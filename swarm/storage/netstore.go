@@ -24,8 +24,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/swarm/log"
+	"github.com/plotozhu/MDCMainnet/p2p/enode"
+	"github.com/plotozhu/MDCMainnet/swarm/log"
 	lru "github.com/hashicorp/golang-lru"
 )
 
@@ -45,9 +45,9 @@ type NetFetcher interface {
 // fetchFuncFactory is a factory object to create a fetch function for a specific chunk address
 type NetStore struct {
 	mu                sync.Mutex
-	store             SyncChunkStore
-	fetchers          *lru.Cache
-	NewNetFetcherFunc NewNetFetcherFunc
+	store             SyncChunkStore	 //chunk临时缓冲区房间
+	fetchers          *lru.Cache		 //当前已经有的fetcher的缓冲区
+	NewNetFetcherFunc NewNetFetcherFunc  //Fetcher(不是fetcher)创造工厂,
 	closeC            chan struct{}
 }
 
@@ -143,8 +143,10 @@ func (n *NetStore) get(ctx context.Context, ref Address) (Chunk, func(context.Co
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
+	//从缓冲中获取数据
 	chunk, err := n.store.Get(ctx, ref)
 	if err != nil {
+		//数据没有取到，生成一个fetcher
 		if err != ErrChunkNotFound {
 			log.Debug("Received error from LocalStore other than ErrNotFound", "err", err)
 		}
@@ -162,10 +164,12 @@ func (n *NetStore) get(ctx context.Context, ref Address) (Chunk, func(context.Co
 // if none exists, creates one and saves it in the fetchers cache
 // caller must hold the lock
 func (n *NetStore) getOrCreateFetcher(ref Address) *fetcher {
+	//查看是否已经有某个Fetch存在了
 	if f := n.getFetcher(ref); f != nil {
 		return f
 	}
 
+	//没有，开始新建一个fetcher
 	// no fetcher for the given address, we have to create a new one
 	key := hex.EncodeToString(ref)
 	// create the context during which fetching is kept alive
@@ -183,7 +187,16 @@ func (n *NetStore) getOrCreateFetcher(ref Address) *fetcher {
 	// the peers which requested the chunk should not be requested to deliver it.
 	peers := &sync.Map{}
 
+	//peers此时为空，还没有节点
+	//创建一个新的fetcher,这个fetcher是针对特写的address的
+	//ref 针对特定的地址
+	//NewNetFetcherFunc Fetcher创建的工厂
+	//destroy 销毁函数
+	//peers 连接的端点
+
 	fetcher := newFetcher(ref, n.NewNetFetcherFunc(ctx, ref, peers), destroy, peers, n.closeC)
+
+	//放到缓存里
 	n.fetchers.Add(key, fetcher)
 
 	return fetcher
@@ -193,9 +206,9 @@ func (n *NetStore) getOrCreateFetcher(ref Address) *fetcher {
 // otherwise it returns nil
 func (n *NetStore) getFetcher(ref Address) *fetcher {
 	key := hex.EncodeToString(ref)
-	f, ok := n.fetchers.Get(key)
+	f, ok := n.fetchers.Get(key) //缓存里是否存在
 	if ok {
-		return f.(*fetcher)
+		return f.(*fetcher) //如果有，取缓存里的
 	}
 	return nil
 }
@@ -219,7 +232,7 @@ type fetcher struct {
 	deliverOnce *sync.Once    // guarantees that we only close deliveredC once
 }
 
-// newFetcher creates a new fetcher object for the fiven addr. fetch is the function which actually
+// newFetcher creates a new fetcher object for the given addr. fetch is the function which actually
 // does the retrieval (in non-test cases this is coming from the network package). cancel function is
 // called either
 //     1. when the chunk has been fetched all peers have been either notified or their context has been done
@@ -244,6 +257,7 @@ func newFetcher(addr Address, nf NetFetcher, cancel func(), peers *sync.Map, clo
 
 // Fetch fetches the chunk synchronously, it is called by NetStore.Get is the chunk is not available
 // locally.
+// Fetch进行Chunk同步读取，它在NetStore.Get中，本地没有对应可用的Chunk时被调用
 func (f *fetcher) Fetch(rctx context.Context) (Chunk, error) {
 	atomic.AddInt32(&f.requestCnt, 1)
 	defer func() {

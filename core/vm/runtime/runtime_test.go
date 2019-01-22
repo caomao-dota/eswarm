@@ -21,12 +21,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/plotozhu/MDCMainnet/accounts/abi"
+	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/plotozhu/MDCMainnet/core/state"
+	"github.com/plotozhu/MDCMainnet/core/vm"
+	"github.com/plotozhu/MDCMainnet/ethdb"
+	"github.com/plotozhu/MDCMainnet/params"
 )
 
 func TestDefaults(t *testing.T) {

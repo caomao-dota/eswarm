@@ -25,11 +25,11 @@ import (
 	"sync"
 	"time"
 
-	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
+	ethereum "github.com/plotozhu/MDCMainnet"
+	"github.com/plotozhu/MDCMainnet/accounts"
+	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/plotozhu/MDCMainnet/core/types"
+	"github.com/plotozhu/MDCMainnet/log"
 	"github.com/karalabe/hid"
 )
 

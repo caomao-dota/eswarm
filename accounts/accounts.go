@@ -20,10 +20,10 @@ package accounts
 import (
 	"math/big"
 
-	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
+	ethereum "github.com/plotozhu/MDCMainnet"
+	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/plotozhu/MDCMainnet/core/types"
+	"github.com/plotozhu/MDCMainnet/event"
 )
 
 // Account represents an Ethereum account located at a specific location defined

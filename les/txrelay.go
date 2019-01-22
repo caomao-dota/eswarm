@@ -19,8 +19,8 @@ package les
 import (
 	"sync"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/plotozhu/MDCMainnet/core/types"
 )
 
 type ltrInfo struct {

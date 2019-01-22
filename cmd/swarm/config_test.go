@@ -27,10 +27,10 @@ import (
 	"time"
 
 	"github.com/docker/docker/pkg/reexec"
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/swarm"
-	"github.com/ethereum/go-ethereum/swarm/api"
+	"github.com/plotozhu/MDCMainnet/cmd/utils"
+	"github.com/plotozhu/MDCMainnet/rpc"
+	"github.com/plotozhu/MDCMainnet/swarm"
+	"github.com/plotozhu/MDCMainnet/swarm/api"
 )
 
 func TestConfigDump(t *testing.T) {

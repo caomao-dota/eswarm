@@ -21,12 +21,12 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/swarm/storage"
-	whisper "github.com/ethereum/go-ethereum/whisper/whisperv5"
+	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/plotozhu/MDCMainnet/common/hexutil"
+	"github.com/plotozhu/MDCMainnet/p2p"
+	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/plotozhu/MDCMainnet/swarm/storage"
+	whisper "github.com/plotozhu/MDCMainnet/whisper/whisperv5"
 )
 
 const (

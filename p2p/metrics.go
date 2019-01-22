@@ -25,11 +25,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/plotozhu/MDCMainnet/p2p/enode"
 
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
+	"github.com/plotozhu/MDCMainnet/event"
+	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/plotozhu/MDCMainnet/metrics"
 )
 
 const (

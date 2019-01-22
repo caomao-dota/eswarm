@@ -17,7 +17,7 @@
 package shed
 
 import (
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/plotozhu/MDCMainnet/rlp"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 

@@ -29,30 +29,30 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/contracts/chequebook"
-	"github.com/ethereum/go-ethereum/contracts/ens"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/p2p/protocols"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/swarm/api"
-	httpapi "github.com/ethereum/go-ethereum/swarm/api/http"
-	"github.com/ethereum/go-ethereum/swarm/fuse"
-	"github.com/ethereum/go-ethereum/swarm/log"
-	"github.com/ethereum/go-ethereum/swarm/network"
-	"github.com/ethereum/go-ethereum/swarm/network/stream"
-	"github.com/ethereum/go-ethereum/swarm/pss"
-	"github.com/ethereum/go-ethereum/swarm/state"
-	"github.com/ethereum/go-ethereum/swarm/storage"
-	"github.com/ethereum/go-ethereum/swarm/storage/feed"
-	"github.com/ethereum/go-ethereum/swarm/storage/mock"
-	"github.com/ethereum/go-ethereum/swarm/swap"
-	"github.com/ethereum/go-ethereum/swarm/tracing"
+	"github.com/plotozhu/MDCMainnet/accounts/abi/bind"
+	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/plotozhu/MDCMainnet/contracts/chequebook"
+	"github.com/plotozhu/MDCMainnet/contracts/ens"
+	"github.com/plotozhu/MDCMainnet/ethclient"
+	"github.com/plotozhu/MDCMainnet/metrics"
+	"github.com/plotozhu/MDCMainnet/p2p"
+	"github.com/plotozhu/MDCMainnet/p2p/enode"
+	"github.com/plotozhu/MDCMainnet/p2p/protocols"
+	"github.com/plotozhu/MDCMainnet/params"
+	"github.com/plotozhu/MDCMainnet/rpc"
+	"github.com/plotozhu/MDCMainnet/swarm/api"
+	httpapi "github.com/plotozhu/MDCMainnet/swarm/api/http"
+	"github.com/plotozhu/MDCMainnet/swarm/fuse"
+	"github.com/plotozhu/MDCMainnet/swarm/log"
+	"github.com/plotozhu/MDCMainnet/swarm/network"
+	"github.com/plotozhu/MDCMainnet/swarm/network/stream"
+	"github.com/plotozhu/MDCMainnet/swarm/pss"
+	"github.com/plotozhu/MDCMainnet/swarm/state"
+	"github.com/plotozhu/MDCMainnet/swarm/storage"
+	"github.com/plotozhu/MDCMainnet/swarm/storage/feed"
+	"github.com/plotozhu/MDCMainnet/swarm/storage/mock"
+	"github.com/plotozhu/MDCMainnet/swarm/swap"
+	"github.com/plotozhu/MDCMainnet/swarm/tracing"
 )
 
 var (
@@ -97,7 +97,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 		return nil, fmt.Errorf("empty bzz key")
 	}
 
-	////TODO 这个backend是给swarm记帐用的，后面使用自己的backend来替代
+	//commenter:Tony  这个backend是给swarm记帐用的，后面使用自己的backend来替代
 	var backend chequebook.Backend
 	if config.SwapAPI != "" && config.SwapEnabled {
 		log.Info("connecting to SWAP API", "url", config.SwapAPI)
@@ -107,6 +107,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 		}
 	}
 
+	//swarm是一堆功能的集合
 	self = &Swarm{
 		config:     config,
 		backend:    backend,
@@ -117,13 +118,18 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 	config.HiveParams.Discovery = true
 
 	bzzconfig := &network.BzzConfig{
-		NetworkID:   config.NetworkID,
-		OverlayAddr: common.FromHex(config.BzzKey),
-		HiveParams:  config.HiveParams,
-		LightNode:   config.LightNodeEnabled,
+		NetworkID:   config.NetworkID,				//网络ID
+		OverlayAddr: common.FromHex(config.BzzKey), //自身的掩码地址
+		HiveParams:  config.HiveParams,      //Hive（网络发现）的参数
+		/**  Discovery             bool  // if want discovery of not
+		PeersBroadcastSetSize uint8 // how many peers to use when relaying
+		MaxPeersPerRequest    uint8 // max size for peer address batches
+		KeepAliveInterval     time.Duration
+		*/
+		LightNode:   config.LightNodeEnabled, //是否为轻节点，终端节点或是移动节点
 	}
 
-	////TODO  状态存储
+	//commenter:Tony  状态存储
 	self.stateStore, err = state.NewDBStore(filepath.Join(config.Path, "state-store.db"))
 	if err != nil {
 		return
@@ -146,13 +152,13 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 		self.dns = resolver
 	}
 
-	//// 本地数据存储，似乎是内存缓存，回头需要检查一下，数据查看顺序是否是 localStore->fileStore->netStore
+	///commenter:Tony 本地数据存储，似乎是内存缓存，回头需要检查一下，数据查看顺序是否是 localStore->fileStore->netStore
 	lstore, err := storage.NewLocalStore(config.LocalStoreParams, mockStore)
 	if err != nil {
 		return nil, err
 	}
 
-	////  网络数据存储
+	////  网络数据存储，文件存在了lstore里，fetcher暂还没有设置，在174行的：self.netStore.NewNetFetcherFunc 设置
 	self.netStore, err = storage.NewNetStore(lstore, nil)
 	if err != nil {
 		return nil, err
@@ -165,9 +171,10 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 	)
 	//// 目前感觉Delivery是用来传递hash组，而Fetcher是用来取某一个hash所对应的chunk的数据的
 	delivery := stream.NewDelivery(to, self.netStore)
+	//创建一个fetcher工厂,然后传递给netStore，该工厂在需要读取chunk的时候，创建一个fetccher对象进行chunk读取，读取完毕后，销毁该对像
 	self.netStore.NewNetFetcherFunc = network.NewFetcherFactory(delivery.RequestFromPeers, config.DeliverySkipCheck).New
 
-	//SWAP是记录数据交易记录的交易体系
+	//SWAP是记录数据交易记录的交易体系，后面再研究
 	if config.SwapEnabled {
 		balancesStore, err := state.NewDBStore(filepath.Join(config.Path, "balances.db"))
 		if err != nil {

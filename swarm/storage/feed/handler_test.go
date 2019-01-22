@@ -26,11 +26,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/swarm/chunk"
-	"github.com/ethereum/go-ethereum/swarm/storage"
-	"github.com/ethereum/go-ethereum/swarm/storage/feed/lookup"
+	"github.com/plotozhu/MDCMainnet/crypto"
+	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/plotozhu/MDCMainnet/swarm/chunk"
+	"github.com/plotozhu/MDCMainnet/swarm/storage"
+	"github.com/plotozhu/MDCMainnet/swarm/storage/feed/lookup"
 )
 
 var (

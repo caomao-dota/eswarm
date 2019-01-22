@@ -19,9 +19,9 @@ package protocols
 import (
 	"testing"
 
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/simulations/adapters"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/plotozhu/MDCMainnet/p2p"
+	"github.com/plotozhu/MDCMainnet/p2p/simulations/adapters"
+	"github.com/plotozhu/MDCMainnet/rlp"
 )
 
 //dummy Balance implementation

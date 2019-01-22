@@ -32,12 +32,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/swarm/api"
-	"github.com/ethereum/go-ethereum/swarm/api/client"
-	"github.com/ethereum/go-ethereum/swarm/spancontext"
-	"github.com/ethereum/go-ethereum/swarm/testutil"
+	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/plotozhu/MDCMainnet/metrics"
+	"github.com/plotozhu/MDCMainnet/swarm/api"
+	"github.com/plotozhu/MDCMainnet/swarm/api/client"
+	"github.com/plotozhu/MDCMainnet/swarm/spancontext"
+	"github.com/plotozhu/MDCMainnet/swarm/testutil"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/pborman/uuid"
 

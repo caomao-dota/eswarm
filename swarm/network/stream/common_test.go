@@ -30,14 +30,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	p2ptest "github.com/ethereum/go-ethereum/p2p/testing"
-	"github.com/ethereum/go-ethereum/swarm/network"
-	"github.com/ethereum/go-ethereum/swarm/network/simulation"
-	"github.com/ethereum/go-ethereum/swarm/state"
-	"github.com/ethereum/go-ethereum/swarm/storage"
-	"github.com/ethereum/go-ethereum/swarm/testutil"
+	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/plotozhu/MDCMainnet/p2p/enode"
+	p2ptest "github.com/plotozhu/MDCMainnet/p2p/testing"
+	"github.com/plotozhu/MDCMainnet/swarm/network"
+	"github.com/plotozhu/MDCMainnet/swarm/network/simulation"
+	"github.com/plotozhu/MDCMainnet/swarm/state"
+	"github.com/plotozhu/MDCMainnet/swarm/storage"
+	"github.com/plotozhu/MDCMainnet/swarm/testutil"
 	colorable "github.com/mattn/go-colorable"
 )
 

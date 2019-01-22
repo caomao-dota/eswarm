@@ -30,8 +30,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/plotozhu/MDCMainnet/accounts/keystore"
+	"github.com/plotozhu/MDCMainnet/core/types"
 )
 
 // Tests that the account management snippets work correctly.

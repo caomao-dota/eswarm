@@ -5,10 +5,10 @@ import (
 	"math/big"
 	"testing"
 
-	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
+	ethereum "github.com/plotozhu/MDCMainnet"
+	"github.com/plotozhu/MDCMainnet/accounts/abi"
+	"github.com/plotozhu/MDCMainnet/accounts/abi/bind"
+	"github.com/plotozhu/MDCMainnet/common"
 )
 
 type mockCaller struct {

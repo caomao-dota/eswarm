@@ -21,9 +21,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/swarm/storage"
+	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/plotozhu/MDCMainnet/p2p/enode"
+	"github.com/plotozhu/MDCMainnet/swarm/storage"
 )
 
 const (
@@ -109,6 +109,9 @@ func NewFetcherFactory(request RequestFunc, skipCheck bool) *FetcherFactory {
 // contain the peers which are actively requesting this chunk, to make sure we
 // don't request back the chunks from them.
 // The created Fetcher is started and returned.
+/**
+  当需要读取chunk时，由FetcherFactory通过New来生成一个Fetcher，然后使用Fetcher.run来获取数据
+ */
 func (f *FetcherFactory) New(ctx context.Context, source storage.Address, peersToSkip *sync.Map) storage.NetFetcher {
 	fetcher := NewFetcher(source, f.request, f.skipCheck)
 	go fetcher.run(ctx, peersToSkip)
@@ -116,18 +119,20 @@ func (f *FetcherFactory) New(ctx context.Context, source storage.Address, peersT
 }
 
 // NewFetcher creates a new Fetcher for the given chunk address using the given request function.
+//这是实际的fetcher获取者对象
 func NewFetcher(addr storage.Address, rf RequestFunc, skipCheck bool) *Fetcher {
 	return &Fetcher{
 		addr:             addr,
 		protoRequestFunc: rf,
-		offerC:           make(chan *enode.ID),
-		requestC:         make(chan uint8),
+		offerC:           make(chan *enode.ID), //哪些节点有数据
+		requestC:         make(chan uint8),     //需要的数据的Index号
 		searchTimeout:    defaultSearchTimeout,
 		skipCheck:        skipCheck,
 	}
 }
 
 // Offer is called when an upstream peer offers the chunk via syncing as part of `OfferedHashesMsg` and the node does not have the chunk locally.
+// Offer函数在上行流通过同步OfferedHashesMsg时，而且本机没有某个chunk时，被调用
 func (f *Fetcher) Offer(ctx context.Context, source *enode.ID) {
 	// First we need to have this select to make sure that we return if context is done
 	select {
@@ -145,6 +150,7 @@ func (f *Fetcher) Offer(ctx context.Context, source *enode.ID) {
 }
 
 // Request is called when an upstream peer request the chunk as part of `RetrieveRequestMsg`, or from a local request through FileStore, and the node does not have the chunk locally.
+// 当上行流端点要求，或者从FileStore里获取读取`RetrieveRequestMsg`里面的部分，但是本地不存在时，使用Request读取
 func (f *Fetcher) Request(ctx context.Context, hopCount uint8) {
 	// First we need to have this select to make sure that we return if context is done
 	select {

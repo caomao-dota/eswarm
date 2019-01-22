@@ -19,8 +19,8 @@ package enode
 import (
 	"testing"
 
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/plotozhu/MDCMainnet/crypto"
+	"github.com/plotozhu/MDCMainnet/p2p/enr"
 )
 
 func newLocalNodeForTesting() (*LocalNode, *DB) {

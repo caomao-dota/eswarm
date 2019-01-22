@@ -27,15 +27,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/p2p/simulations/adapters"
-	"github.com/ethereum/go-ethereum/swarm/network"
-	"github.com/ethereum/go-ethereum/swarm/network/simulation"
-	"github.com/ethereum/go-ethereum/swarm/state"
-	"github.com/ethereum/go-ethereum/swarm/storage"
-	"github.com/ethereum/go-ethereum/swarm/testutil"
+	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/plotozhu/MDCMainnet/node"
+	"github.com/plotozhu/MDCMainnet/p2p/enode"
+	"github.com/plotozhu/MDCMainnet/p2p/simulations/adapters"
+	"github.com/plotozhu/MDCMainnet/swarm/network"
+	"github.com/plotozhu/MDCMainnet/swarm/network/simulation"
+	"github.com/plotozhu/MDCMainnet/swarm/state"
+	"github.com/plotozhu/MDCMainnet/swarm/storage"
+	"github.com/plotozhu/MDCMainnet/swarm/testutil"
 )
 
 func TestIntervalsLive(t *testing.T) {

@@ -23,8 +23,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/plotozhu/MDCMainnet/cmd/utils"
+	"github.com/plotozhu/MDCMainnet/core/vm"
 )
 
 func TestState(t *testing.T) {

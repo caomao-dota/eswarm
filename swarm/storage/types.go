@@ -25,9 +25,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/swarm/bmt"
-	ch "github.com/ethereum/go-ethereum/swarm/chunk"
+	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/plotozhu/MDCMainnet/swarm/bmt"
+	ch "github.com/plotozhu/MDCMainnet/swarm/chunk"
 	"golang.org/x/crypto/sha3"
 )
 

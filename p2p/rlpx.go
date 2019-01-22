@@ -35,11 +35,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/bitutil"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/crypto/ecies"
-	"github.com/ethereum/go-ethereum/crypto/secp256k1"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/plotozhu/MDCMainnet/common/bitutil"
+	"github.com/plotozhu/MDCMainnet/crypto"
+	"github.com/plotozhu/MDCMainnet/crypto/ecies"
+	"github.com/plotozhu/MDCMainnet/crypto/secp256k1"
+	"github.com/plotozhu/MDCMainnet/rlp"
 	"github.com/golang/snappy"
 	"golang.org/x/crypto/sha3"
 )
