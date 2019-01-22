@@ -97,6 +97,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 		return nil, fmt.Errorf("empty bzz key")
 	}
 
+	////TODO 这个backend是给swarm记帐用的，后面使用自己的backend来替代
 	var backend chequebook.Backend
 	if config.SwapAPI != "" && config.SwapEnabled {
 		log.Info("connecting to SWAP API", "url", config.SwapAPI)
@@ -122,6 +123,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 		LightNode:   config.LightNodeEnabled,
 	}
 
+	////TODO  状态存储
 	self.stateStore, err = state.NewDBStore(filepath.Join(config.Path, "state-store.db"))
 	if err != nil {
 		return
@@ -144,23 +146,28 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 		self.dns = resolver
 	}
 
+	//// 本地数据存储，似乎是内存缓存，回头需要检查一下，数据查看顺序是否是 localStore->fileStore->netStore
 	lstore, err := storage.NewLocalStore(config.LocalStoreParams, mockStore)
 	if err != nil {
 		return nil, err
 	}
 
+	////  网络数据存储
 	self.netStore, err = storage.NewNetStore(lstore, nil)
 	if err != nil {
 		return nil, err
 	}
 
+	//// 网络数据存储中的存取需要从网络上获取，网络上获取的过程就是从K桶中获取的过程，因此需要注册KAD网络，并且注册一个Fetcher函数
 	to := network.NewKademlia(
 		common.FromHex(config.BzzKey),
 		network.NewKadParams(),
 	)
+	//// 目前感觉Delivery是用来传递hash组，而Fetcher是用来取某一个hash所对应的chunk的数据的
 	delivery := stream.NewDelivery(to, self.netStore)
 	self.netStore.NewNetFetcherFunc = network.NewFetcherFactory(delivery.RequestFromPeers, config.DeliverySkipCheck).New
 
+	//SWAP是记录数据交易记录的交易体系
 	if config.SwapEnabled {
 		balancesStore, err := state.NewDBStore(filepath.Join(config.Path, "balances.db"))
 		if err != nil {
@@ -175,11 +182,14 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 		return nil, err
 	}
 
+	//流的处理
 	syncing := stream.SyncingAutoSubscribe
+	//是否同步（存储数据）
 	if !config.SyncEnabled || config.LightNodeEnabled {
 		syncing = stream.SyncingDisabled
 	}
 
+	//数据获取方式，是否只作为客户端（client only downstream)还是都有（client/server downstream and upstream)
 	retrieval := stream.RetrievalEnabled
 	if config.LightNodeEnabled {
 		retrieval = stream.RetrievalClientOnly
@@ -192,11 +202,18 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 		SyncUpdateDelay: config.SyncUpdateDelay,
 		MaxPeerServers:  config.MaxStreamPeerServers,
 	}
+	//正式创建一个流服务（流化器）
+	//nodeId 节点地址 Deliver 管理hash的对象  netStore网络存储系统
+	//stateStore 存储状态的系统
+	//registerOptions 构建参数
+	//
 	self.streamer = stream.NewRegistry(nodeID, delivery, self.netStore, self.stateStore, registryOptions, self.swap)
 
+	//创建一个本地存储的文件结构
 	// Swarm Hash Merklised Chunking for Arbitrary-length Document/File storage
 	self.fileStore = storage.NewFileStore(self.netStore, self.config.FileStoreParams)
 
+	//feed(聚合流） 的处理，feed注册后，可以由节点更新，多个节点获取信息
 	var feedsHandler *feed.Handler
 	fhParams := &feed.HandlerParams{}
 
@@ -215,8 +232,15 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 
 	log.Debug("Setup local storage")
 
+	//bzz协议服务注册
+	//
+	// to kademelia网络
+	// state store 状态存储
+	// spec bzz 的配置，就是streamer的配置
+	// Run  核心运行函数
 	self.bzz = network.NewBzz(bzzconfig, to, self.stateStore, self.streamer.GetSpec(), self.streamer.Run)
 
+	//创建PSS通信网络(暂略过，没有深入研究）
 	// Pss = postal service over swarm (devp2p over bzz)
 	self.ps, err = pss.NewPss(to, config.Pss)
 	if err != nil {
@@ -226,8 +250,9 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 		pss.SetHandshakeController(self.ps, pss.NewHandshakeParams())
 	}
 
+	//创建api
 	self.api = api.NewAPI(self.fileStore, self.dns, feedsHandler, self.privateKey)
-
+	//创建可加载的文件系统 FUSE
 	self.sfs = fuse.NewSwarmFS(self.api)
 	log.Debug("Initialized FUSE filesystem")
 
