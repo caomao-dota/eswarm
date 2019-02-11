@@ -73,6 +73,7 @@ type WrappedPriorityMsg struct {
 }
 
 // NewPeer is the constructor for Peer
+//
 func NewPeer(peer *protocols.Peer, streamer *Registry) *Peer {
 	p := &Peer{
 		Peer:         peer,

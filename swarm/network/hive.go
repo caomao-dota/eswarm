@@ -35,7 +35,10 @@ When the hive is started, a forever loop is launched that
 asks the  kademlia nodetable
 to suggest peers to bootstrap connectivity
 */
-
+/**
+ Hive是节点启动器
+ Hive是swarm的对数距离管理器，当HIVE启动后，启动一个无限循环，请求Kademlia节点表，寻找一个启动的连接
+ */
 // HiveParams holds the config options to hive
 type HiveParams struct {
 	Discovery             bool  // if want discovery of not
@@ -79,7 +82,7 @@ func NewHive(params *HiveParams, kad *Kademlia, store state.Store) *Hive {
 	}
 }
 
-// Start stars the hive, receives p2p.Server only at startup
+// Start starts the hive, receives p2p.Server only at startup
 // server is used to connect to a peer based on its NodeID or enode URL
 // these are called on the p2p.Server which runs on the node
 func (h *Hive) Start(server *p2p.Server) error {

@@ -136,10 +136,12 @@ type RetrieveRequestMsg struct {
 	HopCount  uint8
 }
 
+//收到了某个节点来的查询数据的请求
 func (d *Delivery) handleRetrieveRequestMsg(ctx context.Context, sp *Peer, req *RetrieveRequestMsg) error {
 	log.Trace("received request", "peer", sp.ID(), "hash", req.Addr)
 	handleRetrieveRequestMsgCount.Inc(1)
 
+	//记录
 	var osp opentracing.Span
 	ctx, osp = spancontext.StartSpan(
 		ctx,
@@ -208,6 +210,7 @@ type ChunkDeliveryMsgRetrieval ChunkDeliveryMsg
 type ChunkDeliveryMsgSyncing ChunkDeliveryMsg
 
 // TODO: Fix context SNAFU
+//a new chunk delivery has been arrived
 func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *ChunkDeliveryMsg) error {
 	var osp opentracing.Span
 	ctx, osp = spancontext.StartSpan(
@@ -221,6 +224,7 @@ func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *Ch
 		req.peer = sp
 		err := d.chunkStore.Put(ctx, storage.NewChunk(req.Addr, req.SData))
 		if err != nil {
+			//如果chunk不对，说明协议不对，断开连接
 			if err == storage.ErrChunkInvalid {
 				// we removed this log because it spams the logs
 				// TODO: Enable this log line
@@ -233,12 +237,13 @@ func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *Ch
 }
 
 // RequestFromPeers sends a chunk retrieve request to
+// 发送一个chunk读取请求，ctx保存超时之类的信息，req是一个请求指令，包含了源地址和数据哈希，
 func (d *Delivery) RequestFromPeers(ctx context.Context, req *network.Request) (*enode.ID, chan struct{}, error) {
 	requestFromPeersCount.Inc(1)
 	var sp *Peer
 	spID := req.Source
 
-	if spID != nil {
+	if spID != nil { //自动恢复来源地址，这样第一个发出的节点，可以不需要带上自身的地址
 		sp = d.getPeer(*spID)
 		if sp == nil {
 			return nil, nil, fmt.Errorf("source peer %v not found", spID.String())
@@ -266,7 +271,7 @@ func (d *Delivery) RequestFromPeers(ctx context.Context, req *network.Request) (
 			return nil, nil, errors.New("no peer found")
 		}
 	}
-
+    //sp 是最近的一个节点
 	err := sp.SendPriority(ctx, &RetrieveRequestMsg{
 		Addr:      req.Addr,
 		SkipCheck: req.SkipCheck,
