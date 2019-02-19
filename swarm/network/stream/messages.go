@@ -19,14 +19,15 @@ package stream
 import (
 	"context"
 	"fmt"
+	"github.com/plotozhu/MDCMainnet/p2p/enode"
 	"time"
 
+	"github.com/opentracing/opentracing-go"
 	"github.com/plotozhu/MDCMainnet/metrics"
 	"github.com/plotozhu/MDCMainnet/swarm/log"
 	bv "github.com/plotozhu/MDCMainnet/swarm/network/bitvector"
 	"github.com/plotozhu/MDCMainnet/swarm/spancontext"
 	"github.com/plotozhu/MDCMainnet/swarm/storage"
-	"github.com/opentracing/opentracing-go"
 )
 
 var syncBatchTimeout = 30 * time.Second
@@ -194,6 +195,11 @@ func (m OfferedHashesMsg) String() string {
 
 // handleOfferedHashesMsg protocol msg handler calls the incoming streamer interface
 // Filter method
+// 本函数处理收到的offeredHash,其简单的过程就是检查这些hash,看看哪些应该自己存储但是还没有的，通过	bitvector（wantedHash）来汇报给对方，
+// 汇报的时候，直接汇报当前需要的哈希和下一次的哈希的范围
+// 这里面只是汇报自身所需的哈希，获取的过程是由对方发送过来的，那么：
+// 1.设备刚初始化的时候，是不是会占用大量的带宽
+// 2.如果某个哈希没有取到（对方因为磁盘空间原因删除了），这个哈希是否就不管了，还是需要到别的地方去取
 func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg) error {
 	metrics.GetOrRegisterCounter("peer.handleofferedhashes", nil).Inc(1)
 
@@ -233,15 +239,17 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 			// create request and wait until the chunk data arrives and is stored
 			go func(w func(context.Context) error) {
 				select {
-				case errC <- w(ctx):
-				case <-ctx.Done():
+				case errC <- w(ctx): //要么error
+				case <-ctx.Done():   //要么完成
 				}
 			}(wait)
 		}
 	}
 
+	//重新建立了一个线程，管理所有的等待事宜
 	go func() {
 		defer cancel()
+		//需要和ctr对应个数的回应
 		for i := 0; i < ctr; i++ {
 			select {
 			case err := <-errC:
@@ -258,8 +266,9 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 				return
 			}
 		}
+		//没有return出去，说明所有的都正常了(只有errC为0的才是正常的)
 		select {
-		case c.next <- c.batchDone(p, req, hashes):
+		case c.next <- c.batchDone(p, req, hashes): //这个是正常的退出
 		case <-c.quit:
 			log.Debug("client.handleOfferedHashesMsg() quit")
 		case <-ctx.Done():
@@ -271,12 +280,14 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 	if c.stream.Live {
 		c.sessionAt = req.From
 	}
+	//看看还有没有
 	from, to := c.nextBatch(req.To + 1)
 	log.Trace("set next batch", "peer", p.ID(), "stream", req.Stream, "from", req.From, "to", req.To, "addr", p.streamer.addr)
 	if from == to {
 		return nil
 	}
 
+	//注意，from/to变成新的了，Want应该对应的旧的，这个的意思是就同时发送上一次的wantedhash和下一次的	from/to，这个在下面的处理函数里得到了验证要
 	msg := &WantedHashesMsg{
 		Stream: req.Stream,
 		Want:   want.Bytes(),
@@ -312,8 +323,8 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 // offered in OfferedHashesMsg downstream peer actually wants sent over
 type WantedHashesMsg struct {
 	Stream   Stream
-	Want     []byte // bitvector indicating which keys of the batch needed
-	From, To uint64 // next interval offset - empty if not to be continued
+	Want     []byte // bitvector indicating which keys of the batch needed  当前想要的哈希的位映射表
+	From, To uint64 // next interval offset - empty if not to be continued  下一个要检查的区域
 }
 
 // String pretty prints WantedHashesMsg
@@ -332,6 +343,7 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 	if err != nil {
 		return err
 	}
+	//currentBatch，是当前还没有提供给对端的所有哈希（上一次提供的）
 	hashes := s.currentBatch
 	// launch in go routine since GetBatch blocks until new hashes arrive
 	go func() {
@@ -347,6 +359,7 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 	if err != nil {
 		return fmt.Errorf("error initiaising bitvector of length %v: %v", l, err)
 	}
+	//针对所有的HAS，读取数据后，通过Deliver函数发给对方
 	for i := 0; i < l; i++ {
 		if want.Get(i) {
 			metrics.GetOrRegisterCounter("peer.handlewantedhashesmsg.actualget", nil).Inc(1)
@@ -356,11 +369,14 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 			if err != nil {
 				return fmt.Errorf("handleWantedHashesMsg get data %x: %v", hash, err)
 			}
+			//在这里也只要有一个数据不对，就立刻退出了，那这样的话，在一段里，如果有某一个HASH没有了，这一段后续的都没有了
+			//TODO Aegon 重新考虑一下，是否需要继续读取
 			chunk := storage.NewChunk(hash, data)
 			syncing := true
 			if err := p.Deliver(ctx, chunk, s.priority, syncing); err != nil {
 				return err
 			}
+			//在这里只要有一个发送失败，就会立即退出，后续的不再发送
 		}
 	}
 	return nil
@@ -403,3 +419,23 @@ func (p *Peer) handleTakeoverProofMsg(ctx context.Context, req *TakeoverProofMsg
 	// store the strongest takeoverproof for the stream in streamer
 	return err
 }
+//双方确认STIME的消息， 由服务端向客户端发送，
+// 1. 如果客户端认可，就可能会向该服务端请求检索数据;
+// 2. 如果客户端不认可，那么就重新设置一个STime,把StartAmount设置成0,然后向服务端发送
+// 3. 如果服务端不认可客户端，就断开该peer的连接
+type STimeHandShake struct {
+	Stime    	time.Time	//收据的标志
+	StartAmount uint16		//目前该收据的开始数量
+	ChunkPrice  uint16      //该服务每Chunk将要收取的费用，其准是10000，最高65535，一般来说，普通的矿工节点是10000，而中心化矿工的价格是11000
+	status      uint8		//状态：1 服务端向客户端发送   2 客户端向服务端发送
+}
+//收据消息，客户端从服务端收到检索的回应数据后，通过此格式向服务端发送签名
+//如果客户端总是向服务端提交一个新签名，即STime为新的，AMount为0，那么服务端就可以断开该客户端的连接，并将该节点加入黑名单
+//签名的收据总是用最低优先级发送，并且如果有新的可覆盖签名出现时，使用新的签名，可以直接丢弃老的签名
+type ReceiptsMsg struct {
+	PA      enode.ID
+	STime   time.Time
+	AMount	uint16
+	Sig     []byte
+}
+

@@ -167,7 +167,8 @@ func (ls *LocalStore) get(ctx context.Context, addr Address) (chunk Chunk, err e
 	ls.memStore.Put(ctx, chunk)
 	return chunk, nil
 }
-
+//从本地获取一个数据片断，如果没有，返回一个函数，该函数使用context作为参数
+//在需要的时候，这个返回的函数可以放到goRoutine里，
 func (ls *LocalStore) FetchFunc(ctx context.Context, addr Address) func(context.Context) error {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()

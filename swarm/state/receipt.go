@@ -1,0 +1,476 @@
+package state
+
+import (
+	"crypto/ecdsa"
+	"errors"
+	"github.com/plotozhu/MDCMainnet/crypto"
+	"golang.org/x/crypto/sha3"
+	"io"
+	"math/big"
+	"sync"
+	"time"
+
+	"github.com/hashicorp/golang-lru"
+	"github.com/plotozhu/MDCMainnet/p2p/enode"
+	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/syndtr/goleveldb/leveldb"
+)
+var (
+
+	ErrInvalidNode = errors.New("InvalidNodeId")
+	ErrUnexpectedReceipt = errors.New("UnexpectedReceipt")
+	ErrInvalidSignature = errors.New("InvalidSignature")
+	ErrInvalidSTime = errors.New("InvalidSignTime")
+)
+const (
+	MAX_C_REC_LIMIT = 4096   //当超过这个数目时，最长时间不用的C_记录，就是找了最久没有连接的节点
+)
+var (
+	CPREF = []byte("IN_CHUNK")
+	HPREF = []byte("IN_RECEIPT")
+	RPREF = []byte("UNREPORTED")
+
+	MAX_STIME_DURATION  = 60*time.Minute   //生成收据时，一个STIME允许的最长时间
+	MAX_STIME_JITTER    = 120*time.Minute  //接收收据时，允许最长的时间差，超过这个时间的不再接收
+
+	)
+type ChunkDeliverItem struct {
+	FromTime     time.Time		//从某个时间点开始
+	FromCount    uint32			//从某个数值开始
+	Delivered  	 uint32       	//已经发送的数据包
+	unpayed      uint32         //没有收到收据的，发送数据包数量-签收数据包数量的差值
+}
+
+type ChunkDeliverInfo  map[enode.ID]*ChunkDeliverItem
+
+//收据的数据
+type ReceiptData struct {
+	Stime    time.Time
+	Amount   uint32
+	Signature []byte
+}
+type rlpRD struct {
+
+	Stime *big.Int
+	Amount uint32
+	Signature []byte
+}
+func (r ReceiptData)EncodeRLP(w io.Writer) error{
+
+	rs := &rlpRD{big.NewInt(r.Stime.UnixNano()),r.Amount,r.Signature}
+
+	return rlp.Encode(w,rs)
+}
+func (rs *ReceiptData) DecodeRLP(s *rlp.Stream) error{
+	result := new(rlpRD)
+	err := s.Decode(result)
+	if err == nil {
+		rs.Signature = result.Signature
+		rs.Stime =time.Unix(0,result.Stime.Int64())
+		rs.Amount = result.Amount
+	}
+	return err
+}
+//收据的数据
+type ReceiptBody struct {
+	NodeId   enode.ID  //数据提供者
+	Stime    time.Time
+	Amount   uint32
+}
+type rlpRB struct {
+	NodeId enode.ID
+	Stime *big.Int
+	Amount uint32
+}
+func (r ReceiptBody)EncodeRLP(w io.Writer) error{
+
+	rs := &rlpRB{r.NodeId,big.NewInt(r.Stime.UnixNano()),r.Amount}
+
+	return rlp.Encode(w,rs)
+}
+func (rs *ReceiptBody) DecodeRLP(s *rlp.Stream) error{
+	result := new(rlpRB)
+	err := s.Decode(result)
+	if err == nil {
+		rs.NodeId = result.NodeId
+		rs.Stime =time.Unix(0,result.Stime.Int64())
+		rs.Amount = result.Amount
+	}
+	return err
+}
+//某个单个的收据
+type Receipt struct {
+	ReceiptBody
+	Sign []byte
+}
+type ReceiptInStore struct {
+	Stime    time.Time
+	Amount   uint32
+}
+
+
+type Hash  [32]byte
+func rlpHash(x interface{}) (h Hash) {
+	hw := sha3.NewLegacyKeccak256()
+	rlp.Encode(hw, x)
+	hw.Sum(h[:0])
+	return h
+}
+/**
+签名
+ */
+func (r *Receipt)Signature(prvKey *ecdsa.PrivateKey) error {
+	h := rlpHash(r.ReceiptBody)
+	sig, err := crypto.Sign(h[:], prvKey)
+	if err != nil {
+		return  err
+	}
+	r.Sign = sig
+	return nil
+}
+
+/**
+	验证签名是否正确，并且返回签名者的公钥
+ */
+func (r *Receipt)Verify() ( *ecdsa.PublicKey,bool) {
+	//SigToPub
+	h := rlpHash(r.ReceiptBody)
+	pubKey,err := crypto.SigToPub(h[:],r.Sign)
+	if err == nil {
+		pubKeyBytes := crypto.CompressPubkey(pubKey)
+		if crypto.VerifySignature(pubKeyBytes, h[:], r.Sign[:64]) {
+			return pubKey,true
+		}
+	}
+	return nil,false
+}
+type ReceiptItem struct {
+	Amount uint32
+	Sign []byte
+}
+type ReceiptItems  map[time.Time]ReceiptItem
+
+func (rs *ReceiptItems) EncodeRLP(w io.Writer) error{
+
+	rcs := make([]ReceiptData,0)
+	for id,item := range *rs {
+		rcItem := ReceiptData{
+			id,
+			item.Amount,
+			item.Sign,
+		}
+		rcs = append(rcs,rcItem)
+	}
+	return rlp.Encode(w,rcs)
+}
+func (rs *ReceiptItems) DecodeRLP(s *rlp.Stream) error{
+	result := new([]*ReceiptData)
+	err := s.Decode(result)
+	if err == nil {
+		for _,item := range *result {
+			(*rs)[item.Stime] = ReceiptItem{item.Amount,item.Signature}
+		}
+	}
+	return err
+}
+//某个来源节点的收据集
+type ReceiptsOfNode struct {
+	NodeId   enode.ID
+	Receipts []*ReceiptData
+}
+
+type Receipts map[enode.ID]ReceiptItems
+
+func (rs Receipts) EncodeRLP(w io.Writer) error{
+
+	rcs := make([]*ReceiptsOfNode,0)
+	for id,item := range rs {
+		recsOfNode := make([]*ReceiptData,0)
+		for stime,data := range item {
+			recsOfNode = append(recsOfNode,&ReceiptData{stime,data.Amount,data.Sign})
+		}
+
+			rcItem := &ReceiptsOfNode{
+			id,
+			recsOfNode,
+		}
+		rcs = append(rcs,rcItem)
+	}
+	return rlp.Encode(w,rcs)
+}
+func (rs *Receipts) DecodeRLP(s *rlp.Stream) error{
+	result := make([]*ReceiptsOfNode,0)
+	err := s.Decode(&result)
+	if err == nil {
+		for _,item := range result {
+			items := make(ReceiptItems)
+			for _,eachReceiptItem := range item.Receipts{
+				items[eachReceiptItem.Stime] = ReceiptItem{eachReceiptItem.Amount,eachReceiptItem.Signature}
+			}
+			(*rs)[item.NodeId] = items
+		}
+	}
+	return err
+}
+
+func (rs *Receipts) CurrentReceipt(nodeId enode.ID) *ReceiptData{
+
+	result,ok := (*rs)[nodeId]
+	if !ok {
+		return nil
+	}
+	lastestTime := time.Now().AddDate(-10,0,0)
+	for sTime,_ := range result {
+		if sTime.After(lastestTime) {
+			lastestTime = sTime
+		}
+	}
+	return &ReceiptData{lastestTime,result[lastestTime].Amount,result[lastestTime].Sign}
+}
+
+type ReceiptStore struct {
+	nodeId  enode.ID
+	db *leveldb.DB
+	allReceipts Receipts
+	prvKey *ecdsa.PrivateKey
+	//deliverInfo ChunkDeliverInfo
+	unpaidAmount   map[enode.ID]uint32
+	nodeCommCache    *lru.Cache
+	cmu sync.RWMutex
+	hmu sync.RWMutex
+}
+func NewReceiptsStore(newDb *leveldb.DB,prvKey *ecdsa.PrivateKey) *ReceiptStore {
+	store := ReceiptStore{
+		nodeId:enode.PubkeyToIDV4(&prvKey.PublicKey),
+		db:newDb,
+		prvKey:prvKey,
+		unpaidAmount:make(map[enode.ID]uint32),
+		allReceipts:make(Receipts),
+	}
+	store.nodeCommCache,_ =  lru.New(MAX_C_REC_LIMIT)
+
+	store.Init();
+	return &store
+}
+func (rs *ReceiptStore) Init(){
+	rs.loadCRecord()
+	rs.loadHRecord()
+
+}
+func (rs *ReceiptStore) loadCRecord(){
+	data,err := rs.db.Get(CPREF,nil)
+	result := make([]*ReceiptBody,0)
+	if err == nil {
+		err = rlp.DecodeBytes(data,&result)
+		if err == nil {
+			rs.nodeCommCache.Purge()
+			for _,item := range result {
+				rs.nodeCommCache.ContainsOrAdd(item.NodeId,&ReceiptInStore{item.Stime,item.Amount})
+			}
+		}
+	}
+}
+func (rs *ReceiptStore) saveCRecord() error{
+	results := make([]*ReceiptBody,0)
+	allIds := rs.nodeCommCache.Keys()
+	for _,nodeId := range  allIds{
+		item,exist := rs.nodeCommCache.Get(nodeId)
+		if exist  {
+			receipt := item.(*ReceiptInStore)
+			results = append(results,&ReceiptBody{nodeId.(enode.ID),receipt.Stime,receipt.Amount})
+		}
+
+	}
+	data,err := rlp.EncodeToBytes(results)
+	err = rs.db.Put(CPREF,data,nil)
+	return err
+}
+func (rs *ReceiptStore) loadHRecord(){
+	rs.allReceipts = rs.loadReceipts(HPREF)
+}
+func (rs *ReceiptStore) saveHRecord() error {
+	//持久化数据
+
+	return rs.saveReceipts(HPREF,rs.allReceipts)
+}
+
+
+
+func (rs *ReceiptStore) loadReceipts(key []byte) Receipts{
+	data,err := rs.db.Get(key,nil)
+	result := make(Receipts)
+	if err == nil {
+		err = rlp.DecodeBytes(data,&result)
+		if err == nil {
+			return result
+		}
+	}
+	return result
+}
+func (rs *ReceiptStore) saveReceipts(key []byte,receipts Receipts) error {
+	//持久化数据
+
+	data,err := rlp.EncodeToBytes(receipts)
+	err = rs.db.Put(key,data,nil)
+	return err
+}
+//新收到了一个数据,在C记录中记录，并且返回一个签过名的收据
+//如果nodeId不合法，返回的收据为空，error为ErrInvalidNode
+func (rs *ReceiptStore) OnNodeChunkReceived(nodeId enode.ID) (*Receipt,error) {
+	rs.cmu.Lock()
+	defer rs.cmu.Unlock()
+
+	if len(nodeId) != 32 {
+		return nil,ErrInvalidNode
+	}
+	//update chunkOfNode
+	 item,exist := rs.nodeCommCache.Get(nodeId)
+	if !exist {
+		item = &ReceiptInStore{time.Now(),1}
+	}else {
+		if MAX_STIME_DURATION < time.Since(item.(*ReceiptInStore).Stime) {
+			item = &ReceiptInStore{time.Now(),1}
+		}else {
+			item = &ReceiptInStore{item.(*ReceiptInStore).Stime,item.(*ReceiptInStore).Amount+1}
+		}
+
+	}
+	 rs.nodeCommCache.Add(nodeId,item)
+	//持久化
+	 rs.saveCRecord()
+	//创建收据
+	aReceipt := &Receipt{ReceiptBody{nodeId,item.(*ReceiptInStore).Stime,item.(*ReceiptInStore).Amount},[]byte{}}
+
+	aReceipt.Signature(rs.prvKey)
+	return aReceipt,nil
+
+}
+//服务端新到了一个收据
+func (rs *ReceiptStore) OnNewReceipt(receipt *Receipt)(error){
+	rs.hmu.Lock()
+	defer rs.hmu.Unlock()
+	//不是自己的nodeId不收
+	if receipt.NodeId != rs.nodeId {
+		return ErrInvalidNode
+	}
+	//超过MAX_STIME_JITTER(默认2个小时)的不收
+	jitter := time.Since(receipt.Stime)
+	if jitter > MAX_STIME_JITTER || jitter < -MAX_STIME_JITTER{
+		return ErrInvalidSTime
+	}
+	//验证签名是否正确
+	pubKey,isOk := receipt.Verify()
+	if !isOk {
+		return ErrInvalidSignature
+	}
+	//根据这个pubKey生成nodeId
+	nodeId := enode.PubkeyToIDV4(pubKey)
+	_,ok := rs.allReceipts[nodeId]
+	//这个节点的第一次记录
+	if !ok {
+		rs.allReceipts[nodeId] = make(ReceiptItems)
+	}
+	_,ok = rs.allReceipts[nodeId][receipt.Stime]
+	if !ok {
+		//这个节点的这个STIME的第一次记录
+		rs.allReceipts[nodeId][receipt.Stime] = ReceiptItem{receipt.Amount,receipt.Sign}
+		rs.decreaseOnNewReceipt(nodeId,receipt.Amount)
+	}else {
+		//这个节点的这个STIME记录存在，只有更大的Amount才会覆盖小的
+		if receipt.Amount > rs.allReceipts[nodeId][receipt.Stime].Amount {
+			//更新未支付的数量
+			rs.decreaseOnNewReceipt(nodeId,receipt.Amount - rs.allReceipts[nodeId][receipt.Stime].Amount)
+			//覆盖原有的记录
+			rs.allReceipts[nodeId][receipt.Stime] =ReceiptItem{receipt.Amount,receipt.Sign}
+		}
+	}
+
+
+	//持久化
+	return rs.saveHRecord()
+}
+
+func (rs *ReceiptStore)GetReceiptsToReport() Receipts {
+	toReport := rs.extractReportReceipts()
+	//从数据库中检查是否有上一次未提交成功的
+	fromDB := rs.loadReceipts(RPREF)
+	//合并
+	for nodeId,items := range fromDB {
+		newItems, ok := toReport[nodeId]
+
+		if !ok {
+			toReport[nodeId] = items
+		} else {
+			for stime,data := range items {
+				newItems[stime] = data
+			}
+		}
+	}
+	//持久化
+	rs.saveReceipts(RPREF,toReport)
+	return toReport
+}
+/**
+	从库中找出所有的可以提交(stime超过两个小时的，）的收据
+	遍历allReceipts，把超过2小时的和小于两小时的放到两个map里
+    超过两小时的返回，小于两个小时的那个替换当前的allReceipts
+ */
+func (rs *ReceiptStore) extractReportReceipts() Receipts {
+	rs.hmu.Lock()
+	defer rs.hmu.Unlock()
+	result := make(Receipts)
+	newReceipts := make(Receipts)
+
+	for nodeId,receipts := range rs.allReceipts {
+		for stime,receiptItem := range receipts {
+			if time.Since(stime) > MAX_STIME_JITTER { //超过两小时的
+				receiptItems,ok := result[nodeId]
+				if !ok {
+					receiptItems = make(ReceiptItems)
+					result[nodeId] = receiptItems
+				}
+				receiptItems[stime] = receiptItem
+			}else{  								//小于两个小时的
+				receiptItems,ok := newReceipts[nodeId]
+				if !ok {
+					receiptItems = make(ReceiptItems)
+					newReceipts[nodeId] = receiptItems
+				}
+				receiptItems[stime] = receiptItem
+			}
+		}
+	}
+	if len(result) > 0 {
+		rs.allReceipts = newReceipts
+		rs.saveHRecord()
+	}
+	return result
+}
+func (rs *ReceiptStore) GetLastSTimeOfNode(nodeId enode.ID) {
+
+}
+/**
+	每次数据传输完成后，用这个通知ReceiptStore，用于计数某些节点发送的总Chunk和收到的收据
+    本函数返回一个unpayed的值，用于表示该节点目前有多少个未支付（收据）的数据了
+	调用者可以根据这个返回决定对相应节点的操作
+ */
+func (rs *ReceiptStore) OnChunkDelivered(nodeId enode.ID) uint32 {
+	rs.hmu.Lock()
+	defer rs.hmu.Unlock()
+
+	_,ok := rs.unpaidAmount[nodeId]
+	if !ok {
+		rs.unpaidAmount[nodeId] = 1
+	}else {
+		rs.unpaidAmount[nodeId] += 1
+	}
+	return rs.unpaidAmount[nodeId]
+}
+
+func (rs *ReceiptStore) decreaseOnNewReceipt(nodeId enode.ID,count uint32)  {
+	if rs.unpaidAmount[nodeId] > count {
+		rs.unpaidAmount[nodeId] -= count
+	}else {
+		rs.unpaidAmount[nodeId] = 0
+	}
+}

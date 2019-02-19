@@ -54,7 +54,7 @@ Using this account, connect to Swarm with
     swarm --bzzaccount <your-account-here>
 
     # in our example
-
+                     
     swarm --bzzaccount 2f1cd699b0bf461dcfbf0098ad8f5587b038f0f1
 
 

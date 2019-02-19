@@ -152,6 +152,7 @@ func NewRegistry(localID enode.ID, delivery *Delivery, syncChunkStore storage.Sy
 		})
 	}
 
+	//同步是stream上的一个服务，这里注册了一个客户端和一个服务端
 	// If syncing is not disabled, the syncing functions are registered (both client and server)
 	if options.Syncing != SyncingDisabled {
 		RegisterSwarmSyncerServer(streamer, syncChunkStore)
@@ -799,6 +800,9 @@ func (r *Registry) createSpec() {
 			RequestSubscriptionMsg{},
 			QuitMsg{},
 			ChunkDeliveryMsgSyncing{},
+			//增加的两个消息
+			ReceiptsMsg{},
+
 		},
 	}
 	r.spec = spec

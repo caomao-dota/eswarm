@@ -112,3 +112,7 @@ func (s *DBStore) Delete(key string) (err error) {
 func (s *DBStore) Close() error {
 	return s.db.Close()
 }
+
+func UpdateARec(){
+
+}

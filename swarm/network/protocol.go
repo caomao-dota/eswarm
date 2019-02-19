@@ -178,6 +178,7 @@ func (b *Bzz) RunProtocol(spec *protocols.Spec, run func(*BzzPeer) error) func(*
 		if handshake.err != nil {
 			return fmt.Errorf("%08x: %s protocol closed: %v", b.BaseAddr()[:4], spec.Name, handshake.err)
 		}
+		//修改C记录
 		// the handshake has succeeded so construct the BzzPeer and run the protocol
 		peer := &BzzPeer{
 			Peer:       protocols.NewPeer(p, rw, spec),

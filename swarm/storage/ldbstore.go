@@ -54,7 +54,7 @@ const (
 var (
 	dbEntryCount = metrics.NewRegisteredCounter("ldbstore.entryCnt", nil)
 )
-
+//同一个chunk，在系统中存储了不同的信息，每种信息用一个前缀来区分， 信息的键值是 前缀+chunkAddress
 var (
 	keyIndex       = byte(0)
 	keyAccessCnt   = []byte{2}
@@ -106,7 +106,7 @@ type LDBStore struct {
 	bucketCnt []uint64
 
 	hashfunc SwarmHasher
-	po       func(Address) uint8
+	po       func(Address) uint8  //从地址计算属于哪个PO
 
 	batchesC chan struct{}
 	closed   bool
@@ -247,15 +247,16 @@ func U64ToBytes(val uint64) []byte {
 	binary.BigEndian.PutUint64(data, val)
 	return data
 }
-
+//返回指向index的键值, "0"+hash
 func getIndexKey(hash Address) []byte {
 	hashSize := len(hash)
 	key := make([]byte, hashSize+1)
 	key[0] = keyIndex
-	copy(key[1:], hash[:])
+	copy(key[1:], hash[:]) // "0"+hash
 	return key
 }
 
+//指向数据内容的， "6"+"po位置"+"索引"
 func getDataKey(idx uint64, po uint8) []byte {
 	key := make([]byte, 10)
 	key[0] = keyData
@@ -264,7 +265,7 @@ func getDataKey(idx uint64, po uint8) []byte {
 
 	return key
 }
-
+//指向垃圾收集的："9"+index
 func getGCIdxKey(index *dpaDBIndex) []byte {
 	key := make([]byte, 9)
 	key[0] = keyGCIdx
@@ -783,6 +784,7 @@ func (s *LDBStore) Put(ctx context.Context, chunk Chunk) error {
 	ikey := getIndexKey(chunk.Address())
 	var index dpaDBIndex
 
+	//算出PO位置
 	po := s.po(chunk.Address())
 
 	s.lock.Lock()
@@ -824,7 +826,7 @@ func (s *LDBStore) Put(ctx context.Context, chunk Chunk) error {
 func (s *LDBStore) doPut(chunk Chunk, index *dpaDBIndex, po uint8) {
 	data := s.encodeDataFunc(chunk)
 	dkey := getDataKey(s.dataIdx, po)
-	s.batch.Put(dkey, data)
+	s.batch.Put(dkey, data) //Aegon TODO: 这里需要改造，存入到通用的存储器中
 	index.Idx = s.dataIdx
 	s.bucketCnt[po] = s.dataIdx
 	s.entryCnt++

@@ -232,6 +232,7 @@ func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *Ch
 				req.peer.Drop(err)
 			}
 		}
+		//用最低的优先级，发送一个
 	}()
 	return nil
 }
