@@ -396,7 +396,7 @@ func getPassPhrase(prompt string, i int, passwords []string) string {
 	}
 	password, err := console.Stdin.PromptPassword("Passphrase: ")
 	if err != nil {
-		utils.Fatalf("Failed to read passphrase: %v", err)
+		//utils.Fatalf("Failed to read passphrase: %v", err)
 	}
 	return password
 }

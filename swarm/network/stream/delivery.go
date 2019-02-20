@@ -20,14 +20,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/plotozhu/MDCMainnet/swarm/state"
 
+	"github.com/opentracing/opentracing-go"
 	"github.com/plotozhu/MDCMainnet/metrics"
 	"github.com/plotozhu/MDCMainnet/p2p/enode"
 	"github.com/plotozhu/MDCMainnet/swarm/log"
 	"github.com/plotozhu/MDCMainnet/swarm/network"
 	"github.com/plotozhu/MDCMainnet/swarm/spancontext"
 	"github.com/plotozhu/MDCMainnet/swarm/storage"
-	opentracing "github.com/opentracing/opentracing-go"
 )
 
 const (
@@ -48,12 +49,14 @@ type Delivery struct {
 	chunkStore storage.SyncChunkStore
 	kad        *network.Kademlia
 	getPeer    func(enode.ID) *Peer
+	receiptStore *state.ReceiptStore
 }
 
-func NewDelivery(kad *network.Kademlia, chunkStore storage.SyncChunkStore) *Delivery {
+func NewDelivery(kad *network.Kademlia, chunkStore storage.SyncChunkStore,receiptStore *state.ReceiptStore) *Delivery {
 	return &Delivery{
 		chunkStore: chunkStore,
 		kad:        kad,
+		receiptStore:receiptStore,
 	}
 }
 
@@ -180,6 +183,8 @@ func (d *Delivery) handleRetrieveRequestMsg(ctx context.Context, sp *Peer, req *
 			err = sp.Deliver(ctx, chunk, s.priority, syncing)
 			if err != nil {
 				log.Warn("ERROR in handleRetrieveRequestMsg", "err", err)
+			}else {
+				d.receiptStore.OnChunkDelivered(sp.ID())
 			}
 			return
 		}
@@ -211,7 +216,7 @@ type ChunkDeliveryMsgSyncing ChunkDeliveryMsg
 
 // TODO: Fix context SNAFU
 //a new chunk delivery has been arrived
-func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *ChunkDeliveryMsg) error {
+func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *ChunkDeliveryMsg,replyReceipt bool) error {
 	var osp opentracing.Span
 	ctx, osp = spancontext.StartSpan(
 		ctx,
@@ -232,7 +237,22 @@ func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *Ch
 				req.peer.Drop(err)
 			}
 		}
-		//用最低的优先级，发送一个
+		if replyReceipt { //TODO 优化每隔10帧或是10秒发送一次收据
+			//用最低的优先级，发送一个收据
+			receipt,err := d.receiptStore.OnNodeChunkReceived(sp.ID())
+			if err == nil {
+				err = sp.SendPriority(ctx, &ReceiptsMsg{receipt.NodeId,receipt.Stime,receipt.Amount,receipt.Sign}, Mid)
+				if err != nil {
+					log.Warn("send receipt failed", "peer", sp.ID(), "error", err, )
+				}
+
+			}else{
+				log.Warn("create receipt failed", "peer", sp.ID(), "error", err, )
+			}
+		}
+
+
+
 	}()
 	return nil
 }
@@ -284,4 +304,9 @@ func (d *Delivery) RequestFromPeers(ctx context.Context, req *network.Request) (
 	requestFromPeersEachCount.Inc(1)
 
 	return spID, sp.quit, nil
+}
+func (d *Delivery) handleReceiptsMsg(sp *Peer,receipt *ReceiptsMsg) error{
+
+	return d.receiptStore.OnNewReceipt(&state.Receipt{state.ReceiptBody{receipt.PA,receipt.STime,receipt.AMount},receipt.Sig})
+
 }

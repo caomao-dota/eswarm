@@ -3,10 +3,13 @@ package state
 import (
 	"crypto/ecdsa"
 	"errors"
+	"github.com/plotozhu/MDCMainnet/common/hexutil"
 	"github.com/plotozhu/MDCMainnet/crypto"
 	"golang.org/x/crypto/sha3"
 	"io"
 	"math/big"
+	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -213,6 +216,7 @@ func (rs *Receipts) DecodeRLP(s *rlp.Stream) error{
 	return err
 }
 
+
 func (rs *Receipts) CurrentReceipt(nodeId enode.ID) *ReceiptData{
 
 	result,ok := (*rs)[nodeId]
@@ -239,7 +243,11 @@ type ReceiptStore struct {
 	cmu sync.RWMutex
 	hmu sync.RWMutex
 }
-func NewReceiptsStore(newDb *leveldb.DB,prvKey *ecdsa.PrivateKey) *ReceiptStore {
+func NewReceiptsStore(filePath string,prvKey *ecdsa.PrivateKey) (*ReceiptStore,error){
+	db,err := leveldb.OpenFile(filePath,nil)
+	return newReceiptsStore(db,prvKey),err
+}
+func newReceiptsStore(newDb *leveldb.DB,prvKey *ecdsa.PrivateKey) *ReceiptStore {
 	store := ReceiptStore{
 		nodeId:enode.PubkeyToIDV4(&prvKey.PublicKey),
 		db:newDb,
@@ -249,7 +257,8 @@ func NewReceiptsStore(newDb *leveldb.DB,prvKey *ecdsa.PrivateKey) *ReceiptStore 
 	}
 	store.nodeCommCache,_ =  lru.New(MAX_C_REC_LIMIT)
 
-	store.Init();
+	store.Init()
+	go store.submitRoutine()
 	return &store
 }
 func (rs *ReceiptStore) Init(){
@@ -446,8 +455,36 @@ func (rs *ReceiptStore) extractReportReceipts() Receipts {
 	}
 	return result
 }
-func (rs *ReceiptStore) GetLastSTimeOfNode(nodeId enode.ID) {
+func (rs *ReceiptStore) doAutoSubmit() error {
+	receipts := rs.GetReceiptsToReport()
+	result,err := rlp.EncodeToBytes(receipts)
 
+	data := url.Values{}
+	data["nodeId"] = []string{rs.nodeId.String()}
+	data["receipts"] = []string{hexutil.Encode(result)}
+	_,err = http.PostForm("xxxxxxx",  data)
+
+
+	if err == nil { //提交成功，本地删除
+
+	}else {
+		//提交失败，本地存储
+		rs.saveReceipts(RPREF,receipts)
+	}
+	return err
+}
+
+func (rs *ReceiptStore)submitRoutine(){
+	timer := time.NewTimer(MAX_STIME_DURATION)
+	rs.doAutoSubmit()
+	for {
+		select {
+			case <- timer.C:
+				timer.Reset(MAX_STIME_DURATION)
+				 rs.doAutoSubmit()
+
+		}
+	}
 }
 /**
 	每次数据传输完成后，用这个通知ReceiptStore，用于计数某些节点发送的总Chunk和收到的收据

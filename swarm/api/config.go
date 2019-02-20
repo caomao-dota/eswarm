@@ -139,3 +139,5 @@ func (c *Config) ShiftPrivateKey() (privKey *ecdsa.PrivateKey) {
 	}
 	return privKey
 }
+
+func (c *Config)GetPrivateKey() (privKey *ecdsa.PrivateKey) { return c.privateKey }

@@ -588,17 +588,20 @@ func (p *Peer) HandleMsg(ctx context.Context, msg interface{}) error {
 
 	case *ChunkDeliveryMsgRetrieval:
 		// handling chunk delivery is the same for retrieval and syncing, so let's cast the msg
-		return p.streamer.delivery.handleChunkDeliveryMsg(ctx, p, ((*ChunkDeliveryMsg)(msg)))
+		return p.streamer.delivery.handleChunkDeliveryMsg(ctx, p, ((*ChunkDeliveryMsg)(msg)),true)
 
 	case *ChunkDeliveryMsgSyncing:
 		// handling chunk delivery is the same for retrieval and syncing, so let's cast the msg
-		return p.streamer.delivery.handleChunkDeliveryMsg(ctx, p, ((*ChunkDeliveryMsg)(msg)))
+		return p.streamer.delivery.handleChunkDeliveryMsg(ctx, p, ((*ChunkDeliveryMsg)(msg)),false)
 
 	case *RetrieveRequestMsg:
 		return p.streamer.delivery.handleRetrieveRequestMsg(ctx, p, msg)
 
 	case *RequestSubscriptionMsg:
 		return p.handleRequestSubscription(ctx, msg)
+
+	case *ReceiptsMsg:
+		return p.streamer.delivery.handleReceiptsMsg(p,((*ReceiptsMsg)(msg)))
 
 	case *QuitMsg:
 		return p.handleQuitMsg(msg)

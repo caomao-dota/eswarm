@@ -419,23 +419,14 @@ func (p *Peer) handleTakeoverProofMsg(ctx context.Context, req *TakeoverProofMsg
 	// store the strongest takeoverproof for the stream in streamer
 	return err
 }
-//双方确认STIME的消息， 由服务端向客户端发送，
-// 1. 如果客户端认可，就可能会向该服务端请求检索数据;
-// 2. 如果客户端不认可，那么就重新设置一个STime,把StartAmount设置成0,然后向服务端发送
-// 3. 如果服务端不认可客户端，就断开该peer的连接
-type STimeHandShake struct {
-	Stime    	time.Time	//收据的标志
-	StartAmount uint16		//目前该收据的开始数量
-	ChunkPrice  uint16      //该服务每Chunk将要收取的费用，其准是10000，最高65535，一般来说，普通的矿工节点是10000，而中心化矿工的价格是11000
-	status      uint8		//状态：1 服务端向客户端发送   2 客户端向服务端发送
-}
+
 //收据消息，客户端从服务端收到检索的回应数据后，通过此格式向服务端发送签名
 //如果客户端总是向服务端提交一个新签名，即STime为新的，AMount为0，那么服务端就可以断开该客户端的连接，并将该节点加入黑名单
 //签名的收据总是用最低优先级发送，并且如果有新的可覆盖签名出现时，使用新的签名，可以直接丢弃老的签名
 type ReceiptsMsg struct {
 	PA      enode.ID
 	STime   time.Time
-	AMount	uint16
+	AMount	uint32
 	Sig     []byte
 }
 

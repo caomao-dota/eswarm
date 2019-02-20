@@ -79,6 +79,7 @@ type Swarm struct {
 	ps                *pss.Pss
 	swap              *swap.Swap
 	stateStore        *state.DBStore
+	receiptsStore	  *state.ReceiptStore
 	accountingMetrics *protocols.AccountingMetrics
 
 	tracerClose io.Closer
@@ -129,6 +130,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 		LightNode:   config.LightNodeEnabled, //是否为轻节点，终端节点或是移动节点
 	}
 
+	self.receiptsStore,err = state.NewReceiptsStore(filepath.Join(config.Path, "receipts.db"),self.privateKey)
 	//commenter:Tony  状态存储
 	self.stateStore, err = state.NewDBStore(filepath.Join(config.Path, "state-store.db"))
 	if err != nil {
@@ -169,8 +171,8 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 		common.FromHex(config.BzzKey),
 		network.NewKadParams(),
 	)
-	//// 目前感觉Delivery是用来传递hash组，而Fetcher是用来取某一个hash所对应的chunk的数据的
-	delivery := stream.NewDelivery(to, self.netStore)
+	//// delivery响应fetcher的请求，将对应的数据返回
+	delivery := stream.NewDelivery(to, self.netStore,self.receiptsStore)
 	//创建一个fetcher工厂,然后传递给netStore，该工厂在需要读取chunk的时候，创建一个fetccher对象进行chunk读取，读取完毕后，销毁该对像
 	self.netStore.NewNetFetcherFunc = network.NewFetcherFactory(delivery.RequestFromPeers, config.DeliverySkipCheck).New
 

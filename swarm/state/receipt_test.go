@@ -69,7 +69,7 @@ func createReceiptStore(t *testing.T,index int) *ReceiptStore{
 	 if err != nil {
 	 	t.Error(err)
 	 }
-	 receiptStore := NewReceiptsStore(db,getOrCreateKey(index))
+	 receiptStore := newReceiptsStore(db,getOrCreateKey(index))
 
 	 return receiptStore
  }
@@ -118,7 +118,7 @@ func Test_Signature(t *testing.T){
 }
 
  func cloneStore(store *ReceiptStore) *ReceiptStore{
-	 receiptStore := NewReceiptsStore(store.db,store.prvKey)
+	 receiptStore := newReceiptsStore(store.db,store.prvKey)
 
 	 return receiptStore
  }
