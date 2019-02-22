@@ -289,7 +289,7 @@ func (f *Fetcher) doRequest(ctx context.Context, gone chan *enode.ID, peersToSki
 	for i = 0; i < len(sources); i++ {
 		req.Source = sources[i]
 		var err error
-		sourceID, quit, err = f.protoRequestFunc(ctx, req)
+		sourceID, quit, err = f.protoRequestFunc(ctx, req) //调用了delivery.RequestFromPeers找到节点，发送一个request请求，实现数据读取
 		if err == nil {
 			// remove the peer from known sources
 			// Note: we can modify the source although we are looping on it, because we break from the loop immediately
@@ -303,14 +303,18 @@ func (f *Fetcher) doRequest(ctx context.Context, gone chan *enode.ID, peersToSki
 	if !foundSource {
 		req.Source = nil
 		var err error
-		sourceID, quit, err = f.protoRequestFunc(ctx, req)
+		sourceID, quit, err = f.protoRequestFunc(ctx, req) //调用了delivery.RequestFromPeers，找到节点，发送一个request请求，实现数据读取
 		if err != nil {
 			// if no peers found to request from
 			return sources, err
 		}
 	}
+	//到这里为止，表示数据都没有获取到，可以从中心化服务器上去取了
+
 	// add peer to the set of peers to skip from now
 	peersToSkip.Store(sourceID.String(), time.Now())
+
+
 
 	// if the quit channel is closed, it indicates that the source peer we requested from
 	// disconnected or terminated its streamer

@@ -17,18 +17,22 @@
 package stream
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"github.com/plotozhu/MDCMainnet/swarm/state"
-
 	"github.com/opentracing/opentracing-go"
 	"github.com/plotozhu/MDCMainnet/metrics"
 	"github.com/plotozhu/MDCMainnet/p2p/enode"
 	"github.com/plotozhu/MDCMainnet/swarm/log"
 	"github.com/plotozhu/MDCMainnet/swarm/network"
 	"github.com/plotozhu/MDCMainnet/swarm/spancontext"
+	"github.com/plotozhu/MDCMainnet/swarm/state"
 	"github.com/plotozhu/MDCMainnet/swarm/storage"
+	"io"
+	"net/http"
+	"sync"
+	"time"
 )
 
 const (
@@ -46,10 +50,12 @@ var (
 )
 
 type Delivery struct {
-	chunkStore storage.SyncChunkStore
-	kad        *network.Kademlia
-	getPeer    func(enode.ID) *Peer
-	receiptStore *state.ReceiptStore
+	chunkStore 		storage.SyncChunkStore
+	kad        		*network.Kademlia
+	getPeer    		func(enode.ID) *Peer
+	receiptStore 	*state.ReceiptStore
+	centralNodes	[]string
+	mu  		    sync.RWMutex
 }
 
 func NewDelivery(kad *network.Kademlia, chunkStore storage.SyncChunkStore,receiptStore *state.ReceiptStore) *Delivery {
@@ -264,12 +270,15 @@ func (d *Delivery) RequestFromPeers(ctx context.Context, req *network.Request) (
 	var sp *Peer
 	spID := req.Source
 
-	if spID != nil { //自动恢复来源地址，这样第一个发出的节点，可以不需要带上自身的地址
+	if spID != nil { //有直接的请求地址可以取
 		sp = d.getPeer(*spID)
 		if sp == nil {
 			return nil, nil, fmt.Errorf("source peer %v not found", spID.String())
 		}
 	} else {
+		//从KAD网络中，由近及远找到一个节点，向这个节点请求查询数据
+		//TODO 需要理解，为什么不是从这个地址所在的桶里去查找，而是从近到远的找
+		//比较容易理解的时，由于近的桶里的节点是直接连接好的，不需要重新连接，因此从最近的桶里找快一些，这个后面优化的时候分析一下
 		d.kad.EachConn(req.Addr[:], 255, func(p *network.Peer, po int) bool {
 			id := p.ID()
 			if p.LightNode {
@@ -305,6 +314,55 @@ func (d *Delivery) RequestFromPeers(ctx context.Context, req *network.Request) (
 
 	return spID, sp.quit, nil
 }
+func (d *Delivery) UpdateNodes(nodes []string) {
+	d.mu.Lock()
+	defer d.mu.Lock()
+	d.centralNodes = nodes
+}
+
+
+func (d *Delivery) getDataFromCentral(ctx context.Context,address storage.Address){
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	nodes_count := len(d.centralNodes)
+	//一个节点，一个小时内，总是只对一个中心节点取数据，这样提高收据合并的效率
+	nodeIndex := (time.Now().Hour() + int(d.receiptStore.NodeId().Bytes()[0])) % nodes_count
+	times := 0
+	go func(){
+		for times < nodes_count {
+			node,err := enode.ParseV4(d.centralNodes[nodeIndex])
+			if err == nil {
+				client := http.Client{Timeout: 5 * time.Second}
+				resp,err := client.Get("http://"+node.IP().String()+":8080/") //这个是阻塞型的
+
+				if err == nil {
+					 buffer := make([]byte,resp.ContentLength)
+					result := bytes.NewBuffer(nil)
+					parseOk := false;
+					for {
+						n, err := resp.Body.Read(buffer[0:])
+						result.Write(buffer[0:n])
+						if err != nil && err == io.EOF {
+							d.handleChunkDeliveryMsg(ctx,nil,&ChunkDeliveryMsg{address,result.Bytes(),nil},false)
+							parseOk = true;
+							break
+						} else if err != nil {
+							break;
+						}
+					}
+
+					if parseOk {
+						break;
+					}
+				}
+			}
+			nodeIndex = (nodeIndex +1 ) %nodes_count
+		}
+
+	}()
+
+}
+
 func (d *Delivery) handleReceiptsMsg(sp *Peer,receipt *ReceiptsMsg) error{
 
 	return d.receiptStore.OnNewReceipt(&state.Receipt{state.ReceiptBody{receipt.PA,receipt.STime,receipt.AMount},receipt.Sig})

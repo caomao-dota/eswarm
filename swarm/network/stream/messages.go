@@ -232,15 +232,15 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 	ctx = context.WithValue(ctx, "source", p.ID().String())
 	for i := 0; i < lenHashes; i += HashSize {
 		hash := hashes[i : i+HashSize]
-
+		//wait是一个函数，要么是一个fetcher函数，要么是nil(数据已经取了）
 		if wait := c.NeedData(ctx, hash); wait != nil {
 			ctr++
 			want.Set(i/HashSize, true)
 			// create request and wait until the chunk data arrives and is stored
 			go func(w func(context.Context) error) {
 				select {
-				case errC <- w(ctx): //要么error
-				case <-ctx.Done():   //要么完成
+				case errC <- w(ctx): // 	fetcher函数，从对方去取数据
+				case <-ctx.Done():   //
 				}
 			}(wait)
 		}

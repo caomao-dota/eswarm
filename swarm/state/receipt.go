@@ -261,6 +261,9 @@ func newReceiptsStore(newDb *leveldb.DB,prvKey *ecdsa.PrivateKey) *ReceiptStore 
 	go store.submitRoutine()
 	return &store
 }
+func (rs *ReceiptStore) NodeId() enode.ID{
+	return rs.nodeId
+}
 func (rs *ReceiptStore) Init(){
 	rs.loadCRecord()
 	rs.loadHRecord()
