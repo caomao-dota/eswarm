@@ -1,15 +1,16 @@
 package state
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"errors"
-	"github.com/plotozhu/MDCMainnet/common/hexutil"
 	"github.com/plotozhu/MDCMainnet/crypto"
 	"golang.org/x/crypto/sha3"
 	"io"
+	"io/ioutil"
+	"log"
 	"math/big"
 	"net/http"
-	"net/url"
 	"sync"
 	"time"
 
@@ -34,7 +35,7 @@ var (
 	RPREF = []byte("UNREPORTED")
 
 	MAX_STIME_DURATION  = 60*time.Minute   //生成收据时，一个STIME允许的最长时间
-	MAX_STIME_JITTER    = 120*time.Minute  //接收收据时，允许最长的时间差，超过这个时间的不再接收
+	MAX_STIME_JITTER    = 2*MAX_STIME_DURATION  //接收收据时，允许最长的时间差，超过这个时间的不再接收
 
 	)
 type ChunkDeliverItem struct {
@@ -458,18 +459,72 @@ func (rs *ReceiptStore) extractReportReceipts() Receipts {
 	}
 	return result
 }
+type ReceiptsOfReport struct {
+	Version byte
+	NodeId enode.ID
+	Receipts []rlpRD
+}
+
+
+func (rs *ReceiptStore) mockAutoSubmit() error {
+	result,err := rs.createReportData(rs.allReceipts)
+
+
+	ioutil.WriteFile("./reportData", result, 0644)
+
+	/*res,err  :=http.Post("http://127.0.0.1:8088","multipart/form-data",bytes.NewReader(result))
+
+	defer res.Body.Close()
+	if err == nil { //提交成功，本地删除
+
+		rs.saveReceipts(RPREF,Receipts{})
+	}else {
+		//提交失败，本地存储
+		rs.saveReceipts(RPREF,receipts)
+	}*/
+	return err
+}
+func (rs *ReceiptStore) createReportData(receipts Receipts) ([]byte,error){
+	receiptsArray := make([]rlpRD,0)
+	for _,item := range receipts  {
+		for stime,val := range item {
+			receiptsArray = append(receiptsArray,rlpRD{big.NewInt(stime.UnixNano()),val.Amount,val.Sign})
+		}
+
+	}
+	toReport := ReceiptsOfReport{
+		1,
+		rs.nodeId,
+		receiptsArray,
+	}
+	return rlp.EncodeToBytes(toReport)
+}
 func (rs *ReceiptStore) doAutoSubmit() error {
 	receipts := rs.GetReceiptsToReport()
-	result,err := rlp.EncodeToBytes(receipts)
 
-	data := url.Values{}
-	data["nodeId"] = []string{rs.nodeId.String()}
-	data["receipts"] = []string{hexutil.Encode(result)}
-	_,err = http.PostForm("xxxxxxx",  data)
+	result,err := rs.createReportData(receipts)
+
+
+	url := "http://127.0.0.1:8088"
+	timeout := time.Duration(5 * time.Millisecond)//超时时间50ms
+	client := &http.Client{
+		Timeout: timeout,
+	}
+
+	request, err := http.NewRequest("POST", url, bytes.NewReader(result))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	request.Header.Set("Content-Type", "multipart/form-data")
+
+	res, err := client.Do(request)
+
 
 
 	if err == nil { //提交成功，本地删除
-
+		defer res.Body.Close()
+		rs.saveReceipts(RPREF,Receipts{})
 	}else {
 		//提交失败，本地存储
 		rs.saveReceipts(RPREF,receipts)

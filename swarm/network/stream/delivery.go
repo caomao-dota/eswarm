@@ -321,7 +321,7 @@ func (d *Delivery) UpdateNodes(nodes []string) {
 }
 
 
-func (d *Delivery) getDataFromCentral(ctx context.Context,address storage.Address){
+func (d *Delivery) GetDataFromCentral(ctx context.Context,address storage.Address){
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 	nodes_count := len(d.centralNodes)
@@ -333,7 +333,7 @@ func (d *Delivery) getDataFromCentral(ctx context.Context,address storage.Addres
 			node,err := enode.ParseV4(d.centralNodes[nodeIndex])
 			if err == nil {
 				client := http.Client{Timeout: 5 * time.Second}
-				resp,err := client.Get("http://"+node.IP().String()+":8080/") //这个是阻塞型的
+				resp,err := client.Get("http://"+node.IP().String()+":8080/?chunk="+address.Hex()) //这个是阻塞型的
 
 				if err == nil {
 					 buffer := make([]byte,resp.ContentLength)

@@ -418,3 +418,7 @@ func Test_MultiStime(t *testing.T){
 	}
 	t.Log("Test multi stime  passed")
 }
+
+func Test_Submit(t *testing.T){
+	store4.mockAutoSubmit()
+}

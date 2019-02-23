@@ -38,7 +38,7 @@ const (
 var RequestTimeout = 10 * time.Second
 
 type RequestFunc func(context.Context, *Request) (*enode.ID, chan struct{}, error)
-
+type RequestCenterFunc  func(ctx context.Context,address storage.Address)
 // Fetcher is created when a chunk is not found locally. It starts a request handler loop once and
 // keeps it alive until all active requests are completed. This can happen:
 //     1. either because the chunk is delivered
@@ -47,6 +47,7 @@ type RequestFunc func(context.Context, *Request) (*enode.ID, chan struct{}, erro
 // TODO: cancel all forward requests after termination
 type Fetcher struct {
 	protoRequestFunc RequestFunc     // request function fetcher calls to issue retrieve request for a chunk
+	reqFromCenter     RequestCenterFunc
 	addr             storage.Address // the address of the chunk to be fetched
 	offerC           chan *enode.ID  // channel of sources (peer node id strings)
 	requestC         chan uint8      // channel for incoming requests (with the hopCount value in it)
@@ -93,13 +94,15 @@ func (r *Request) SkipPeer(nodeID string) bool {
 // FetcherFactory is initialised with a request function and can create fetchers
 type FetcherFactory struct {
 	request   RequestFunc
+	c_request RequestCenterFunc
 	skipCheck bool
 }
 
 // NewFetcherFactory takes a request function and skip check parameter and creates a FetcherFactory
-func NewFetcherFactory(request RequestFunc, skipCheck bool) *FetcherFactory {
+func NewFetcherFactory(request RequestFunc, requestFromCenter RequestCenterFunc, skipCheck bool) *FetcherFactory {
 	return &FetcherFactory{
 		request:   request,
+		c_request:requestFromCenter,
 		skipCheck: skipCheck,
 	}
 }
@@ -113,17 +116,18 @@ func NewFetcherFactory(request RequestFunc, skipCheck bool) *FetcherFactory {
   当需要读取chunk时，由FetcherFactory通过New来生成一个Fetcher，然后使用Fetcher.run来获取数据
  */
 func (f *FetcherFactory) New(ctx context.Context, source storage.Address, peersToSkip *sync.Map) storage.NetFetcher {
-	fetcher := NewFetcher(source, f.request, f.skipCheck)
+	fetcher := NewFetcher(source, f.request,f.c_request, f.skipCheck)
 	go fetcher.run(ctx, peersToSkip)
 	return fetcher
 }
 
 // NewFetcher creates a new Fetcher for the given chunk address using the given request function.
 //这是实际的fetcher获取者对象
-func NewFetcher(addr storage.Address, rf RequestFunc, skipCheck bool) *Fetcher {
+func NewFetcher(addr storage.Address, rf RequestFunc, crf RequestCenterFunc,skipCheck bool) *Fetcher {
 	return &Fetcher{
 		addr:             addr,
 		protoRequestFunc: rf,
+		reqFromCenter:		crf,
 		offerC:           make(chan *enode.ID), //哪些节点有数据
 		requestC:         make(chan uint8),     //需要的数据的Index号
 		searchTimeout:    defaultSearchTimeout,
@@ -311,6 +315,7 @@ func (f *Fetcher) doRequest(ctx context.Context, gone chan *enode.ID, peersToSki
 	}
 	//到这里为止，表示数据都没有获取到，可以从中心化服务器上去取了
 
+	f.reqFromCenter(ctx,f.addr)
 	// add peer to the set of peers to skip from now
 	peersToSkip.Store(sourceID.String(), time.Now())
 
