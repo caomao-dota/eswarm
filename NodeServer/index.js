@@ -104,7 +104,25 @@ function testReportData(){
         }
     })
 }
+var formidable = require('formidable'),
+    http = require('http'),
+    util = require('util');
+ 
+http.createServer(function(req, res) {
+  if (req.url == '/receipts' && req.method.toLowerCase() == 'post') {
 
+    var body = Buffer([]);   
+    req.on('data', function(chunk){
+      body = Buffer.concat([body,chunk]);
+    }).on('end',function(){
+       result =  parseReportReceipts(body)
+    })
+  }
+ 
+  // show a file upload form
+  res.writeHead(200, {'content-type': 'text/html'});
+  res.end();
+}).listen(8088);
 
 //dumpData();
 testReportData();

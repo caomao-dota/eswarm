@@ -466,24 +466,7 @@ type ReceiptsOfReport struct {
 }
 
 
-func (rs *ReceiptStore) mockAutoSubmit() error {
-	result,err := rs.createReportData(rs.allReceipts)
 
-
-	ioutil.WriteFile("./reportData", result, 0644)
-
-	/*res,err  :=http.Post("http://127.0.0.1:8088","multipart/form-data",bytes.NewReader(result))
-
-	defer res.Body.Close()
-	if err == nil { //提交成功，本地删除
-
-		rs.saveReceipts(RPREF,Receipts{})
-	}else {
-		//提交失败，本地存储
-		rs.saveReceipts(RPREF,receipts)
-	}*/
-	return err
-}
 func (rs *ReceiptStore) createReportData(receipts Receipts) ([]byte,error){
 	receiptsArray := make([]rlpRD,0)
 	for _,item := range receipts  {
@@ -499,14 +482,9 @@ func (rs *ReceiptStore) createReportData(receipts Receipts) ([]byte,error){
 	}
 	return rlp.EncodeToBytes(toReport)
 }
-func (rs *ReceiptStore) doAutoSubmit() error {
-	receipts := rs.GetReceiptsToReport()
-
-	result,err := rs.createReportData(receipts)
+func (rs *ReceiptStore)SendDataToServer(url string,timeout time.Duration,result []byte) error{
 
 
-	url := "http://127.0.0.1:8088"
-	timeout := time.Duration(5 * time.Millisecond)//超时时间50ms
 	client := &http.Client{
 		Timeout: timeout,
 	}
@@ -515,15 +493,29 @@ func (rs *ReceiptStore) doAutoSubmit() error {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	request.Header.Set("Content-Type", "multipart/form-data")
+	request.Header.Set("Connection", "Keep-Alive")
+	//request.Header.Set("Content-Type", "multipart/form-data")
 
 	res, err := client.Do(request)
+	if err == nil { //提交成功，本地删除
+		defer res.Body.Close()
+	}
+	return err
+}
+func (rs *ReceiptStore) doAutoSubmit() error {
+	receipts := rs.GetReceiptsToReport()
+
+	result,err := rs.createReportData(receipts)
+
+
+	url := "http://127.0.0.1:8080/receipts"
+	timeout := time.Duration(5 * time.Millisecond)//超时时间50ms
+	err = rs.SendDataToServer(url,timeout,result)
 
 
 
 	if err == nil { //提交成功，本地删除
-		defer res.Body.Close()
+
 		rs.saveReceipts(RPREF,Receipts{})
 	}else {
 		//提交失败，本地存储
@@ -531,7 +523,18 @@ func (rs *ReceiptStore) doAutoSubmit() error {
 	}
 	return err
 }
+func (rs *ReceiptStore) mockAutoSubmit() error {
+	result,err := rs.createReportData(rs.allReceipts)
 
+
+	ioutil.WriteFile("./reportData", result, 0644)
+
+	url := "http://127.0.0.1:8088/receipts"
+	timeout := time.Duration(50 * time.Millisecond)//超时时间50ms
+	err = rs.SendDataToServer(url,timeout,result)
+
+	return err
+}
 func (rs *ReceiptStore)submitRoutine(){
 	timer := time.NewTimer(MAX_STIME_DURATION)
 	rs.doAutoSubmit()
