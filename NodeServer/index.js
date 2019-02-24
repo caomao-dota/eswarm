@@ -29,7 +29,7 @@ function parseReceiptsV1(nodeId,coded_receipts){
                                "signature":receipt_item[2]
                             }   
                             data =Buffer.concat([receipts.account,receipt.stime,receipt.amount]);
-                            hash = ejsutil.keccak256(data)
+                            hash = ejsutil.rlphash(data)
 
                            
                             pubKey = secp256k1.recover(hash,receipt.signature.slice(0,64),1,true)
@@ -68,6 +68,7 @@ function parseReceiptsV1(nodeId,coded_receipts){
                 .signer  该收据的签名者，是从signature中恢复出来的
             }
         ]
+        .hash  以上所有的哈希值，用于验证是否提交过
     }
 
     应用层，通过parseReportReceipts处理后，产生一个如上述所记录的收据，应用根据这个收据作如下的计费：
@@ -95,15 +96,33 @@ function parseReportReceipts(data){
     }          
 }
 
-function testReportData(){
-    fs.readFile("../reportData",function(err,data){
-        if(!err){
-            parseReportReceipts(data)
-        }else{
-            console.log(err)
+
+function VerifyReport(data){
+    if(data.length < 65){
+        return undefined,"insufficent ata"
+    }else {
+        signature = data.slice(0,64)
+        recovery = data.slice(64,65)[0]
+        result   = data.slice(65,data.length)
+        hash = ejsutil.rlphash(result)
+
+
+        apubKey = secp256k1.recover(hash,signature,recovery,true)
+
+        apubKey_uc = secp256k1.recover(hash,signature,recovery,false)
+        signOk = secp256k1.verify(hash,signature,apubKey)
+
+        if(signOk){
+            receipt = {
+                receipts:parseReportReceipts(result),
+                hash:hash,
+                signer:ejsutil.pubToAddress(apubKey,true)
+            }
+            return receipt
         }
-    })
+    }
 }
+
 var formidable = require('formidable'),
     http = require('http'),
     util = require('util');
@@ -111,11 +130,11 @@ var formidable = require('formidable'),
 http.createServer(function(req, res) {
   if (req.url == '/receipts' && req.method.toLowerCase() == 'post') {
 
-    var body = Buffer([]);   
+    var body = Buffer.alloc(0);   
     req.on('data', function(chunk){
       body = Buffer.concat([body,chunk]);
     }).on('end',function(){
-       result =  parseReportReceipts(body)
+       result =  VerifyReport(body)
     })
   }
  
@@ -124,5 +143,28 @@ http.createServer(function(req, res) {
   res.end();
 }).listen(8088);
 
-//dumpData();
-testReportData();
+const { randomBytes } = require('crypto')
+function testSigner (){
+    // or require('secp256k1/elliptic')
+    //   if you want to use pure js implementation in node
+
+    // generate message to sign
+    const msg = randomBytes(32)
+
+    // generate privKey
+    let privKey
+    do {
+    privKey = randomBytes(32)
+    } while (!secp256k1.privateKeyVerify(privKey))
+
+    // get the public key in a compressed format
+    const pubKey = secp256k1.publicKeyCreate(privKey)
+
+    // sign the message
+    const sigObj = secp256k1.sign(msg, privKey)
+    pKey = secp256k1.recover(msg,sigObj.signature,sigObj.recovery,false)
+    msg[0] += 1
+    // verify the signature
+    console.log(secp256k1.verify(msg, sigObj.signature, pKey))
+    // => true
+}
