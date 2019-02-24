@@ -3,9 +3,12 @@ FROM golang:1.11-alpine as builder
 ARG VERSION
 
 RUN apk add --update git gcc g++ linux-headers
+
+
+
 RUN mkdir -p $GOPATH/src/github.com/plotozhu && \
     cd $GOPATH/src/github.com/plotozhu && \
-    git clone https://github.com/plotozhu/MDCMainnet && \
+    git clone https://2a2bce2b2dde8543f09ec27efd63f8fa7bbfa82f:@github.com/plotozhu/MDCMainnet && \
     cd $GOPATH/src/github.com/plotozhu/MDCMainnet && \
     git checkout ${VERSION} && \
     go install -ldflags "-X main.gitCommit=${VERSION}" ./cmd/swarm && \
