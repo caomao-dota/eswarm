@@ -74,6 +74,28 @@ func createReceiptStore(t *testing.T,index int) *ReceiptStore{
 	 return receiptStore
  }
 
+ func Test_SignAny(t *testing.T){
+ 	vkey,_ := crypto.GenerateKey()
+ 	hash := [32]byte{0x01}
+ 	for i:=0; i <32 ;i ++{
+ 		hash[i] = byte(i);
+	}
+
+ 	sign,err := crypto.Sign(hash[:],vkey)
+ 	if(err == nil){
+ 		hash[0] =0x70
+ 		pbkey,err := crypto.Ecrecover(hash[:],sign)
+ 		if err == nil {
+ 			 result := crypto.VerifySignature(pbkey,hash[:],sign[0:64])
+ 			 if(result) {
+ 			 	t.Log("any signature")
+ 			 	return
+			 }
+		}
+	}
+	 t.Log("any signature not passed")
+
+ }
  func Test_ReceiptRlp(t *testing.T) {
 	// atime := time.Unix(0,big.NewInt(time.Now().UnixNano()).Int64())
 	// t.Log(atime.Format("2006-01-02 15:04:01"))
@@ -420,5 +442,34 @@ func Test_MultiStime(t *testing.T){
 }
 
 func Test_Submit(t *testing.T){
+	store4.mockAutoSubmit()
+}
+
+func Test_Unordered2(t *testing.T){
+	receipts := make([]*Receipt,20)
+	unpaied := uint32(20)
+	for i := uint32(0); i < unpaied; i++ {
+		store4.OnChunkDelivered(store5.nodeId)
+		receipt,_ := store5.OnNodeChunkReceived(store4.nodeId)
+		receipts[i] = receipt
+	}
+	calcUnpaied,_ := store4.unpaidAmount[store5.nodeId]
+	if  calcUnpaied != unpaied {
+		t.Error("Test deliver counter failed: unpaiedAmount error")
+		return
+	}
+	Shuffle(receipts)
+
+	for i := uint32(0); i < unpaied; i++ {
+		store4.OnNewReceipt(receipts[i])
+	}
+
+
+	calcUnpaied,_ = store4.unpaidAmount[store5.nodeId]
+	if  calcUnpaied != 0  {
+		t.Error("Test unordered receipts failed: unpaiedAmount not reset")
+		return
+	}
+	t.Log("Test  unordered receipts passed")
 	store4.mockAutoSubmit()
 }

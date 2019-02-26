@@ -9,7 +9,6 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"math/big"
 	"net/http"
 	"sync"
 	"time"
@@ -57,14 +56,14 @@ type ReceiptData struct {
 	Signature []byte
 }
 type rlpRD struct {
-	Stime     *big.Int
+	Stime     uint32
 	Amount    uint32
 	Signature []byte
 }
 
 func (r ReceiptData) EncodeRLP(w io.Writer) error {
 
-	rs := &rlpRD{big.NewInt(r.Stime.UnixNano()), r.Amount, r.Signature}
+	rs := &rlpRD{uint32(r.Stime.Unix()), r.Amount, r.Signature}
 
 	return rlp.Encode(w, rs)
 }
@@ -73,7 +72,7 @@ func (rs *ReceiptData) DecodeRLP(s *rlp.Stream) error {
 	err := s.Decode(result)
 	if err == nil {
 		rs.Signature = result.Signature
-		rs.Stime = time.Unix(0, result.Stime.Int64())
+		rs.Stime = time.Unix( int64(result.Stime),0)
 		rs.Amount = result.Amount
 	}
 	return err
@@ -87,13 +86,13 @@ type ReceiptBody struct {
 }
 type rlpRB struct {
 	NodeId enode.ID
-	Stime  *big.Int
+	Stime  uint32
 	Amount uint32
 }
 
 func (r ReceiptBody) EncodeRLP(w io.Writer) error {
 
-	rs := &rlpRB{r.NodeId, big.NewInt(r.Stime.UnixNano()), r.Amount}
+	rs := &rlpRB{r.NodeId, uint32(r.Stime.Unix()), r.Amount}
 
 	return rlp.Encode(w, rs)
 }
@@ -102,7 +101,7 @@ func (rs *ReceiptBody) DecodeRLP(s *rlp.Stream) error {
 	err := s.Decode(result)
 	if err == nil {
 		rs.NodeId = result.NodeId
-		rs.Stime = time.Unix(0, result.Stime.Int64())
+		rs.Stime = time.Unix(int64(result.Stime),0)
 		rs.Amount = result.Amount
 	}
 	return err
@@ -479,7 +478,7 @@ func (rs *ReceiptStore) createReportData(receipts Receipts) ([]byte, error) {
 	receiptsArray := make([]rlpRD, 0)
 	for _, item := range receipts {
 		for stime, val := range item {
-			receiptsArray = append(receiptsArray, rlpRD{big.NewInt(stime.UnixNano()), val.Amount, val.Sign})
+			receiptsArray = append(receiptsArray, rlpRD{uint32(stime.Unix()), val.Amount, val.Sign})
 		}
 
 	}

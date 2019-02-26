@@ -316,7 +316,7 @@ func (d *Delivery) RequestFromPeers(ctx context.Context, req *network.Request) (
 }
 func (d *Delivery) UpdateNodes(nodes []string) {
 	d.mu.Lock()
-	defer d.mu.Lock()
+	defer d.mu.Unlock()
 	d.centralNodes = nodes
 }
 
@@ -325,41 +325,44 @@ func (d *Delivery) GetDataFromCentral(ctx context.Context,address storage.Addres
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 	nodes_count := len(d.centralNodes)
-	//一个节点，一个小时内，总是只对一个中心节点取数据，这样提高收据合并的效率
-	nodeIndex := (time.Now().Hour() + int(d.receiptStore.NodeId().Bytes()[0])) % nodes_count
-	times := 0
-	go func(){
-		for times < nodes_count {
-			node,err := enode.ParseV4(d.centralNodes[nodeIndex])
-			if err == nil {
-				client := http.Client{Timeout: 5 * time.Second}
-				resp,err := client.Get("http://"+node.IP().String()+":8080/?chunk="+address.Hex()) //这个是阻塞型的
+	if(nodes_count > 0){
+		//一个节点，一个小时内，总是只对一个中心节点取数据，这样提高收据合并的效率
+		nodeIndex := (time.Now().Hour() + int(d.receiptStore.NodeId().Bytes()[0])) % nodes_count
+		times := 0
+		go func(){
+			for times < nodes_count {
+			//	node,err := enode.ParseV4(d.centralNodes[nodeIndex])
+			//	if err == nil {
+					client := http.Client{Timeout: 5 * time.Second}
+					resp,err := client.Get(d.centralNodes[nodeIndex]+"/?chunk="+address.Hex()) //这个是阻塞型的
 
-				if err == nil {
-					 buffer := make([]byte,resp.ContentLength)
-					result := bytes.NewBuffer(nil)
-					parseOk := false;
-					for {
-						n, err := resp.Body.Read(buffer[0:])
-						result.Write(buffer[0:n])
-						if err != nil && err == io.EOF {
-							d.handleChunkDeliveryMsg(ctx,nil,&ChunkDeliveryMsg{address,result.Bytes(),nil},false)
-							parseOk = true;
-							break
-						} else if err != nil {
+					if err == nil && resp.StatusCode == 200 {
+						buffer := make([]byte,resp.ContentLength)
+						result := bytes.NewBuffer(nil)
+						parseOk := false;
+						for {
+							n, err := resp.Body.Read(buffer[0:])
+							result.Write(buffer[0:n])
+							if err != nil && err == io.EOF {
+								d.handleChunkDeliveryMsg(ctx,nil,&ChunkDeliveryMsg{address,result.Bytes(),nil},false)
+								parseOk = true;
+								break
+							} else if err != nil {
+								break;
+							}
+						}
+
+						if parseOk {
 							break;
 						}
-					}
-
-					if parseOk {
-						break;
-					}
+					//}
 				}
+				nodeIndex = (nodeIndex +1 ) %nodes_count
 			}
-			nodeIndex = (nodeIndex +1 ) %nodes_count
-		}
 
-	}()
+		}()
+	}
+
 
 }
 

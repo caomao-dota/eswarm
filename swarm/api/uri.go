@@ -86,7 +86,7 @@ func Parse(rawuri string) (*URI, error) {
 
 	// check the scheme is valid
 	switch uri.Scheme {
-	case "bzz", "bzz-raw", "bzz-immutable", "bzz-list", "bzz-hash", "bzz-feed":
+	case "bzz", "bzz-raw", "bzz-immutable", "bzz-list", "bzz-hash", "bzz-feed","chunk":
 	default:
 		return nil, fmt.Errorf("unknown scheme %q", u.Scheme)
 	}
@@ -127,7 +127,9 @@ func (u *URI) List() bool {
 func (u *URI) Hash() bool {
 	return u.Scheme == "bzz-hash"
 }
-
+func (u *URI) Chunk() bool {
+	return u.Scheme == "chunk"
+}
 func (u *URI) String() string {
 	return u.Scheme + ":/" + u.Addr + "/" + u.Path
 }

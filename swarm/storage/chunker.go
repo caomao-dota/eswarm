@@ -453,8 +453,9 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 	// }
 	var treeSize int64
 	var depth int
-	// calculate depth and max treeSize
+	// calculate depth and max treeSize 计算要多少层
 	treeSize = r.chunkSize
+	// depth = log (r.branches) (size)
 	for ; treeSize < size; treeSize *= r.branches {
 		depth++
 	}

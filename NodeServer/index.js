@@ -116,9 +116,10 @@ function VerifyReport(data){
             receipt = {
                 receipts:parseReportReceipts(result),
                 hash:hash,
-                signer:ejsutil.pubToAddress(apubKey,true)
+                signer:ejsutil.pubToAddress(apubKey_uc,true)
             }
-            return receipt
+            if(receipt.signer == receipt.receipts.account)
+                return receipt
         }
     }
 }
