@@ -513,7 +513,7 @@ func (rs *ReceiptStore) SendDataToServer(url string, timeout time.Duration, resu
 		log.Fatal(err)
 	}
 	request.Header.Set("Connection", "Keep-Alive")
-	//request.Header.Set("Content-Type", "multipart/form-data")
+	request.Header.Set("Content-Type", "text/plain")
 
 	res, err := client.Do(request)
 	if err == nil { //提交成功，本地删除
