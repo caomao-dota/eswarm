@@ -23,4 +23,4 @@ WORKDIR /
 COPY --from=builder /swarm /geth /swarm-smoke /
 ADD run.sh /run.sh
 ADD run-smoke.sh /run-smoke.sh
-ENTRYPOINT ["/run.sh"]
+#ENTRYPOINT ["/run.sh"]

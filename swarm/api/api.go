@@ -208,6 +208,10 @@ func NewAPI(fileStore *storage.FileStore, dns Resolver, feedHandler *feed.Handle
 func (a *API) Retrieve(ctx context.Context, addr storage.Address) (reader storage.LazySectionReader, isEncrypted bool) {
 	return a.fileStore.Retrieve(ctx, addr)
 }
+// Retrieve FileStore reader API
+func (a *API) RetrieveChunk(ctx context.Context, addr storage.Address) ( storage.Chunk,error) {
+	return a.fileStore.ChunkStore.Get(ctx, addr)
+}
 
 // Store wraps the Store API call of the embedded FileStore
 func (a *API) Store(ctx context.Context, data io.Reader, size int64, toEncrypt bool) (addr storage.Address, wait func(ctx context.Context) error, err error) {

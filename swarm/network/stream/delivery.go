@@ -334,7 +334,7 @@ func (d *Delivery) GetDataFromCentral(ctx context.Context,address storage.Addres
 			//	node,err := enode.ParseV4(d.centralNodes[nodeIndex])
 			//	if err == nil {
 					client := http.Client{Timeout: 5 * time.Second}
-					resp,err := client.Get(d.centralNodes[nodeIndex]+"/?chunk="+address.Hex()) //这个是阻塞型的
+					resp,err := client.Get(d.centralNodes[nodeIndex]+"/chunk:/"+address.Hex()) //这个是阻塞型的
 
 					if err == nil && resp.StatusCode == 200 {
 						buffer := make([]byte,resp.ContentLength)

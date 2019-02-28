@@ -22,6 +22,7 @@ package http
 import (
 	"bufio"
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -147,7 +148,22 @@ func NewServer(api *api.API, corsString string) *Server {
 			defaultMiddlewares...,
 		),
 	})
-
+	mux.Handle("/chunk:/", methodHandler{
+		"GET": Adapt(
+			http.HandlerFunc(server.HandleGetChunk),
+			defaultMiddlewares...,
+		),
+	})
+	mux.Handle("/metrics:/", methodHandler{
+		"GET": Adapt(
+			http.HandlerFunc(server.HandleGetMetrics),
+			defaultMiddlewares...,
+		),
+		"POST": Adapt(
+			http.HandlerFunc(server.HandlePostMetrics),
+			defaultMiddlewares...,
+		),
+	})
 	mux.Handle("/", methodHandler{
 		"GET": Adapt(
 			http.HandlerFunc(server.HandleRootPaths),
@@ -173,6 +189,7 @@ type Server struct {
 	http.Handler
 	api        *api.API
 	listenAddr string
+	chunks     uint64
 }
 
 func (s *Server) HandleBzzGet(w http.ResponseWriter, r *http.Request) {
@@ -677,6 +694,103 @@ func (s *Server) HandleGet(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// HandleGet handles a GET request to
+// - chunk://<key> and responds with the raw content stored at the
+//   given storage key
+func (s *Server) HandleGetChunk(w http.ResponseWriter, r *http.Request) {
+
+	ruid := GetRUID(r.Context())
+	uri := GetURI(r.Context())
+	log.Debug("handle.getchunk", "ruid", ruid, "uri", uri)
+	getCount.Inc(1)
+	_, pass, _ := r.BasicAuth()
+
+	addr, err := s.api.ResolveURI(r.Context(), uri, pass)
+	if err != nil {
+		getFail.Inc(1)
+		respondError(w, r, fmt.Sprintf("cannot resolve %s: %s", uri.Addr, err), http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Cache-Control", "max-age=2147483648, immutable") // url was of type bzz://<hex key>/path, so we are sure it is immutable.
+
+	log.Debug("handle.get: resolved", "ruid", ruid, "key", addr)
+
+	// if path is set, interpret <key> as a manifest and return the
+	// raw entry at the given path
+
+	etag := common.Bytes2Hex(addr)
+	noneMatchEtag := r.Header.Get("If-None-Match")
+	w.Header().Set("ETag", fmt.Sprintf("%q", etag)) // set etag to manifest key or raw entry key.
+	if noneMatchEtag != "" {
+		if bytes.Equal(storage.Address(common.Hex2Bytes(noneMatchEtag)), addr) {
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+	}
+
+	// check the root chunk exists by retrieving the file's size
+	chunk, err := s.api.RetrieveChunk(r.Context(), addr)
+	if err != nil {
+		getFail.Inc(1)
+		respondError(w, r, fmt.Sprintf("root chunk not found %s: %s", addr, err), http.StatusNotFound)
+		return
+	}
+
+
+
+	switch {
+	case uri.Chunk():
+		// allow the request to overwrite the content type using a query
+		// parameter
+		if typ := r.URL.Query().Get("content_type"); typ != "" {
+			w.Header().Set("Content-Type", "application/octet-stream")
+		}
+		s.chunks++
+		w.Write(chunk.Data())
+
+
+	}
+}
+// HandleGet handles a GET request to
+// - chunk://<key> and responds with the raw content stored at the
+//   given storage key
+func (s *Server) HandleGetMetrics(w http.ResponseWriter, r *http.Request) {
+	ruid := GetRUID(r.Context())
+	uri := GetURI(r.Context())
+	log.Debug("handle.metrics", "ruid", ruid, "uri", uri)
+	getCount.Inc(1)
+
+
+
+
+
+	switch {
+	case uri.Metrics():
+		// allow the request to overwrite the content type using a query
+		// parameter
+		w.Header().Set("Content-Type", "application/octet-stream")
+		var buf = make([]byte, 4)
+		binary.BigEndian.PutUint32(buf, uint32(s.chunks))
+		w.Write(buf)
+
+
+	}
+}
+
+// HandleGet handles a GET request to
+// - chunk://<key> and responds with the raw content stored at the
+//   given storage key
+func (s *Server) HandlePostMetrics(w http.ResponseWriter, r *http.Request) {
+	ruid := GetRUID(r.Context())
+	uri := GetURI(r.Context())
+	log.Debug("handle.setmetrics", "ruid", ruid, "uri", uri)
+	getCount.Inc(1)
+	w.Header().Set("Content-Type", "application/octet-stream")
+	s.chunks = 0
+	var buf = make([]byte, 4)
+	binary.BigEndian.PutUint32(buf, uint32(s.chunks))
+	w.Write(buf)
+}
 // HandleGetList handles a GET request to bzz-list:/<manifest>/<path> and returns
 // a list of all files contained in <manifest> under <path> grouped into
 // common prefixes using "/" as a delimiter
