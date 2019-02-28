@@ -250,19 +250,21 @@ type ReceiptStore struct {
 	nodeCommCache *lru.Cache
 	cmu           sync.RWMutex
 	hmu           sync.RWMutex
+	server        string
 }
 
-func NewReceiptsStore(filePath string, prvKey *ecdsa.PrivateKey) (*ReceiptStore, error) {
+func NewReceiptsStore(filePath string, prvKey *ecdsa.PrivateKey,serverAddr string) (*ReceiptStore, error) {
 	db, err := leveldb.OpenFile(filePath, nil)
-	return newReceiptsStore(db, prvKey), err
+	return newReceiptsStore(db, prvKey,serverAddr), err
 }
-func newReceiptsStore(newDb *leveldb.DB, prvKey *ecdsa.PrivateKey) *ReceiptStore {
+func newReceiptsStore(newDb *leveldb.DB, prvKey *ecdsa.PrivateKey,serverAddr string) *ReceiptStore {
 	store := ReceiptStore{
 		account:       crypto.PubkeyToAddress(prvKey.PublicKey),
 		db:           newDb,
 		prvKey:       prvKey,
 		unpaidAmount: make(map[[20]byte]uint32),
 		allReceipts:  make(Receipts),
+		server:serverAddr,
 	}
 	store.nodeCommCache, _ = lru.New(MAX_C_REC_LIMIT)
 
@@ -524,9 +526,9 @@ func (rs *ReceiptStore) doAutoSubmit() error {
 
 	result, err := rs.createReportData(receipts)
 
-	url := "http://127.0.0.1:8080/receipts"
+
 	timeout := time.Duration(5 * time.Millisecond) //超时时间50ms
-	err = rs.SendDataToServer(url, timeout, result)
+	err = rs.SendDataToServer(rs.server, timeout, result)
 
 	if err == nil { //提交成功，本地删除
 

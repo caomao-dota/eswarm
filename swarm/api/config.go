@@ -71,6 +71,8 @@ type Config struct {
 	Cors                 string
 	BzzAccount           string
 	privateKey           *ecdsa.PrivateKey
+	ServerAddr           string
+	CentralAddr          []string
 }
 
 //create a default config with all parameters to set to defaults
@@ -96,6 +98,8 @@ func NewConfig() (c *Config) {
 		DeliverySkipCheck:    true,
 		SyncUpdateDelay:      15 * time.Second,
 		SwapAPI:              "",
+		ServerAddr:           "http://192.168.1.20:4000/apis/v1/receipts",
+		CentralAddr:          []string{"http://192.168.1.20:8500"},
 	}
 
 	return
