@@ -67,7 +67,7 @@ type BzzConfig struct {
 	HiveParams   *HiveParams
 	NetworkID    uint64
 	LightNode    bool
-	BzzAccount   []byte
+	BzzAccount   [20]byte
 }
 
 // Bzz is the swarm protocol bundle
@@ -80,7 +80,7 @@ type Bzz struct {
 	handshakes   map[enode.ID]*HandshakeMsg
 	streamerSpec *protocols.Spec
 	streamerRun  func(*BzzPeer) error
-	bzzAccount   []byte
+	bzzAccount   [20]byte
 }
 
 // NewBzz is the swarm protocol constructor
@@ -212,6 +212,8 @@ func (b *Bzz) performHandshake(p *protocols.Peer, handshake *HandshakeMsg) error
 	}
 	handshake.peerAddr = rsh.(*HandshakeMsg).Addr
 	handshake.LightNode = rsh.(*HandshakeMsg).LightNode
+	handshake.Account = rsh.(*HandshakeMsg).Account
+	p.SetAccount(handshake.Account)
 	return nil
 }
 
@@ -273,7 +275,7 @@ type HandshakeMsg struct {
 	NetworkID uint64
 	Addr      *BzzAddr
 	LightNode bool
-	Account   []byte
+	Account   [20]byte
 
 	// peerAddr is the address received in the peer handshake
 	peerAddr *BzzAddr

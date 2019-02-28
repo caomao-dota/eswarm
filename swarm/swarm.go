@@ -118,6 +118,9 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 
 	config.HiveParams.Discovery = true
 
+	account := [20]byte{}
+	copy(account[:],common.FromHex(config.BzzAccount))
+
 	bzzconfig := &network.BzzConfig{
 		NetworkID:   config.NetworkID,				//网络ID
 		OverlayAddr: common.FromHex(config.BzzKey), //自身的掩码地址
@@ -127,7 +130,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 		MaxPeersPerRequest    uint8 // max size for peer address batches
 		KeepAliveInterval     time.Duration
 		*/
-		BzzAccount:common.FromHex(config.BzzAccount),
+		BzzAccount:[20]byte(account),
 		LightNode:   config.LightNodeEnabled, //是否为轻节点，终端节点或是移动节点
 	}
 

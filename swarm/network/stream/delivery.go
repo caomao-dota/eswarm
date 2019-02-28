@@ -193,7 +193,7 @@ func (d *Delivery) handleRetrieveRequestMsg(ctx context.Context, sp *Peer, req *
 			if err != nil {
 				log.Warn("ERROR in handleRetrieveRequestMsg", "err", err)
 			}else {
-				d.receiptStore.OnChunkDelivered(sp.ID())
+				d.receiptStore.OnChunkDelivered(sp.Account())
 			}
 			return
 		}
@@ -251,7 +251,7 @@ func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *Ch
 			//用最低的优先级，发送一个收据
 			receipt,err := d.receiptStore.OnNodeChunkReceived(hs.Account)
 			if err == nil {
-				err = sp.SendPriority(ctx, &ReceiptsMsg{receipt.NodeId,receipt.Stime,receipt.Amount,receipt.Sign}, Mid)
+				err = sp.SendPriority(ctx, &ReceiptsMsg{receipt.Account,receipt.Stime,receipt.Amount,receipt.Sign}, Mid)
 				if err != nil {
 					log.Warn("send receipt failed", "peer", sp.ID(), "error", err, )
 				}
@@ -331,7 +331,7 @@ func (d *Delivery) GetDataFromCentral(ctx context.Context,address storage.Addres
 	nodes_count := len(d.centralNodes)
 	if(nodes_count > 0){
 		//一个节点，一个小时内，总是只对一个中心节点取数据，这样提高收据合并的效率
-		nodeIndex := (time.Now().Hour() + int(d.receiptStore.NodeId().Bytes()[0])) % nodes_count
+		nodeIndex := (time.Now().Hour() + int(d.receiptStore.Account()[0])) % nodes_count
 		times := 0
 		go func(){
 			for times < nodes_count {

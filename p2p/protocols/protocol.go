@@ -208,6 +208,7 @@ type Peer struct {
 	*p2p.Peer                   // the p2p.Peer object representing the remote
 	rw        p2p.MsgReadWriter // p2p.MsgReadWriter to send messages to and read messages from
 	spec      *Spec
+	account   [20]byte
 }
 
 // NewPeer constructs a new peer
@@ -222,6 +223,12 @@ func NewPeer(p *p2p.Peer, rw p2p.MsgReadWriter, spec *Spec) *Peer {
 	}
 }
 
+func (p *Peer) SetAccount(account [20]byte){
+	p.account = account
+}
+func (p *Peer) Account() [20]byte {
+	return p.account
+}
 // Run starts the forever loop that handles incoming messages
 // called within the p2p.Protocol#Run function
 // the handler argument is a function which is called for each message received

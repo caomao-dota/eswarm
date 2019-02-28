@@ -19,7 +19,6 @@ package stream
 import (
 	"context"
 	"fmt"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
@@ -424,7 +423,7 @@ func (p *Peer) handleTakeoverProofMsg(ctx context.Context, req *TakeoverProofMsg
 //如果客户端总是向服务端提交一个新签名，即STime为新的，AMount为0，那么服务端就可以断开该客户端的连接，并将该节点加入黑名单
 //签名的收据总是用最低优先级发送，并且如果有新的可覆盖签名出现时，使用新的签名，可以直接丢弃老的签名
 type ReceiptsMsg struct {
-	PA      enode.ID
+	PA      [20]byte
 	STime   time.Time
 	AMount	uint32
 	Sig     []byte
