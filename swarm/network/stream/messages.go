@@ -424,7 +424,7 @@ func (p *Peer) handleTakeoverProofMsg(ctx context.Context, req *TakeoverProofMsg
 //签名的收据总是用最低优先级发送，并且如果有新的可覆盖签名出现时，使用新的签名，可以直接丢弃老的签名
 type ReceiptsMsg struct {
 	PA      [20]byte
-	STime   time.Time
+	STime   uint32
 	AMount	uint32
 	Sig     []byte
 }

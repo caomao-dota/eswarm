@@ -251,7 +251,7 @@ func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *Ch
 			//用最低的优先级，发送一个收据
 			receipt,err := d.receiptStore.OnNodeChunkReceived(hs.Account)
 			if err == nil {
-				err = sp.SendPriority(ctx, &ReceiptsMsg{receipt.Account,receipt.Stime,receipt.Amount,receipt.Sign}, Mid)
+				err = sp.SendPriority(ctx, &ReceiptsMsg{receipt.Account,uint32(receipt.Stime.Unix()),receipt.Amount,receipt.Sign}, Mid)
 				if err != nil {
 					log.Warn("send receipt failed", "peer", sp.ID(), "error", err, )
 				}
@@ -364,6 +364,6 @@ func (d *Delivery) GetDataFromCentral(ctx context.Context,address storage.Addres
 
 func (d *Delivery) handleReceiptsMsg(sp *Peer,receipt *ReceiptsMsg) error{
 
-	return d.receiptStore.OnNewReceipt(&state.Receipt{state.ReceiptBody{receipt.PA,receipt.STime,receipt.AMount},receipt.Sig})
+	return d.receiptStore.OnNewReceipt(&state.Receipt{state.ReceiptBody{receipt.PA,time.Unix(int64(receipt.STime),0),receipt.AMount},receipt.Sig})
 
 }
