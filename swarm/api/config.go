@@ -98,8 +98,8 @@ func NewConfig() (c *Config) {
 		DeliverySkipCheck:    true,
 		SyncUpdateDelay:      15 * time.Second,
 		SwapAPI:              "",
-		ServerAddr:           "http://192.168.1.20:4000/apis/v1/receipts",
-		CentralAddr:          []string{"http://192.168.1.20:8500"},
+		ServerAddr:           "http://172.16.1.10:4000/apis/v1/receipts",
+		CentralAddr:          []string{"http://172.16.1.10:8500"},
 	}
 
 	return
@@ -144,4 +144,4 @@ func (c *Config) ShiftPrivateKey() (privKey *ecdsa.PrivateKey) {
 	return privKey
 }
 
-func (c *Config)GetPrivateKey() (privKey *ecdsa.PrivateKey) { return c.privateKey }
+func (c *Config) GetPrivateKey() (privKey *ecdsa.PrivateKey) { return c.privateKey }

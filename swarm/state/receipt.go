@@ -35,7 +35,7 @@ var (
 	HPREF = []byte("IN_RECEIPT")
 	RPREF = []byte("UNREPORTED")
 
-	MAX_STIME_DURATION = 60 * time.Minute       //生成收据时，一个STIME允许的最长时间
+	MAX_STIME_DURATION = 5 * time.Minute        //生成收据时，一个STIME允许的最长时间
 	MAX_STIME_JITTER   = 2 * MAX_STIME_DURATION //接收收据时，允许最长的时间差，超过这个时间的不再接收
 
 )
@@ -72,7 +72,7 @@ func (rs *ReceiptData) DecodeRLP(s *rlp.Stream) error {
 	err := s.Decode(result)
 	if err == nil {
 		rs.Signature = result.Signature
-		rs.Stime = time.Unix( int64(result.Stime),0)
+		rs.Stime = time.Unix(int64(result.Stime), 0)
 		rs.Amount = result.Amount
 	}
 	return err
@@ -81,13 +81,13 @@ func (rs *ReceiptData) DecodeRLP(s *rlp.Stream) error {
 //收据的数据
 type ReceiptBody struct {
 	Account [20]byte //数据提供者
-	Stime  time.Time
-	Amount uint32
+	Stime   time.Time
+	Amount  uint32
 }
 type rlpRB struct {
 	Account [20]byte
-	Stime  uint32
-	Amount uint32
+	Stime   uint32
+	Amount  uint32
 }
 
 func (r ReceiptBody) EncodeRLP(w io.Writer) error {
@@ -101,7 +101,7 @@ func (rs *ReceiptBody) DecodeRLP(s *rlp.Stream) error {
 	err := s.Decode(result)
 	if err == nil {
 		rs.Account = result.Account
-		rs.Stime = time.Unix(int64(result.Stime),0)
+		rs.Stime = time.Unix(int64(result.Stime), 0)
 		rs.Amount = result.Amount
 	}
 	return err
@@ -241,7 +241,7 @@ func (rs *Receipts) CurrentReceipt(account [20]byte) *ReceiptData {
 }
 
 type ReceiptStore struct {
-	account      [20]byte
+	account     [20]byte
 	db          *leveldb.DB
 	allReceipts Receipts
 	prvKey      *ecdsa.PrivateKey
@@ -253,18 +253,18 @@ type ReceiptStore struct {
 	server        string
 }
 
-func NewReceiptsStore(filePath string, prvKey *ecdsa.PrivateKey,serverAddr string) (*ReceiptStore, error) {
+func NewReceiptsStore(filePath string, prvKey *ecdsa.PrivateKey, serverAddr string) (*ReceiptStore, error) {
 	db, err := leveldb.OpenFile(filePath, nil)
-	return newReceiptsStore(db, prvKey,serverAddr), err
+	return newReceiptsStore(db, prvKey, serverAddr), err
 }
-func newReceiptsStore(newDb *leveldb.DB, prvKey *ecdsa.PrivateKey,serverAddr string) *ReceiptStore {
+func newReceiptsStore(newDb *leveldb.DB, prvKey *ecdsa.PrivateKey, serverAddr string) *ReceiptStore {
 	store := ReceiptStore{
-		account:       crypto.PubkeyToAddress(prvKey.PublicKey),
+		account:      crypto.PubkeyToAddress(prvKey.PublicKey),
 		db:           newDb,
 		prvKey:       prvKey,
 		unpaidAmount: make(map[[20]byte]uint32),
 		allReceipts:  make(Receipts),
-		server:serverAddr,
+		server:       serverAddr,
 	}
 	store.nodeCommCache, _ = lru.New(MAX_C_REC_LIMIT)
 
@@ -472,7 +472,7 @@ func (rs *ReceiptStore) extractReportReceipts() Receipts {
 
 type ReceiptsOfReport struct {
 	Version  byte
-	Account   [20]byte
+	Account  [20]byte
 	Receipts []rlpRD
 }
 
@@ -526,8 +526,7 @@ func (rs *ReceiptStore) doAutoSubmit() error {
 
 	result, err := rs.createReportData(receipts)
 
-
-	timeout := time.Duration(5 * time.Millisecond) //超时时间50ms
+	timeout := time.Duration(5 * time.Second) //超时时间50ms
 	err = rs.SendDataToServer(rs.server, timeout, result)
 
 	if err == nil { //提交成功，本地删除
