@@ -127,6 +127,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 		MaxPeersPerRequest    uint8 // max size for peer address batches
 		KeepAliveInterval     time.Duration
 		*/
+		BzzAccount:common.FromHex(config.BzzAccount),
 		LightNode:   config.LightNodeEnabled, //是否为轻节点，终端节点或是移动节点
 	}
 
@@ -173,7 +174,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 	)
 	//// delivery响应fetcher的请求，将对应的数据返回
 	delivery := stream.NewDelivery(to, self.netStore,self.receiptsStore)
-	delivery.UpdateNodes([]string{"http://localhost:3000"})
+	delivery.UpdateNodes([]string{"http://192.168.1.20:8500"})
 	//创建一个fetcher工厂,然后传递给netStore，该工厂在需要读取chunk的时候，创建一个fetccher对象进行chunk读取，读取完毕后，销毁该对像
 	self.netStore.NewNetFetcherFunc = network.NewFetcherFactory(delivery.RequestFromPeers, delivery.GetDataFromCentral, config.DeliverySkipCheck).New
 
@@ -250,6 +251,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 	// Run  核心运行函数
 	self.bzz = network.NewBzz(bzzconfig, to, self.stateStore, self.streamer.GetSpec(), self.streamer.Run)
 
+	delivery.AttachBzz(self.bzz)
 	//创建PSS通信网络(暂略过，没有深入研究）
 	// Pss = postal service over swarm (devp2p over bzz)
 	self.ps, err = pss.NewPss(to, config.Pss)

@@ -17,7 +17,6 @@
 package stream
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -29,7 +28,7 @@ import (
 	"github.com/plotozhu/MDCMainnet/swarm/spancontext"
 	"github.com/plotozhu/MDCMainnet/swarm/state"
 	"github.com/plotozhu/MDCMainnet/swarm/storage"
-	"io"
+	"io/ioutil"
 	"net/http"
 	"sync"
 	"time"
@@ -56,6 +55,7 @@ type Delivery struct {
 	receiptStore 	*state.ReceiptStore
 	centralNodes	[]string
 	mu  		    sync.RWMutex
+	bzz             *network.Bzz
 }
 
 func NewDelivery(kad *network.Kademlia, chunkStore storage.SyncChunkStore,receiptStore *state.ReceiptStore) *Delivery {
@@ -144,7 +144,10 @@ type RetrieveRequestMsg struct {
 	SkipCheck bool
 	HopCount  uint8
 }
-
+//收到了某个节点来的查询数据的请求
+func (d *Delivery) AttachBzz(bzz *network.Bzz)  {
+	d.bzz = bzz
+}
 //收到了某个节点来的查询数据的请求
 func (d *Delivery) handleRetrieveRequestMsg(ctx context.Context, sp *Peer, req *RetrieveRequestMsg) error {
 	log.Trace("received request", "peer", sp.ID(), "hash", req.Addr)
@@ -243,9 +246,10 @@ func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *Ch
 				req.peer.Drop(err)
 			}
 		}
-		if replyReceipt { //TODO 优化每隔10帧或是10秒发送一次收据
+		if replyReceipt && d.bzz != nil { //TODO 优化每隔10帧或是10秒发送一次收据
+			hs,_ := d.bzz.GetOrCreateHandshake(sp.ID())
 			//用最低的优先级，发送一个收据
-			receipt,err := d.receiptStore.OnNodeChunkReceived(sp.ID())
+			receipt,err := d.receiptStore.OnNodeChunkReceived(hs.Account)
 			if err == nil {
 				err = sp.SendPriority(ctx, &ReceiptsMsg{receipt.NodeId,receipt.Stime,receipt.Amount,receipt.Sign}, Mid)
 				if err != nil {
@@ -337,24 +341,16 @@ func (d *Delivery) GetDataFromCentral(ctx context.Context,address storage.Addres
 					resp,err := client.Get(d.centralNodes[nodeIndex]+"/chunk:/"+address.Hex()) //这个是阻塞型的
 
 					if err == nil && resp.StatusCode == 200 {
-						buffer := make([]byte,resp.ContentLength)
-						result := bytes.NewBuffer(nil)
-						parseOk := false;
-						for {
-							n, err := resp.Body.Read(buffer[0:])
-							result.Write(buffer[0:n])
-							if err != nil && err == io.EOF {
-								d.handleChunkDeliveryMsg(ctx,nil,&ChunkDeliveryMsg{address,result.Bytes(),nil},false)
-								parseOk = true;
-								break
-							} else if err != nil {
-								break;
-							}
-						}
 
-						if parseOk {
+						buffer, err := ioutil.ReadAll(resp.Body)
+
+						if err == nil {
+
+							d.handleChunkDeliveryMsg(ctx,nil,&ChunkDeliveryMsg{address,buffer,nil},false)
 							break;
 						}
+
+
 					//}
 				}
 				nodeIndex = (nodeIndex +1 ) %nodes_count

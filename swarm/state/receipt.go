@@ -80,19 +80,19 @@ func (rs *ReceiptData) DecodeRLP(s *rlp.Stream) error {
 
 //收据的数据
 type ReceiptBody struct {
-	NodeId enode.ID //数据提供者
+	Account [20]byte //数据提供者
 	Stime  time.Time
 	Amount uint32
 }
 type rlpRB struct {
-	NodeId enode.ID
+	Account [20]byte
 	Stime  uint32
 	Amount uint32
 }
 
 func (r ReceiptBody) EncodeRLP(w io.Writer) error {
 
-	rs := &rlpRB{r.NodeId, uint32(r.Stime.Unix()), r.Amount}
+	rs := &rlpRB{r.Account, uint32(r.Stime.Unix()), r.Amount}
 
 	return rlp.Encode(w, rs)
 }
@@ -100,7 +100,7 @@ func (rs *ReceiptBody) DecodeRLP(s *rlp.Stream) error {
 	result := new(rlpRB)
 	err := s.Decode(result)
 	if err == nil {
-		rs.NodeId = result.NodeId
+		rs.Account = result.Account
 		rs.Stime = time.Unix(int64(result.Stime),0)
 		rs.Amount = result.Amount
 	}
@@ -187,11 +187,11 @@ func (rs *ReceiptItems) DecodeRLP(s *rlp.Stream) error {
 
 //某个来源节点的收据集
 type ReceiptsOfNode struct {
-	NodeId   enode.ID
+	NodeId   [20]byte
 	Receipts []*ReceiptData
 }
 
-type Receipts map[enode.ID]ReceiptItems
+type Receipts map[[20]byte]ReceiptItems
 
 func (rs Receipts) EncodeRLP(w io.Writer) error {
 
@@ -225,9 +225,9 @@ func (rs *Receipts) DecodeRLP(s *rlp.Stream) error {
 	return err
 }
 
-func (rs *Receipts) CurrentReceipt(nodeId enode.ID) *ReceiptData {
+func (rs *Receipts) CurrentReceipt(account [20]byte) *ReceiptData {
 
-	result, ok := (*rs)[nodeId]
+	result, ok := (*rs)[account]
 	if !ok {
 		return nil
 	}
@@ -241,12 +241,12 @@ func (rs *Receipts) CurrentReceipt(nodeId enode.ID) *ReceiptData {
 }
 
 type ReceiptStore struct {
-	nodeId      enode.ID
+	account      [20]byte
 	db          *leveldb.DB
 	allReceipts Receipts
 	prvKey      *ecdsa.PrivateKey
 	//deliverInfo ChunkDeliverInfo
-	unpaidAmount  map[enode.ID]uint32
+	unpaidAmount  map[[20]byte]uint32
 	nodeCommCache *lru.Cache
 	cmu           sync.RWMutex
 	hmu           sync.RWMutex
@@ -258,10 +258,10 @@ func NewReceiptsStore(filePath string, prvKey *ecdsa.PrivateKey) (*ReceiptStore,
 }
 func newReceiptsStore(newDb *leveldb.DB, prvKey *ecdsa.PrivateKey) *ReceiptStore {
 	store := ReceiptStore{
-		nodeId:       enode.PubkeyToIDV4(&prvKey.PublicKey),
+		account:       crypto.PubkeyToAddress(prvKey.PublicKey),
 		db:           newDb,
 		prvKey:       prvKey,
-		unpaidAmount: make(map[enode.ID]uint32),
+		unpaidAmount: make(map[[20]byte]uint32),
 		allReceipts:  make(Receipts),
 	}
 	store.nodeCommCache, _ = lru.New(MAX_C_REC_LIMIT)
@@ -270,8 +270,8 @@ func newReceiptsStore(newDb *leveldb.DB, prvKey *ecdsa.PrivateKey) *ReceiptStore
 	go store.submitRoutine()
 	return &store
 }
-func (rs *ReceiptStore) NodeId() enode.ID {
-	return rs.nodeId
+func (rs *ReceiptStore) Account() [20]byte {
+	return rs.account
 }
 func (rs *ReceiptStore) Init() {
 	rs.loadCRecord()
@@ -286,7 +286,7 @@ func (rs *ReceiptStore) loadCRecord() {
 		if err == nil {
 			rs.nodeCommCache.Purge()
 			for _, item := range result {
-				rs.nodeCommCache.ContainsOrAdd(item.NodeId, &ReceiptInStore{item.Stime, item.Amount})
+				rs.nodeCommCache.ContainsOrAdd(item.Account, &ReceiptInStore{item.Stime, item.Amount})
 			}
 		}
 	}
@@ -294,11 +294,11 @@ func (rs *ReceiptStore) loadCRecord() {
 func (rs *ReceiptStore) saveCRecord() error {
 	results := make([]*ReceiptBody, 0)
 	allIds := rs.nodeCommCache.Keys()
-	for _, nodeId := range allIds {
-		item, exist := rs.nodeCommCache.Get(nodeId)
+	for _, account := range allIds {
+		item, exist := rs.nodeCommCache.Get(account)
 		if exist {
 			receipt := item.(*ReceiptInStore)
-			results = append(results, &ReceiptBody{nodeId.(enode.ID), receipt.Stime, receipt.Amount})
+			results = append(results, &ReceiptBody{account.([20]byte), receipt.Stime, receipt.Amount})
 		}
 
 	}
@@ -336,15 +336,15 @@ func (rs *ReceiptStore) saveReceipts(key []byte, receipts Receipts) error {
 
 //新收到了一个数据,在C记录中记录，并且返回一个签过名的收据
 //如果nodeId不合法，返回的收据为空，error为ErrInvalidNode
-func (rs *ReceiptStore) OnNodeChunkReceived(nodeId enode.ID) (*Receipt, error) {
+func (rs *ReceiptStore) OnNodeChunkReceived(account [20]byte) (*Receipt, error) {
 	rs.cmu.Lock()
 	defer rs.cmu.Unlock()
 
-	if len(nodeId) != 32 {
+	if len(account) != 20 {
 		return nil, ErrInvalidNode
 	}
 	//update chunkOfNode
-	item, exist := rs.nodeCommCache.Get(nodeId)
+	item, exist := rs.nodeCommCache.Get(account)
 	if !exist {
 		item = &ReceiptInStore{time.Now(), 1}
 	} else {
@@ -355,11 +355,11 @@ func (rs *ReceiptStore) OnNodeChunkReceived(nodeId enode.ID) (*Receipt, error) {
 		}
 
 	}
-	rs.nodeCommCache.Add(nodeId, item)
+	rs.nodeCommCache.Add(account, item)
 	//持久化
 	rs.saveCRecord()
 	//创建收据
-	aReceipt := &Receipt{ReceiptBody{nodeId, item.(*ReceiptInStore).Stime, item.(*ReceiptInStore).Amount}, []byte{}}
+	aReceipt := &Receipt{ReceiptBody{account, item.(*ReceiptInStore).Stime, item.(*ReceiptInStore).Amount}, []byte{}}
 
 	aReceipt.Signature(rs.prvKey)
 	return aReceipt, nil
@@ -371,7 +371,7 @@ func (rs *ReceiptStore) OnNewReceipt(receipt *Receipt) error {
 	rs.hmu.Lock()
 	defer rs.hmu.Unlock()
 	//不是自己的nodeId不收
-	if receipt.NodeId != rs.nodeId {
+	if receipt.Account != rs.account {
 		return ErrInvalidNode
 	}
 	//超过MAX_STIME_JITTER(默认2个小时)的不收
@@ -385,7 +385,7 @@ func (rs *ReceiptStore) OnNewReceipt(receipt *Receipt) error {
 		return ErrInvalidSignature
 	}
 	//根据这个pubKey生成nodeId
-	nodeId := enode.PubkeyToIDV4(pubKey)
+	nodeId := crypto.PubkeyToAddress(*pubKey)
 	_, ok := rs.allReceipts[nodeId]
 	//这个节点的第一次记录
 	if !ok {
@@ -470,7 +470,7 @@ func (rs *ReceiptStore) extractReportReceipts() Receipts {
 
 type ReceiptsOfReport struct {
 	Version  byte
-	NodeId   enode.ID
+	Account   [20]byte
 	Receipts []rlpRD
 }
 
@@ -484,7 +484,7 @@ func (rs *ReceiptStore) createReportData(receipts Receipts) ([]byte, error) {
 	}
 	toReport := ReceiptsOfReport{
 		1,
-		rs.nodeId,
+		rs.account,
 		receiptsArray,
 	}
 	encoded, err := rlp.EncodeToBytes(toReport)
@@ -494,8 +494,8 @@ func (rs *ReceiptStore) createReportData(receipts Receipts) ([]byte, error) {
 	if err == nil {
 		encoded = append(sig, encoded...)
 	}
-	id := enode.PubkeyToIDV4(&rs.prvKey.PublicKey)
-	if id != rs.nodeId {
+	id := crypto.PubkeyToAddress(rs.prvKey.PublicKey)
+	if id != rs.account {
 		err = ErrInvalidNode
 	}
 	return encoded, err
@@ -566,7 +566,7 @@ func (rs *ReceiptStore) submitRoutine() {
     本函数返回一个unpayed的值，用于表示该节点目前有多少个未支付（收据）的数据了
 	调用者可以根据这个返回决定对相应节点的操作
 */
-func (rs *ReceiptStore) OnChunkDelivered(nodeId enode.ID) uint32 {
+func (rs *ReceiptStore) OnChunkDelivered(nodeId [20]byte) uint32 {
 	rs.hmu.Lock()
 	defer rs.hmu.Unlock()
 
@@ -579,10 +579,10 @@ func (rs *ReceiptStore) OnChunkDelivered(nodeId enode.ID) uint32 {
 	return rs.unpaidAmount[nodeId]
 }
 
-func (rs *ReceiptStore) decreaseOnNewReceipt(nodeId enode.ID, count uint32) {
-	if rs.unpaidAmount[nodeId] > count {
-		rs.unpaidAmount[nodeId] -= count
+func (rs *ReceiptStore) decreaseOnNewReceipt(account [20]byte, count uint32) {
+	if rs.unpaidAmount[account] > count {
+		rs.unpaidAmount[account] -= count
 	} else {
-		rs.unpaidAmount[nodeId] = 0
+		rs.unpaidAmount[account] = 0
 	}
 }

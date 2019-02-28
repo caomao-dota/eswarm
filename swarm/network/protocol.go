@@ -67,6 +67,7 @@ type BzzConfig struct {
 	HiveParams   *HiveParams
 	NetworkID    uint64
 	LightNode    bool
+	BzzAccount   []byte
 }
 
 // Bzz is the swarm protocol bundle
@@ -79,6 +80,7 @@ type Bzz struct {
 	handshakes   map[enode.ID]*HandshakeMsg
 	streamerSpec *protocols.Spec
 	streamerRun  func(*BzzPeer) error
+	bzzAccount   []byte
 }
 
 // NewBzz is the swarm protocol constructor
@@ -95,6 +97,8 @@ func NewBzz(config *BzzConfig, kad *Kademlia, store state.Store, streamerSpec *p
 		handshakes:   make(map[enode.ID]*HandshakeMsg),
 		streamerRun:  streamerRun,
 		streamerSpec: streamerSpec,
+		bzzAccount:   config.BzzAccount,
+
 	}
 }
 
@@ -269,6 +273,7 @@ type HandshakeMsg struct {
 	NetworkID uint64
 	Addr      *BzzAddr
 	LightNode bool
+	Account   []byte
 
 	// peerAddr is the address received in the peer handshake
 	peerAddr *BzzAddr
@@ -316,6 +321,7 @@ func (b *Bzz) GetOrCreateHandshake(peerID enode.ID) (*HandshakeMsg, bool) {
 			LightNode: b.LightNode,
 			init:      make(chan bool, 1),
 			done:      make(chan struct{}),
+			Account:   b.bzzAccount,
 		}
 		// when handhsake is first created for a remote peer
 		// it is initialised with the init

@@ -4,7 +4,6 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
 	"github.com/plotozhu/MDCMainnet/rlp"
 	"github.com/syndtr/goleveldb/leveldb"
 	"math/rand"
@@ -100,7 +99,7 @@ func createReceiptStore(t *testing.T,index int) *ReceiptStore{
 	// atime := time.Unix(0,big.NewInt(time.Now().UnixNano()).Int64())
 	// t.Log(atime.Format("2006-01-02 15:04:01"))
 	 key := getOrCreateKey(0)
-	 nodeId := enode.PubkeyToIDV4(&key.PublicKey)
+	 nodeId := crypto.PubkeyToAddress(key.PublicKey)
 	 data := ReceiptBody{nodeId,time.Now(),1}
 
 	 bytes,err := rlp.EncodeToBytes(data)
@@ -121,14 +120,14 @@ func createReceiptStore(t *testing.T,index int) *ReceiptStore{
 func Test_Signature(t *testing.T){
 	pvKeySigner := getOrCreateKey(2)
 	pvKeyProvider := getOrCreateKey(3)
-	node2 := enode.PubkeyToIDV4(&pvKeySigner.PublicKey)
-	node3 := enode.PubkeyToIDV4(&pvKeyProvider.PublicKey)
+	node2 := crypto.PubkeyToAddress(pvKeySigner.PublicKey)
+	node3 := crypto.PubkeyToAddress(pvKeyProvider.PublicKey)
 	anReceipt := &Receipt{ ReceiptBody{node3,time.Now(),155},[]byte{}}
 	anReceipt.Signature(pvKeySigner)
 
 	signerKey,ok := anReceipt.Verify()
 	if ok {
-		if node2 == enode.PubkeyToIDV4(signerKey) {
+		if node2 == crypto.PubkeyToAddress(*signerKey) {
 			t.Log("Check signature and extract nodeId ok")
 		}	else {
 			t.Error("Check signature failed, node Id error")
@@ -159,26 +158,26 @@ func  PrepareForTest(t *testing.T){
 func Test_CRecStream(t *testing.T){
 	PrepareForTest(t)
 	//3 from store2
-	store1.OnNodeChunkReceived(store2.nodeId)
-	store1.OnNodeChunkReceived(store2.nodeId)
-	store1.OnNodeChunkReceived(store2.nodeId)
+	store1.OnNodeChunkReceived(store2.account)
+	store1.OnNodeChunkReceived(store2.account)
+	store1.OnNodeChunkReceived(store2.account)
 
 	//4 from store3
-	store1.OnNodeChunkReceived(store3.nodeId)
-	store1.OnNodeChunkReceived(store3.nodeId)
-	store1.OnNodeChunkReceived(store3.nodeId)
-	store1.OnNodeChunkReceived(store3.nodeId)
+	store1.OnNodeChunkReceived(store3.account)
+	store1.OnNodeChunkReceived(store3.account)
+	store1.OnNodeChunkReceived(store3.account)
+	store1.OnNodeChunkReceived(store3.account)
 
 	//1 from store4
-	store1.OnNodeChunkReceived(store4.nodeId)
+	store1.OnNodeChunkReceived(store4.account)
 
 	//2 from store5
-	store1.OnNodeChunkReceived(store5.nodeId)
-	store1.OnNodeChunkReceived(store5.nodeId)
+	store1.OnNodeChunkReceived(store5.account)
+	store1.OnNodeChunkReceived(store5.account)
 
 	//7 from store6
 	for i := 0; i< 7; i++ {
-		store1.OnNodeChunkReceived(store6.nodeId)
+		store1.OnNodeChunkReceived(store6.account)
 	}
 
 	timerC := time.NewTimer(1*time.Second)
@@ -190,11 +189,11 @@ func Test_CRecStream(t *testing.T){
 			storeTest := cloneStore(store1)
 			keys := storeTest.nodeCommCache.Keys()
 			if len(keys) == 5 {
-				r2,ok2 := storeTest.nodeCommCache.Get(store2.nodeId)
-				r3,ok3 := storeTest.nodeCommCache.Get(store3.nodeId)
-				r4,ok4 := storeTest.nodeCommCache.Get(store4.nodeId)
-				r5,ok5 := storeTest.nodeCommCache.Get(store5.nodeId)
-				r6,ok6 := storeTest.nodeCommCache.Get(store6.nodeId)
+				r2,ok2 := storeTest.nodeCommCache.Get(store2.account)
+				r3,ok3 := storeTest.nodeCommCache.Get(store3.account)
+				r4,ok4 := storeTest.nodeCommCache.Get(store4.account)
+				r5,ok5 := storeTest.nodeCommCache.Get(store5.account)
+				r6,ok6 := storeTest.nodeCommCache.Get(store6.account)
 
 				if ok2 && ok3 && ok4 && ok5 && ok6 {
 					if r2.(*ReceiptInStore).Amount == 3 && r3.(*ReceiptInStore).Amount == 4 && r4.(*ReceiptInStore).Amount == 1 &&
@@ -225,7 +224,7 @@ func Test_CRecStream(t *testing.T){
 
 func mockChunkDelivery(chunkSender,chunkReceiver *ReceiptStore,t *testing.T){
 
-	receipt,err := chunkReceiver.OnNodeChunkReceived(chunkSender.nodeId)
+	receipt,err := chunkReceiver.OnNodeChunkReceived(chunkSender.account)
 	if err != nil {
 		t.Error(err)
 	}
@@ -257,11 +256,11 @@ func Test_HRecStream(t *testing.T){
 			storeTest := cloneStore(store1)
 			receipts := storeTest.allReceipts
 			if len(receipts) == 5 {
-				r2,ok2 :=  receipts[store2.nodeId]
-				r3,ok3 := receipts[store3.nodeId]
-				r4,ok4 := receipts[store4.nodeId]
-				r5,ok5 := receipts[store5.nodeId]
-				r6,ok6 := receipts[store6.nodeId]
+				r2,ok2 :=  receipts[store2.account]
+				r3,ok3 := receipts[store3.account]
+				r4,ok4 := receipts[store4.account]
+				r5,ok5 := receipts[store5.account]
+				r6,ok6 := receipts[store6.account]
 
 				if ok2 && ok3 && ok4 && ok5 && ok6 {
 					if len(r2) == 1 &&  len(r3) == 1 && len(r4) == 1 && len(r5) == 1 && len(r6) == 1 {
@@ -293,20 +292,20 @@ func Test_InvalidSignature(t *testing.T){
 	pvKeySigner := getOrCreateKey(2)
 	pvKeyProvider := getOrCreateKey(3)
 	//node2 := enode.PubkeyToIDV4(&pvKeySigner.PublicKey)
-	node3 := enode.PubkeyToIDV4(&pvKeyProvider.PublicKey)
+	node3 := crypto.PubkeyToAddress(pvKeyProvider.PublicKey)
 	invNodeIdReceipt := &Receipt{ ReceiptBody{node3,time.Now(),155},[]byte{}}
 	invNodeIdReceipt.Signature(pvKeySigner)
 
 
 
 
-	InvalidTimeReceipt := &Receipt{ ReceiptBody{store1.nodeId,time.Now().Add(121*time.Minute),155},[]byte{}}
+	InvalidTimeReceipt := &Receipt{ ReceiptBody{store1.account,time.Now().Add(121*time.Minute),155},[]byte{}}
 	InvalidTimeReceipt.Signature(pvKeySigner)
 
-	InvalidTimeReceipt2 := &Receipt{ ReceiptBody{store1.nodeId,time.Now().Add(-121*time.Minute),155},[]byte{}}
+	InvalidTimeReceipt2 := &Receipt{ ReceiptBody{store1.account,time.Now().Add(-121*time.Minute),155},[]byte{}}
 	InvalidTimeReceipt2.Signature(pvKeySigner)
 
-	InvalidSignReceipt := &Receipt{ ReceiptBody{store1.nodeId,time.Now().Add(-121*time.Minute),155},[]byte{}}
+	InvalidSignReceipt := &Receipt{ ReceiptBody{store1.account,time.Now().Add(-121*time.Minute),155},[]byte{}}
 	InvalidSignReceipt.Signature(pvKeySigner)
 	InvalidSignReceipt.Sign[0] += InvalidSignReceipt.Sign[0]
 	if  InvalidSignReceipt.Sign[0] == 0  {
@@ -337,10 +336,10 @@ func Test_DeliverCounter(t *testing.T){
 	var receipt *Receipt
 	unpaied := uint32(10)
 	for i := uint32(0); i < unpaied; i++ {
-		store4.OnChunkDelivered(store5.nodeId)
-		receipt,_ = store5.OnNodeChunkReceived(store4.nodeId)
+		store4.OnChunkDelivered(store5.account)
+		receipt,_ = store5.OnNodeChunkReceived(store4.account)
 	}
-	 calcUnpaied,_ := store4.unpaidAmount[store5.nodeId]
+	 calcUnpaied,_ := store4.unpaidAmount[store5.account]
 	if  calcUnpaied != unpaied {
 		t.Error("Test deliver counter failed: unpaiedAmount error")
 		return
@@ -348,7 +347,7 @@ func Test_DeliverCounter(t *testing.T){
 
 	 store4.OnNewReceipt(receipt)
 
-	calcUnpaied,_ = store4.unpaidAmount[store5.nodeId]
+	calcUnpaied,_ = store4.unpaidAmount[store5.account]
 	if  calcUnpaied != 0  {
 		t.Error("Test deliver counter failed: unpaiedAmount not reset")
 		return
@@ -372,11 +371,11 @@ func Test_Unordered(t *testing.T){
 	 receipts := make([]*Receipt,20)
 	unpaied := uint32(20)
 	for i := uint32(0); i < unpaied; i++ {
-		store4.OnChunkDelivered(store5.nodeId)
-		receipt,_ := store5.OnNodeChunkReceived(store4.nodeId)
+		store4.OnChunkDelivered(store5.account)
+		receipt,_ := store5.OnNodeChunkReceived(store4.account)
 		receipts[i] = receipt
 	}
-	calcUnpaied,_ := store4.unpaidAmount[store5.nodeId]
+	calcUnpaied,_ := store4.unpaidAmount[store5.account]
 	if  calcUnpaied != unpaied {
 		t.Error("Test deliver counter failed: unpaiedAmount error")
 		return
@@ -388,7 +387,7 @@ func Test_Unordered(t *testing.T){
 	}
 
 
-	calcUnpaied,_ = store4.unpaidAmount[store5.nodeId]
+	calcUnpaied,_ = store4.unpaidAmount[store5.account]
 	if  calcUnpaied != 0  {
 		t.Error("Test unordered receipts failed: unpaiedAmount not reset")
 		return
@@ -400,7 +399,7 @@ func createSpecifiyReceipt(providerIndex int,receiverIndex int, singTime time.Ti
 	pvKeySigner := getOrCreateKey(receiverIndex)
 	pvKeyProvider := getOrCreateKey(providerIndex)
 
-	node3 := enode.PubkeyToIDV4(&pvKeyProvider.PublicKey)
+	node3 := crypto.PubkeyToAddress(pvKeyProvider.PublicKey)
 	anReceipt := &Receipt{ ReceiptBody{node3,singTime,amount},[]byte{}}
 	anReceipt.Signature(pvKeySigner)
 	return anReceipt
@@ -449,11 +448,11 @@ func Test_Unordered2(t *testing.T){
 	receipts := make([]*Receipt,20)
 	unpaied := uint32(20)
 	for i := uint32(0); i < unpaied; i++ {
-		store4.OnChunkDelivered(store5.nodeId)
-		receipt,_ := store5.OnNodeChunkReceived(store4.nodeId)
+		store4.OnChunkDelivered(store5.account)
+		receipt,_ := store5.OnNodeChunkReceived(store4.account)
 		receipts[i] = receipt
 	}
-	calcUnpaied,_ := store4.unpaidAmount[store5.nodeId]
+	calcUnpaied,_ := store4.unpaidAmount[store5.account]
 	if  calcUnpaied != unpaied {
 		t.Error("Test deliver counter failed: unpaiedAmount error")
 		return
@@ -465,7 +464,7 @@ func Test_Unordered2(t *testing.T){
 	}
 
 
-	calcUnpaied,_ = store4.unpaidAmount[store5.nodeId]
+	calcUnpaied,_ = store4.unpaidAmount[store5.account]
 	if  calcUnpaied != 0  {
 		t.Error("Test unordered receipts failed: unpaiedAmount not reset")
 		return

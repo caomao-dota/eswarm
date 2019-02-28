@@ -310,12 +310,15 @@ func (f *Fetcher) doRequest(ctx context.Context, gone chan *enode.ID, peersToSki
 		sourceID, quit, err = f.protoRequestFunc(ctx, req) //调用了delivery.RequestFromPeers，找到节点，发送一个request请求，实现数据读取
 		if err != nil {
 			// if no peers found to request from
-			return sources, err
+			//到这里为止，表示数据都没有获取到，可以从中心化服务器上去取了
+//			f.reqFromCenter(ctx,f.addr)
+
+			return sources, nil
 		}
 	}
-	//到这里为止，表示数据都没有获取到，可以从中心化服务器上去取了
 
-	f.reqFromCenter(ctx,f.addr)
+
+
 	// add peer to the set of peers to skip from now
 	peersToSkip.Store(sourceID.String(), time.Now())
 
