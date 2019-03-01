@@ -1,5 +1,5 @@
 #!/bin/sh
-
+tc qdisc add dev eth0 root tbf rate 10mbps latency 50ms burst 2500
 set -o errexit
 set -o pipefail
 set -o nounset

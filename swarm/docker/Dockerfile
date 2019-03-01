@@ -4,7 +4,7 @@ ARG VERSION
 
 RUN apk add --update git gcc g++ linux-headers
 
-
+RUN apk add iproute2
 
 RUN mkdir -p $GOPATH/src/github.com/plotozhu && \
     cd $GOPATH/src/github.com/plotozhu && \
