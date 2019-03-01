@@ -1,0 +1,26 @@
+FROM golang:1.11-alpine as builder
+
+ARG VERSION
+
+RUN apk add --update git gcc g++ linux-headers
+
+RUN apk add iproute2
+
+RUN mkdir -p $GOPATH/src/github.com/plotozhu && \
+    cd $GOPATH/src/github.com/plotozhu && \
+    git clone https://2a2bce2b2dde8543f09ec27efd63f8fa7bbfa82f:@github.com/plotozhu/MDCMainnet && \
+    cd $GOPATH/src/github.com/plotozhu/MDCMainnet && \
+    git checkout ${VERSION} && \
+    go install -ldflags "-X main.gitCommit=${VERSION}" ./cmd/swarm && \
+    go install -ldflags "-X main.gitCommit=${VERSION}" ./cmd/swarm/swarm-smoke && \
+    go install -ldflags "-X main.gitCommit=${VERSION}" ./cmd/geth && \
+    cp $GOPATH/bin/swarm /swarm && cp $GOPATH/bin/geth /geth && cp $GOPATH/bin/swarm-smoke /swarm-smoke
+
+
+# Release image with the required binaries and scripts
+FROM alpine:3.8
+WORKDIR /
+COPY --from=builder /swarm /geth /swarm-smoke /
+ADD run.sh /run.sh
+ADD run-smoke.sh /run-smoke.sh
+#ENTRYPOINT ["/run.sh"]
