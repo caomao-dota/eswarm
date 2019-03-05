@@ -26,7 +26,7 @@ import (
 	"github.com/plotozhu/MDCMainnet/p2p"
 	"github.com/plotozhu/MDCMainnet/rlp"
 	"github.com/plotozhu/MDCMainnet/swarm/storage"
-	whisper "github.com/plotozhu/MDCMainnet/whisper/whisperv5"
+	whisper "github.com/plotozhu/MDCMainnet/whisper/whisperv6"
 )
 
 const (

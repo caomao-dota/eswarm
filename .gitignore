@@ -49,3 +49,5 @@ profile.cov
 tempDir
 private*
 reportData
+
+vendor

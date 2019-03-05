@@ -208,8 +208,9 @@ func NewAPI(fileStore *storage.FileStore, dns Resolver, feedHandler *feed.Handle
 func (a *API) Retrieve(ctx context.Context, addr storage.Address) (reader storage.LazySectionReader, isEncrypted bool) {
 	return a.fileStore.Retrieve(ctx, addr)
 }
+
 // Retrieve FileStore reader API
-func (a *API) RetrieveChunk(ctx context.Context, addr storage.Address) ( storage.Chunk,error) {
+func (a *API) RetrieveChunk(ctx context.Context, addr storage.Address) (storage.Chunk, error) {
 	return a.fileStore.ChunkStore.Get(ctx, addr)
 }
 
@@ -435,7 +436,7 @@ func (a *API) Delete(ctx context.Context, addr string, path string) (storage.Add
 		apiDeleteFail.Inc(1)
 		return nil, err
 	}
-	key, err := a.ResolveURI(ctx, uri, EMPTY_CREDENTIALS)
+	key, err := a.ResolveURI(ctx, uri, EmptyCredentials)
 
 	if err != nil {
 		return nil, err
@@ -647,7 +648,7 @@ func (a *API) AddFile(ctx context.Context, mhash, path, fname string, content []
 		apiAddFileFail.Inc(1)
 		return nil, "", err
 	}
-	mkey, err := a.ResolveURI(ctx, uri, EMPTY_CREDENTIALS)
+	mkey, err := a.ResolveURI(ctx, uri, EmptyCredentials)
 	if err != nil {
 		apiAddFileFail.Inc(1)
 		return nil, "", err
@@ -764,7 +765,7 @@ func (a *API) RemoveFile(ctx context.Context, mhash string, path string, fname s
 		apiRmFileFail.Inc(1)
 		return "", err
 	}
-	mkey, err := a.ResolveURI(ctx, uri, EMPTY_CREDENTIALS)
+	mkey, err := a.ResolveURI(ctx, uri, EmptyCredentials)
 	if err != nil {
 		apiRmFileFail.Inc(1)
 		return "", err
@@ -831,7 +832,7 @@ func (a *API) AppendFile(ctx context.Context, mhash, path, fname string, existin
 		apiAppendFileFail.Inc(1)
 		return nil, "", err
 	}
-	mkey, err := a.ResolveURI(ctx, uri, EMPTY_CREDENTIALS)
+	mkey, err := a.ResolveURI(ctx, uri, EmptyCredentials)
 	if err != nil {
 		apiAppendFileFail.Inc(1)
 		return nil, "", err

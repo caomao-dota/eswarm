@@ -239,7 +239,7 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 			go func(w func(context.Context) error) {
 				select {
 				case errC <- w(ctx): // 	fetcher函数，从对方去取数据
-				case <-ctx.Done():   //
+				case <-ctx.Done(): //
 				}
 			}(wait)
 		}
@@ -423,9 +423,8 @@ func (p *Peer) handleTakeoverProofMsg(ctx context.Context, req *TakeoverProofMsg
 //如果客户端总是向服务端提交一个新签名，即STime为新的，AMount为0，那么服务端就可以断开该客户端的连接，并将该节点加入黑名单
 //签名的收据总是用最低优先级发送，并且如果有新的可覆盖签名出现时，使用新的签名，可以直接丢弃老的签名
 type ReceiptsMsg struct {
-	PA      [20]byte
-	STime   uint32
-	AMount	uint32
-	Sig     []byte
+	PA     [20]byte
+	STime  uint32
+	AMount uint32
+	Sig    []byte
 }
-

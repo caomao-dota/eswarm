@@ -24,11 +24,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mattn/go-colorable"
 	"github.com/plotozhu/MDCMainnet/log"
 	"github.com/plotozhu/MDCMainnet/node"
 	"github.com/plotozhu/MDCMainnet/p2p/simulations"
 	"github.com/plotozhu/MDCMainnet/p2p/simulations/adapters"
-	"github.com/mattn/go-colorable"
 )
 
 var (
@@ -124,7 +124,7 @@ func TestClose(t *testing.T) {
 
 	var upNodeCount int
 	for _, n := range sim.Net.GetNodes() {
-		if n.Up {
+		if n.Up() {
 			upNodeCount++
 		}
 	}
@@ -140,7 +140,7 @@ func TestClose(t *testing.T) {
 
 	upNodeCount = 0
 	for _, n := range sim.Net.GetNodes() {
-		if n.Up {
+		if n.Up() {
 			upNodeCount++
 		}
 	}

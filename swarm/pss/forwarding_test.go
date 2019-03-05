@@ -12,7 +12,7 @@ import (
 	"github.com/plotozhu/MDCMainnet/p2p/protocols"
 	"github.com/plotozhu/MDCMainnet/swarm/network"
 	"github.com/plotozhu/MDCMainnet/swarm/pot"
-	whisper "github.com/plotozhu/MDCMainnet/whisper/whisperv5"
+	whisper "github.com/plotozhu/MDCMainnet/whisper/whisperv6"
 )
 
 type testCase struct {
@@ -54,6 +54,7 @@ func TestForwardBasic(t *testing.T) {
 
 	kad := network.NewKademlia(base[:], network.NewKadParams())
 	ps := createPss(t, kad)
+	defer ps.Stop()
 	addPeers(kad, peerAddresses)
 
 	const firstNearest = depth * 2 // shallowest peer in the nearest neighbours' bin

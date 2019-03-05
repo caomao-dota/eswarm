@@ -57,7 +57,7 @@ func (st *SerializingType) UnmarshalBinary(data []byte) (err error) {
 }
 
 // TestDBStore tests basic functionality of DBStore.
-func TestDBStore1(t *testing.T) {
+func TestDBStore(t *testing.T) {
 	dir, err := ioutil.TempDir("", "db_store_test")
 	if err != nil {
 		panic(err)

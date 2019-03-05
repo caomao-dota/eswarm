@@ -38,7 +38,8 @@ const (
 var RequestTimeout = 10 * time.Second
 
 type RequestFunc func(context.Context, *Request) (*enode.ID, chan struct{}, error)
-type RequestCenterFunc  func(ctx context.Context,address storage.Address)
+type RequestCenterFunc func(ctx context.Context, address storage.Address)
+
 // Fetcher is created when a chunk is not found locally. It starts a request handler loop once and
 // keeps it alive until all active requests are completed. This can happen:
 //     1. either because the chunk is delivered
@@ -46,13 +47,14 @@ type RequestCenterFunc  func(ctx context.Context,address storage.Address)
 // Fetcher self destroys itself after it is completed.
 // TODO: cancel all forward requests after termination
 type Fetcher struct {
-	protoRequestFunc RequestFunc     // request function fetcher calls to issue retrieve request for a chunk
-	reqFromCenter     RequestCenterFunc
+	protoRequestFunc RequestFunc // request function fetcher calls to issue retrieve request for a chunk
+	reqFromCenter    RequestCenterFunc
 	addr             storage.Address // the address of the chunk to be fetched
 	offerC           chan *enode.ID  // channel of sources (peer node id strings)
 	requestC         chan uint8      // channel for incoming requests (with the hopCount value in it)
 	searchTimeout    time.Duration
 	skipCheck        bool
+	ctx              context.Context
 }
 
 type Request struct {
@@ -102,7 +104,7 @@ type FetcherFactory struct {
 func NewFetcherFactory(request RequestFunc, requestFromCenter RequestCenterFunc, skipCheck bool) *FetcherFactory {
 	return &FetcherFactory{
 		request:   request,
-		c_request:requestFromCenter,
+		c_request: requestFromCenter,
 		skipCheck: skipCheck,
 	}
 }
@@ -112,35 +114,31 @@ func NewFetcherFactory(request RequestFunc, requestFromCenter RequestCenterFunc,
 // contain the peers which are actively requesting this chunk, to make sure we
 // don't request back the chunks from them.
 // The created Fetcher is started and returned.
-/**
-  当需要读取chunk时，由FetcherFactory通过New来生成一个Fetcher，然后使用Fetcher.run来获取数据
- */
-func (f *FetcherFactory) New(ctx context.Context, source storage.Address, peersToSkip *sync.Map) storage.NetFetcher {
-	fetcher := NewFetcher(source, f.request,f.c_request, f.skipCheck)
-	go fetcher.run(ctx, peersToSkip)
+func (f *FetcherFactory) New(ctx context.Context, source storage.Address, peers *sync.Map) storage.NetFetcher {
+	fetcher := NewFetcher(ctx, source, f.request, f.c_request, f.skipCheck)
+	go fetcher.run(peers)
 	return fetcher
 }
 
 // NewFetcher creates a new Fetcher for the given chunk address using the given request function.
-//这是实际的fetcher获取者对象
-func NewFetcher(addr storage.Address, rf RequestFunc, crf RequestCenterFunc,skipCheck bool) *Fetcher {
+func NewFetcher(ctx context.Context, addr storage.Address, rf RequestFunc, crf RequestCenterFunc, skipCheck bool) *Fetcher {
 	return &Fetcher{
 		addr:             addr,
 		protoRequestFunc: rf,
-		reqFromCenter:		crf,
-		offerC:           make(chan *enode.ID), //哪些节点有数据
-		requestC:         make(chan uint8),     //需要的数据的Index号
+		reqFromCenter:    crf,
+		offerC:           make(chan *enode.ID),
+		requestC:         make(chan uint8),
 		searchTimeout:    defaultSearchTimeout,
 		skipCheck:        skipCheck,
+		ctx:              ctx,
 	}
 }
 
 // Offer is called when an upstream peer offers the chunk via syncing as part of `OfferedHashesMsg` and the node does not have the chunk locally.
-// Offer函数在上行流通过同步OfferedHashesMsg时，而且本机没有某个chunk时，被调用
-func (f *Fetcher) Offer(ctx context.Context, source *enode.ID) {
+func (f *Fetcher) Offer(source *enode.ID) {
 	// First we need to have this select to make sure that we return if context is done
 	select {
-	case <-ctx.Done():
+	case <-f.ctx.Done():
 		return
 	default:
 	}
@@ -149,16 +147,15 @@ func (f *Fetcher) Offer(ctx context.Context, source *enode.ID) {
 	// push to offerC instead if offerC is available (see number 2 in https://golang.org/ref/spec#Select_statements)
 	select {
 	case f.offerC <- source:
-	case <-ctx.Done():
+	case <-f.ctx.Done():
 	}
 }
 
 // Request is called when an upstream peer request the chunk as part of `RetrieveRequestMsg`, or from a local request through FileStore, and the node does not have the chunk locally.
-// 当上行流端点要求，或者从FileStore里获取读取`RetrieveRequestMsg`里面的部分，但是本地不存在时，使用Request读取
-func (f *Fetcher) Request(ctx context.Context, hopCount uint8) {
+func (f *Fetcher) Request(hopCount uint8) {
 	// First we need to have this select to make sure that we return if context is done
 	select {
-	case <-ctx.Done():
+	case <-f.ctx.Done():
 		return
 	default:
 	}
@@ -172,13 +169,13 @@ func (f *Fetcher) Request(ctx context.Context, hopCount uint8) {
 	// push to offerC instead if offerC is available (see number 2 in https://golang.org/ref/spec#Select_statements)
 	select {
 	case f.requestC <- hopCount + 1:
-	case <-ctx.Done():
+	case <-f.ctx.Done():
 	}
 }
 
 // start prepares the Fetcher
 // it keeps the Fetcher alive within the lifecycle of the passed context
-func (f *Fetcher) run(ctx context.Context, peers *sync.Map) {
+func (f *Fetcher) run(peers *sync.Map) {
 	var (
 		doRequest bool             // determines if retrieval is initiated in the current iteration
 		wait      *time.Timer      // timer for search timeout
@@ -229,7 +226,7 @@ func (f *Fetcher) run(ctx context.Context, peers *sync.Map) {
 			doRequest = requested
 
 			// all Fetcher context closed, can quit
-		case <-ctx.Done():
+		case <-f.ctx.Done():
 			log.Trace("terminate fetcher", "request addr", f.addr)
 			// TODO: send cancellations to all peers left over in peers map (i.e., those we requested from)
 			return
@@ -238,7 +235,7 @@ func (f *Fetcher) run(ctx context.Context, peers *sync.Map) {
 		// need to issue a new request
 		if doRequest {
 			var err error
-			sources, err = f.doRequest(ctx, gone, peers, sources, hopCount)
+			sources, err = f.doRequest(gone, peers, sources, hopCount)
 			if err != nil {
 				log.Info("unable to request", "request addr", f.addr, "err", err)
 			}
@@ -276,7 +273,7 @@ func (f *Fetcher) run(ctx context.Context, peers *sync.Map) {
 // * the peer's address is added to the set of peers to skip
 // * the peer's address is removed from prospective sources, and
 // * a go routine is started that reports on the gone channel if the peer is disconnected (or terminated their streamer)
-func (f *Fetcher) doRequest(ctx context.Context, gone chan *enode.ID, peersToSkip *sync.Map, sources []*enode.ID, hopCount uint8) ([]*enode.ID, error) {
+func (f *Fetcher) doRequest(gone chan *enode.ID, peersToSkip *sync.Map, sources []*enode.ID, hopCount uint8) ([]*enode.ID, error) {
 	var i int
 	var sourceID *enode.ID
 	var quit chan struct{}
@@ -293,7 +290,7 @@ func (f *Fetcher) doRequest(ctx context.Context, gone chan *enode.ID, peersToSki
 	for i = 0; i < len(sources); i++ {
 		req.Source = sources[i]
 		var err error
-		sourceID, quit, err = f.protoRequestFunc(ctx, req) //调用了delivery.RequestFromPeers找到节点，发送一个request请求，实现数据读取
+		sourceID, quit, err = f.protoRequestFunc(f.ctx, req)
 		if err == nil {
 			// remove the peer from known sources
 			// Note: we can modify the source although we are looping on it, because we break from the loop immediately
@@ -307,22 +304,18 @@ func (f *Fetcher) doRequest(ctx context.Context, gone chan *enode.ID, peersToSki
 	if !foundSource {
 		req.Source = nil
 		var err error
-		sourceID, quit, err = f.protoRequestFunc(ctx, req) //调用了delivery.RequestFromPeers，找到节点，发送一个request请求，实现数据读取
+		sourceID, quit, err = f.protoRequestFunc(f.ctx, req) //调用了delivery.RequestFromPeers，找到节点，发送一个request请求，实现数据读取
 		if err != nil {
 			// if no peers found to request from
 			//到这里为止，表示数据都没有获取到，可以从中心化服务器上去取了
-//			f.reqFromCenter(ctx,f.addr)
+			//			f.reqFromCenter(ctx,f.addr)
 
 			return sources, nil
 		}
 	}
 
-
-
 	// add peer to the set of peers to skip from now
 	peersToSkip.Store(sourceID.String(), time.Now())
-
-
 
 	// if the quit channel is closed, it indicates that the source peer we requested from
 	// disconnected or terminated its streamer
@@ -332,7 +325,7 @@ func (f *Fetcher) doRequest(ctx context.Context, gone chan *enode.ID, peersToSki
 		select {
 		case <-quit:
 			gone <- sourceID
-		case <-ctx.Done():
+		case <-f.ctx.Done():
 		}
 	}()
 	return sources, nil

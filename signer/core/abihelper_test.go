@@ -18,12 +18,11 @@ package core
 
 import (
 	"fmt"
-	"strings"
-	"testing"
-
 	"io/ioutil"
 	"math/big"
 	"reflect"
+	"strings"
+	"testing"
 
 	"github.com/plotozhu/MDCMainnet/accounts/abi"
 	"github.com/plotozhu/MDCMainnet/common"

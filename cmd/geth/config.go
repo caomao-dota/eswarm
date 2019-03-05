@@ -27,13 +27,14 @@ import (
 
 	cli "gopkg.in/urfave/cli.v1"
 
+	"github.com/naoina/toml"
 	"github.com/plotozhu/MDCMainnet/cmd/utils"
 	"github.com/plotozhu/MDCMainnet/dashboard"
 	"github.com/plotozhu/MDCMainnet/eth"
+	"github.com/plotozhu/MDCMainnet/graphql"
 	"github.com/plotozhu/MDCMainnet/node"
 	"github.com/plotozhu/MDCMainnet/params"
 	whisper "github.com/plotozhu/MDCMainnet/whisper/whisperv6"
-	"github.com/naoina/toml"
 )
 
 var (
@@ -124,6 +125,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
 	}
 
 	// Apply flags.
+	utils.SetULC(ctx, &cfg.Eth)
 	utils.SetNodeConfig(ctx, &cfg.Node)
 	stack, err := node.New(&cfg.Node)
 	if err != nil {
@@ -174,6 +176,13 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 			cfg.Shh.RestrictConnectionBetweenLightClients = true
 		}
 		utils.RegisterShhService(stack, &cfg.Shh)
+	}
+
+	// Configure GraphQL if required
+	if ctx.GlobalIsSet(utils.GraphQLEnabledFlag.Name) {
+		if err := graphql.RegisterGraphQLService(stack, cfg.Node.GraphQLEndpoint(), cfg.Node.GraphQLCors, cfg.Node.GraphQLVirtualHosts, cfg.Node.HTTPTimeouts); err != nil {
+			utils.Fatalf("Failed to register the Ethereum service: %v", err)
+		}
 	}
 
 	// Add the Ethereum Stats daemon if requested.

@@ -21,6 +21,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/opentracing/opentracing-go"
+	"github.com/plotozhu/MDCMainnet/swarm/tracing"
+
 	"github.com/plotozhu/MDCMainnet/metrics"
 	"github.com/plotozhu/MDCMainnet/p2p/enode"
 	"github.com/plotozhu/MDCMainnet/swarm/log"
@@ -49,20 +51,20 @@ var (
 )
 
 type Delivery struct {
-	chunkStore 		storage.SyncChunkStore
-	kad        		*network.Kademlia
-	getPeer    		func(enode.ID) *Peer
-	receiptStore 	*state.ReceiptStore
-	centralNodes	[]string
-	mu  		    sync.RWMutex
-	bzz             *network.Bzz
+	chunkStore   storage.SyncChunkStore
+	kad          *network.Kademlia
+	getPeer      func(enode.ID) *Peer
+	receiptStore *state.ReceiptStore
+	centralNodes []string
+	mu           sync.RWMutex
+	bzz          *network.Bzz
 }
 
-func NewDelivery(kad *network.Kademlia, chunkStore storage.SyncChunkStore,receiptStore *state.ReceiptStore) *Delivery {
+func NewDelivery(kad *network.Kademlia, chunkStore storage.SyncChunkStore, receiptStore *state.ReceiptStore) *Delivery {
 	return &Delivery{
-		chunkStore: chunkStore,
-		kad:        kad,
-		receiptStore:receiptStore,
+		chunkStore:   chunkStore,
+		kad:          kad,
+		receiptStore: receiptStore,
 	}
 }
 
@@ -144,10 +146,12 @@ type RetrieveRequestMsg struct {
 	SkipCheck bool
 	HopCount  uint8
 }
+
 //收到了某个节点来的查询数据的请求
-func (d *Delivery) AttachBzz(bzz *network.Bzz)  {
+func (d *Delivery) AttachBzz(bzz *network.Bzz) {
 	d.bzz = bzz
 }
+
 //收到了某个节点来的查询数据的请求
 func (d *Delivery) handleRetrieveRequestMsg(ctx context.Context, sp *Peer, req *RetrieveRequestMsg) error {
 	log.Trace("received request", "peer", sp.ID(), "hash", req.Addr)
@@ -157,8 +161,7 @@ func (d *Delivery) handleRetrieveRequestMsg(ctx context.Context, sp *Peer, req *
 	var osp opentracing.Span
 	ctx, osp = spancontext.StartSpan(
 		ctx,
-		"retrieve.request")
-	defer osp.Finish()
+		"stream.handle.retrieve")
 
 	s, err := sp.getServer(NewStream(swarmChunkServerStreamName, "", true))
 	if err != nil {
@@ -181,6 +184,7 @@ func (d *Delivery) handleRetrieveRequestMsg(ctx context.Context, sp *Peer, req *
 	}()
 
 	go func() {
+		defer osp.Finish()
 		chunk, err := d.chunkStore.Get(ctx, req.Addr)
 		if err != nil {
 			retrieveChunkFail.Inc(1)
@@ -192,8 +196,6 @@ func (d *Delivery) handleRetrieveRequestMsg(ctx context.Context, sp *Peer, req *
 			err = sp.Deliver(ctx, chunk, s.priority, syncing)
 			if err != nil {
 				log.Warn("ERROR in handleRetrieveRequestMsg", "err", err)
-			}else {
-				d.receiptStore.OnChunkDelivered(sp.Account())
 			}
 			return
 		}
@@ -223,22 +225,23 @@ type ChunkDeliveryMsgRetrieval ChunkDeliveryMsg
 //defines a chunk delivery for syncing (without accounting)
 type ChunkDeliveryMsgSyncing ChunkDeliveryMsg
 
-// TODO: Fix context SNAFU
-//a new chunk delivery has been arrived
-func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *ChunkDeliveryMsg,replyReceipt bool) error {
-	var osp opentracing.Span
-	ctx, osp = spancontext.StartSpan(
-		ctx,
-		"chunk.delivery")
-	defer osp.Finish()
+// chunk delivery msg is response to retrieverequest msg
+func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *ChunkDeliveryMsg, replyReceipt bool) error {
 
 	processReceivedChunksCount.Inc(1)
 
+	// retrieve the span for the originating retrieverequest
+	spanId := fmt.Sprintf("stream.send.request.%v.%v", sp.ID(), req.Addr)
+	span := tracing.ShiftSpanByKey(spanId)
+
 	go func() {
+		if span != nil {
+			defer span.(opentracing.Span).Finish()
+		}
+
 		req.peer = sp
 		err := d.chunkStore.Put(ctx, storage.NewChunk(req.Addr, req.SData))
 		if err != nil {
-			//如果chunk不对，说明协议不对，断开连接
 			if err == storage.ErrChunkInvalid {
 				// we removed this log because it spams the logs
 				// TODO: Enable this log line
@@ -247,21 +250,19 @@ func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *Ch
 			}
 		}
 		if replyReceipt && d.bzz != nil { //TODO 优化每隔10帧或是10秒发送一次收据
-			hs,_ := d.bzz.GetOrCreateHandshake(sp.ID())
+			hs, _ := d.bzz.GetOrCreateHandshake(sp.ID())
 			//用最低的优先级，发送一个收据
-			receipt,err := d.receiptStore.OnNodeChunkReceived(hs.Account)
+			receipt, err := d.receiptStore.OnNodeChunkReceived(hs.Account)
 			if err == nil {
-				err = sp.SendPriority(ctx, &ReceiptsMsg{receipt.Account,uint32(receipt.Stime.Unix()),receipt.Amount,receipt.Sign}, Mid)
+				err = sp.SendPriority(ctx, &ReceiptsMsg{receipt.Account, uint32(receipt.Stime.Unix()), receipt.Amount, receipt.Sign}, Mid)
 				if err != nil {
-					log.Warn("send receipt failed", "peer", sp.ID(), "error", err, )
+					log.Warn("send receipt failed", "peer", sp.ID(), "error", err)
 				}
 
-			}else{
-				log.Warn("create receipt failed", "peer", sp.ID(), "error", err, )
+			} else {
+				log.Warn("create receipt failed", "peer", sp.ID(), "error", err)
 			}
 		}
-
-
 
 	}()
 	return nil
@@ -294,8 +295,8 @@ func (d *Delivery) RequestFromPeers(ctx context.Context, req *network.Request) (
 				return true
 			}
 			sp = d.getPeer(id)
+			// sp is nil, when we encounter a peer that is not registered for delivery, i.e. doesn't support the `stream` protocol
 			if sp == nil {
-				//log.Warn("Delivery.RequestFromPeers: peer not found", "id", id)
 				return true
 			}
 			spID = &id
@@ -305,7 +306,11 @@ func (d *Delivery) RequestFromPeers(ctx context.Context, req *network.Request) (
 			return nil, nil, errors.New("no peer found")
 		}
 	}
-    //sp 是最近的一个节点
+
+	// setting this value in the context creates a new span that can persist across the sendpriority queue and the network roundtrip
+	// this span will finish only when delivery is handled (or times out)
+	ctx = context.WithValue(ctx, tracing.StoreLabelId, "stream.send.request")
+	ctx = context.WithValue(ctx, tracing.StoreLabelMeta, fmt.Sprintf("%v.%v", sp.ID(), req.Addr))
 	err := sp.SendPriority(ctx, &RetrieveRequestMsg{
 		Addr:      req.Addr,
 		SkipCheck: req.SkipCheck,
@@ -324,46 +329,43 @@ func (d *Delivery) UpdateNodes(nodes []string) {
 	d.centralNodes = nodes
 }
 
-
-func (d *Delivery) GetDataFromCentral(ctx context.Context,address storage.Address){
+func (d *Delivery) GetDataFromCentral(ctx context.Context, address storage.Address) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 	nodes_count := len(d.centralNodes)
-	if(nodes_count > 0){
+	if nodes_count > 0 {
 		//一个节点，一个小时内，总是只对一个中心节点取数据，这样提高收据合并的效率
 		nodeIndex := (time.Now().Hour() + int(d.receiptStore.Account()[0])) % nodes_count
 		times := 0
-		go func(){
+		go func() {
 			for times < nodes_count {
-			//	node,err := enode.ParseV4(d.centralNodes[nodeIndex])
-			//	if err == nil {
-					client := http.Client{Timeout: 5 * time.Second}
-					resp,err := client.Get(d.centralNodes[nodeIndex]+"/chunk:/"+address.Hex()) //这个是阻塞型的
+				//	node,err := enode.ParseV4(d.centralNodes[nodeIndex])
+				//	if err == nil {
+				client := http.Client{Timeout: 5 * time.Second}
+				resp, err := client.Get(d.centralNodes[nodeIndex] + "/chunk:/" + address.Hex()) //这个是阻塞型的
 
-					if err == nil && resp.StatusCode == 200 {
+				if err == nil && resp.StatusCode == 200 {
 
-						buffer, err := ioutil.ReadAll(resp.Body)
+					buffer, err := ioutil.ReadAll(resp.Body)
 
-						if err == nil {
+					if err == nil {
 
-							d.handleChunkDeliveryMsg(ctx,nil,&ChunkDeliveryMsg{address,buffer,nil},false)
-							break;
-						}
-
+						d.handleChunkDeliveryMsg(ctx, nil, &ChunkDeliveryMsg{address, buffer, nil}, false)
+						break
+					}
 
 					//}
 				}
-				nodeIndex = (nodeIndex +1 ) %nodes_count
+				nodeIndex = (nodeIndex + 1) % nodes_count
 			}
 
 		}()
 	}
 
-
 }
 
-func (d *Delivery) handleReceiptsMsg(sp *Peer,receipt *ReceiptsMsg) error{
+func (d *Delivery) handleReceiptsMsg(sp *Peer, receipt *ReceiptsMsg) error {
 
-	return d.receiptStore.OnNewReceipt(&state.Receipt{state.ReceiptBody{receipt.PA,time.Unix(int64(receipt.STime),0),receipt.AMount},receipt.Sig})
+	return d.receiptStore.OnNewReceipt(&state.Receipt{state.ReceiptBody{receipt.PA, time.Unix(int64(receipt.STime), 0), receipt.AMount}, receipt.Sig})
 
 }
