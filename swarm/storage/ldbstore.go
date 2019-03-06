@@ -1006,6 +1006,9 @@ func (s *LDBStore) get(addr Address) (chunk Chunk, err error) {
 			// default DbStore functionality to retrieve chunk data
 			datakey := getDataKey(index.Idx, proximity)
 			data, err = s.db.Get(datakey)
+			if len(data) == 32 {
+				err = ErrChunkInvalid
+			}
 			log.Trace("ldbstore.get retrieve", "key", addr, "indexkey", index.Idx, "datakey", fmt.Sprintf("%x", datakey), "proximity", proximity)
 			if err != nil {
 				log.Trace("ldbstore.get chunk found but could not be accessed", "key", addr, "err", err)

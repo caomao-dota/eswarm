@@ -25,17 +25,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"mime"
-	"mime/multipart"
-	"net/http"
-	"os"
-	"path"
-	"strconv"
-	"strings"
-	"time"
-
+	"github.com/hashicorp/golang-lru"
 	"github.com/plotozhu/MDCMainnet/common"
 	"github.com/plotozhu/MDCMainnet/metrics"
 	"github.com/plotozhu/MDCMainnet/swarm/api"
@@ -43,6 +33,17 @@ import (
 	"github.com/plotozhu/MDCMainnet/swarm/storage"
 	"github.com/plotozhu/MDCMainnet/swarm/storage/feed"
 	"github.com/rs/cors"
+	"io"
+	"io/ioutil"
+	"mime"
+	"mime/multipart"
+	"net/http"
+	"os"
+	"path"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
 )
 
 var (
@@ -164,6 +165,18 @@ func NewServer(api *api.API, corsString string) *Server {
 			defaultMiddlewares...,
 		),
 	})
+	mux.Handle("/m3u8:/", methodHandler{
+		"GET": Adapt(
+			http.HandlerFunc(server.HandleGetM3u8),
+			defaultMiddlewares...,
+		),
+	})
+	mux.Handle("/activate:/", methodHandler{
+		"POST": Adapt(
+			http.HandlerFunc(server.HandleGetM3u8),
+			defaultMiddlewares...,
+		),
+	})
 	mux.Handle("/", methodHandler{
 		"GET": Adapt(
 			http.HandlerFunc(server.HandleRootPaths),
@@ -173,6 +186,7 @@ func NewServer(api *api.API, corsString string) *Server {
 	})
 	server.Handler = c.Handler(mux)
 
+	server.entries,_ =  lru.New(10000)
 	return server
 }
 
@@ -190,6 +204,7 @@ type Server struct {
 	api        *api.API
 	listenAddr string
 	chunks     uint64
+	entries    *lru.Cache
 }
 
 func (s *Server) HandleBzzGet(w http.ResponseWriter, r *http.Request) {
@@ -685,7 +700,9 @@ func (s *Server) HandleGet(w http.ResponseWriter, r *http.Request) {
 		// parameter
 		if typ := r.URL.Query().Get("content_type"); typ != "" {
 			w.Header().Set("Content-Type", typ)
-		}
+		}/*else{
+			w.Header().Set("Content-Type", "application/octet-stream")
+		}*/
 		http.ServeContent(w, r, "", time.Now(), reader)
 	case uri.Hash():
 		w.Header().Set("Content-Type", "text/plain")
@@ -750,6 +767,103 @@ func (s *Server) HandleGetChunk(w http.ResponseWriter, r *http.Request) {
 
 
 	}
+}
+
+
+// HandleGetM3u8 处理m3u8
+// -
+//   given storage key
+func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
+
+	ruid := GetRUID(r.Context())
+	uri := GetURI(r.Context())
+
+	pattern_meu8 := regexp.MustCompile(`\/m3u8:\/(?P<path>(\S+\/)+)(?P<act>[^\?]+)(\?(\S+=\S+\&)*(hash=(?P<hash>[0-9a-fA-F]+))?(&\S+=\S+)*)?`)
+	log.Debug("handle.m3u8", "ruid", ruid, "uri", uri)
+	getCount.Inc(1)
+	_, pass, _ := r.BasicAuth()
+
+	result := pattern_meu8.FindSubmatch([]byte(r.RequestURI))
+
+	//匹配成功
+	if len(result) >= 6 {
+		path := string(result[1])
+		act  := string(result[3])
+		hash := result[7]
+		if len(hash) != 0 {  //有hash的，说明是要取hash对应的m3u8文件
+			//
+			// check the root chunk exists by retrieving the file's size
+			addr := common.Hex2Bytes(string(hash))
+
+
+
+			list, err := s.api.GetManifestList(r.Context(), s.api.Decryptor(r.Context(), pass), addr, "")
+			if err != nil || len(list.Entries) == 0 {
+				respondError(w, r, fmt.Sprintf("root chunk not found %s: %s", addr, err), http.StatusNotFound)
+				return
+			}
+
+			s.entries,_ = lru.New(len(list.Entries))
+			for _,entry := range list.Entries {
+				//fmt.Print(entry)
+				s.entries.Add(path+entry.Path,entry.Hash)
+			}
+
+			//fmt.Print(path)
+			//fmt.Print(act)
+
+			//取到了manifest文件，分析manifest文件，并且存入到数据库中
+			m3u8Hash,_ := s.entries.Get(path+act)
+
+			//从manifest文件中，取出m3u8文件，发送给客户端
+			if m3u8Hash == nil {
+				respondError(w, r, fmt.Sprintf("root chunk not found %s: %s", m3u8Hash, err), http.StatusNotFound)
+				return
+			}
+			// check the root chunk exists by retrieving the file's size
+			reader, isEncrypted := s.api.Retrieve(r.Context(), common.Hex2Bytes(m3u8Hash.(string)))
+			if _, err := reader.Size(r.Context(), nil); err != nil {
+				getFail.Inc(1)
+				respondError(w, r, fmt.Sprintf("root chunk not found %s: %s", addr, err), http.StatusNotFound)
+				return
+			}
+
+			w.Header().Set("X-Decrypted", fmt.Sprintf("%v", isEncrypted))
+
+			//if typ := r.URL.Query().Get("content_type"); typ != "" {
+				w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
+			//}
+
+			http.ServeContent(w, r, "", time.Now(), reader)
+
+		} else {
+			//没有hash,说明是一个数据片断，act是数据片断的名称
+			key := path+act
+			segHash,_ := s.entries.Get(key)
+			if segHash == nil {
+				respondError(w, r, fmt.Sprintf("root chunk not found %s: nil", key, ), http.StatusNotFound)
+				return
+			}
+			//数据片断与哈希的对应关系应该已经存储在数据库里
+			reader, isEncrypted := s.api.Retrieve(r.Context(), common.Hex2Bytes(segHash.(string)))
+			if _, err := reader.Size(r.Context(), nil); err != nil {
+				getFail.Inc(1)
+				respondError(w, r, fmt.Sprintf("root chunk not found %s: %s", act, err), http.StatusNotFound)
+				return
+			}
+
+			w.Header().Set("X-Decrypted", fmt.Sprintf("%v", isEncrypted))
+
+			//if typ := r.URL.Query().Get("content_type"); typ != "" {
+				w.Header().Set("Content-Type", "video/MP2T")
+			//}
+
+			http.ServeContent(w, r, "", time.Now(), reader)
+		}
+	}else{
+		fmt.Print(r.RequestURI)
+	}
+
 }
 // HandleGet handles a GET request to
 // - chunk://<key> and responds with the raw content stored at the

@@ -126,6 +126,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 		HiveParams:   config.HiveParams,
 		LightNode:    config.LightNodeEnabled,
 		BootnodeMode: config.BootnodeMode,
+		BzzAccount: common.HexToAddress(config.BzzAccount),
 	}
 
 	self.receiptsStore, err = state.NewReceiptsStore(filepath.Join(config.Path, "receipts.db"), self.privateKey, config.ServerAddr)

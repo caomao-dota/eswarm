@@ -166,6 +166,7 @@ func (n *NetStore) get(ctx context.Context, ref Address) (Chunk, func(context.Co
 
 	//从缓冲中获取数据
 	chunk, err := n.store.Get(ctx, ref)
+	//by Aegon, if chunk is 0
 	if err != nil {
 		//数据没有取到，生成一个fetcher
 		if err != ErrChunkNotFound {
