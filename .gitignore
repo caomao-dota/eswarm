@@ -51,3 +51,5 @@ private*
 reportData
 
 vendor
+
+.go_build_github*
