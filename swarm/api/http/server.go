@@ -37,6 +37,7 @@ import (
 	"io/ioutil"
 	"mime"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"os"
 	"path"
@@ -44,6 +45,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
 )
 
 var (
@@ -187,6 +189,7 @@ func NewServer(api *api.API, corsString string) *Server {
 	server.Handler = c.Handler(mux)
 
 	server.entries,_ =  lru.New(10000)
+	server.httpClient = createHTTPClient()
 	return server
 }
 
@@ -205,6 +208,8 @@ type Server struct {
 	listenAddr string
 	chunks     uint64
 	entries    *lru.Cache
+	//保存一个和中心服务端的连接，是否长连接另外考虑
+	httpClient *http.Client
 }
 
 func (s *Server) HandleBzzGet(w http.ResponseWriter, r *http.Request) {
@@ -768,8 +773,69 @@ func (s *Server) HandleGetChunk(w http.ResponseWriter, r *http.Request) {
 
 	}
 }
+// createHTTPClient for connection re-use
+func createHTTPClient() *http.Client {
+	client := &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 300 * time.Second,
+			}).DialContext,
+			MaxIdleConns:        2,
+			MaxIdleConnsPerHost: 2,
+			IdleConnTimeout:	 1000 * time.Second,
+		},
+	}
+	return client
+}
+//get data from server and write to response
+func (s *Server)getDataFromCentralServer(uri string, r *http.Request,w http.ResponseWriter){
 
 
+	req, err := http.NewRequest("GET", uri, bytes.NewBuffer([]byte("")))
+	if err != nil {
+		log.Error("Error Occured. %+v", err)
+		respondError(w, r, fmt.Sprintf("Error Occured :%+v", err), http.StatusInternalServerError)
+		return
+	}
+	for k,vv := range r.Header {
+		vv2 := make([]string, len(vv))
+		copy(vv2, vv)
+		req.Header[k] = vv2
+	}
+
+	// use httpClient to send request
+	response, err := s.httpClient.Do(req)
+	if err != nil && response == nil {
+		log.Error("Error sending request to API endpoint. %+v", err)
+		respondError(w, r, fmt.Sprintf("Error Occured :%+v", err), http.StatusBadRequest)
+	} else {
+		// Close the connection to reuse it
+		defer response.Body.Close()
+
+		// Let's check if the work actually is done
+		// We have seen inconsistencies even when we get 200 OK response
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			log.Error("Couldn't parse response body. %+v", err)
+		}
+
+		for k,vv := range response.Header {
+			vv2 := make([]string, len(vv))
+			copy(vv2, vv)
+			if(w.Header().Get(k) == "" && k == "Content-Type") {
+				w.Header().Set(k,vv[0])
+			}
+
+		//	w.Header().Set(k,vv2)
+			//log.Trace(k,vv)
+		}
+		w.Write(body)
+		return
+		//log.Trace("Response Body:", string(body))
+	}
+}
 // HandleGetM3u8 处理m3u8
 // -
 //   given storage key
@@ -778,7 +844,7 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 	ruid := GetRUID(r.Context())
 	uri := GetURI(r.Context())
 
-	pattern_meu8 := regexp.MustCompile(`\/m3u8:\/(?P<path>(\S+\/)+)(?P<act>[^\?]+)(\?(\S+=\S+\&)*(hash=(?P<hash>[0-9a-fA-F]+))?(&\S+=\S+)*)?`)
+	pattern_meu8 := regexp.MustCompile(`\/m3u8:\/(?P<schema>https?)\/(?P<path>(\S+\/)+)(?P<act>[^\?]+)(\?(\S+=\S+\&)*(hash=(?P<hash>[0-9a-fA-F]+))?(&\S+=\S+)*)?`)
 	log.Debug("handle.m3u8", "ruid", ruid, "uri", uri)
 	getCount.Inc(1)
 	_, pass, _ := r.BasicAuth()
@@ -786,10 +852,11 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 	result := pattern_meu8.FindSubmatch([]byte(r.RequestURI))
 
 	//匹配成功
-	if len(result) >= 6 {
-		path := string(result[1])
-		act  := string(result[3])
-		hash := result[7]
+	if len(result) >= 9 {
+		schema := string(result[1])
+		path := schema+"://"+string(result[2])
+		act  := string(result[4])
+		hash := result[8]
 		if len(hash) != 0 {  //有hash的，说明是要取hash对应的m3u8文件
 			//
 			// check the root chunk exists by retrieving the file's size
@@ -817,7 +884,7 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 
 			//从manifest文件中，取出m3u8文件，发送给客户端
 			if m3u8Hash == nil {
-				respondError(w, r, fmt.Sprintf("root chunk not found %s: %s", m3u8Hash, err), http.StatusNotFound)
+				s.getDataFromCentralServer(path+act,r,w)
 				return
 			}
 			// check the root chunk exists by retrieving the file's size
@@ -841,7 +908,9 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 			key := path+act
 			segHash,_ := s.entries.Get(key)
 			if segHash == nil {
-				respondError(w, r, fmt.Sprintf("root chunk not found %s: nil", key, ), http.StatusNotFound)
+				//如果这个没有找到，从中心化服务器上去取，地址就是key，这时候，我们就起了一个转接的作用
+				s.getDataFromCentralServer(path+act,r,w)
+
 				return
 			}
 			//数据片断与哈希的对应关系应该已经存储在数据库里

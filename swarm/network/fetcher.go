@@ -18,6 +18,7 @@ package network
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -154,8 +155,11 @@ func (f *Fetcher) Offer(source *enode.ID) {
 // Request is called when an upstream peer request the chunk as part of `RetrieveRequestMsg`, or from a local request through FileStore, and the node does not have the chunk locally.
 func (f *Fetcher) Request(hopCount uint8) {
 	// First we need to have this select to make sure that we return if context is done
+	tm,ok := f.ctx.Deadline()
+	fmt.Printf("fetcher timeout :%v, %v\r\n",tm,ok)
 	select {
 	case <-f.ctx.Done():
+		fmt.Printf("fetcher done :%v, %v\r\n",tm,ok)
 		return
 	default:
 	}
@@ -169,7 +173,9 @@ func (f *Fetcher) Request(hopCount uint8) {
 	// push to offerC instead if offerC is available (see number 2 in https://golang.org/ref/spec#Select_statements)
 	select {
 	case f.requestC <- hopCount + 1:
+
 	case <-f.ctx.Done():
+		fmt.Printf("fetcher done :%v, %v\r\n",tm,ok)
 	}
 }
 
