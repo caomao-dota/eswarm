@@ -17,6 +17,7 @@
 package main
 
 var SwarmBootnodes = []string{
+	"enode://6cde40e98df8871d17a6832b50bad1bfc0aa12fb471f3a73af75cd2a70bfddee2399cce223d0255b900aedf8b28b3b1128560ea0cc51de6852bada088a62abeb@124.156.115.14:30399",
 	// EF Swarm Bootnode - AWS - eu-central-1
 	//"enode://4c113504601930bf2000c29bcd98d1716b6167749f58bad703bae338332fe93cc9d9204f08afb44100dc7bea479205f5d162df579f9a8f76f8b402d339709023@3.122.203.99:30301",
 	// EF Swarm Bootnode - AWS - us-west-2
