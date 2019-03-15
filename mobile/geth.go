@@ -19,9 +19,14 @@
 
 package geth
 
+import "C"
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/plotozhu/MDCMainnet/accounts"
+	"github.com/plotozhu/MDCMainnet/accounts/keystore"
+	"github.com/plotozhu/MDCMainnet/common"
+	"io/ioutil"
 	"path/filepath"
 
 	"github.com/plotozhu/MDCMainnet/core"
@@ -35,6 +40,8 @@ import (
 	"github.com/plotozhu/MDCMainnet/p2p"
 	"github.com/plotozhu/MDCMainnet/p2p/nat"
 	"github.com/plotozhu/MDCMainnet/params"
+	"github.com/plotozhu/MDCMainnet/swarm"
+	bzzapi "github.com/plotozhu/MDCMainnet/swarm/api"
 	whisper "github.com/plotozhu/MDCMainnet/whisper/whisperv6"
 )
 
@@ -79,6 +86,15 @@ type NodeConfig struct {
 
 	// Ultra Light client options
 	ULC *eth.ULCConfig
+
+	// SwarmEnabled specifies whether the node should run the Swarm protocol.
+	SwarmEnabled bool
+
+	// SwarmAccount specifies account ID used for starting Swarm node.
+	SwarmAccount string
+
+	// SwarmAccountPassword specifies password for account retrieval from the keystore.
+	SwarmAccountPassword string
 }
 
 // defaultNodeConfig contains the default node configuration values to use if all
@@ -189,6 +205,99 @@ func NewNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 			return nil, fmt.Errorf("whisper init: %v", err)
 		}
 	}
+
+	// Register the Swarm (BZZ) protocol if requested
+	if config.SwarmEnabled {
+		bzzconfig := bzzapi.NewConfig()
+		key, err := getSwarmKey(rawStack, config.SwarmAccount, config.SwarmAccountPassword)
+		if err != nil {
+			return nil, fmt.Errorf("no key")
+		}
+		bzzconfig.Init(key.PrivateKey)
+		if err := rawStack.Register(func(*node.ServiceContext) (node.Service, error) {
+			return swarm.NewSwarm(bzzconfig, nil)
+		}); err != nil {
+			return nil, fmt.Errorf("swarm init: %v", err)
+		}
+	}
+
+	return &Node{rawStack}, nil
+}
+
+// getSwarmKey is a helper for finding and decrypting given account's private key
+// to be used with Swarm.
+func getSwarmKey(stack *node.Node, account, password string) (*keystore.Key, error) {
+	if account == "" {
+		return nil, nil // it's not an error, just skip
+	}
+
+	address := common.HexToAddress(account)
+	acc := accounts.Account{
+		Address: address,
+	}
+
+	am := stack.AccountManager()
+	ks := am.Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	a, err := ks.Find(acc)
+	if err != nil {
+		return nil, fmt.Errorf("find account: %v", err)
+	}
+	keyjson, err := ioutil.ReadFile(a.URL.Path)
+	if err != nil {
+		return nil, fmt.Errorf("load key: %v", err)
+	}
+
+	return keystore.DecryptKey(keyjson, password)
+}
+
+func NewSwarmNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
+	if config == nil {
+		config = NewNodeConfig()
+	}
+	if config.MaxPeers == 0 {
+		config.MaxPeers = defaultNodeConfig.MaxPeers
+	}
+	if config.BootstrapNodes == nil || config.BootstrapNodes.Size() == 0 {
+		config.BootstrapNodes = defaultNodeConfig.BootstrapNodes
+	}
+
+	if config.PprofAddress != "" {
+		debug.StartPProf(config.PprofAddress)
+	}
+
+	// Create the empty networking stack
+	nodeConf := &node.Config{
+		Name:        clientIdentifier,
+		Version:     params.VersionWithMeta,
+		DataDir:     datadir,
+		KeyStoreDir: filepath.Join(datadir, "keystore"), // Mobile should never use internal keystores!
+		P2P: p2p.Config{
+			NoDiscovery: false,
+			NoDial:      true,
+			DiscoveryV5: false,
+			ListenAddr:  ":0",
+			NAT:         nat.Any(),
+			MaxPeers:    config.MaxPeers,
+		},
+	}
+
+	rawStack, err := node.New(nodeConf)
+	if err != nil {
+		return nil, err
+	}
+	bzzconfig := bzzapi.NewConfig()
+	key, err := getSwarmKey(rawStack, config.SwarmAccount, config.SwarmAccountPassword)
+	if err != nil {
+		return nil, fmt.Errorf("no key")
+	}
+	bzzconfig.Init(key.PrivateKey)
+
+	if err := rawStack.Register(func(*node.ServiceContext) (node.Service, error) {
+		return swarm.NewSwarm(bzzconfig, nil)
+	}); err != nil {
+		return nil, fmt.Errorf("swarm init: %v", err)
+	}
+
 	return &Node{rawStack}, nil
 }
 
