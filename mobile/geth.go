@@ -318,6 +318,14 @@ func (n *Node) Stop() error {
 	return n.node.Stop()
 }
 
+func (n *Node) Wait() {
+	n.node.Wait()
+}
+
+func (n *Node) AddPeer(peer *Enodev4) {
+	n.node.Server().AddPeer(peer.node)
+}
+
 // GetEthereumClient retrieves a client to access the Ethereum subsystem.
 func (n *Node) GetEthereumClient() (client *EthereumClient, _ error) {
 	rpc, err := n.node.Attach()
