@@ -23,4 +23,4 @@ COPY --from=builder /go/bin/swarm-smoke /
 COPY --from=builder /go/bin/global-store /
 ADD run.sh /run.sh
 ADD run-smoke.sh /run-smoke.sh
-ENTRYPOINT ["/run.sh"]
+ENTRYPOINT ["/config/run.sh"]
