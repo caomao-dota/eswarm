@@ -44,7 +44,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -876,11 +875,19 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 		} else {
 			//没有hash,说明是一个数据片断，act是数据片断的名称
 			key := path+act
-			segHash,_ := s.entries.Get(key)
-			if(segHash == nil) {
-				segHash,_ = s.db.Get([]byte(key),nil)
+
+			segHash,segOk := s.entries.Get(key)
+			if !segOk {
+				hashValue,err := s.db.Get([]byte(key),nil)
+				if err == nil{
+					segOk = true
+				}
+				segHash = hashValue
+
+			}else{
+				segHash = segHash.(string)
 			}
-			if segHash == nil  || reflect.ValueOf(segHash).IsNil(){
+			if !segOk {
 				//如果这个没有找到，从中心化服务器上去取，地址就是key，这时候，我们就起了一个转接的作用
 				s.httpClient.GetDataFromCentralServer(path+act,r,w,respondError)
 
