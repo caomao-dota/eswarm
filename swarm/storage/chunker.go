@@ -20,16 +20,19 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/golang-lru"
+	"github.com/plotozhu/MDCMainnet/swarm/util"
 	"io"
 	"sync"
 	"time"
 
-	opentracing "github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go"
 	olog "github.com/opentracing/opentracing-go/log"
 	"github.com/plotozhu/MDCMainnet/metrics"
 	"github.com/plotozhu/MDCMainnet/swarm/chunk"
 	"github.com/plotozhu/MDCMainnet/swarm/log"
 	"github.com/plotozhu/MDCMainnet/swarm/spancontext"
+	rawHttp "net/http"
 )
 
 /*
@@ -371,9 +374,12 @@ type LazyChunkReader struct {
 	hashSize  int64 // inherit from chunker
 	depth     int
 	getter    Getter
+	reader    *util.HttpReader
+	ts_buffer    *lru.Cache
 }
 
 func (tc *TreeChunker) Join(ctx context.Context) *LazyChunkReader {
+	bf,_ := lru.New(20)
 	return &LazyChunkReader{
 		addr:      tc.addr,
 		chunkSize: tc.chunkSize,
@@ -382,6 +388,8 @@ func (tc *TreeChunker) Join(ctx context.Context) *LazyChunkReader {
 		depth:     tc.depth,
 		getter:    tc.getter,
 		ctx:       tc.ctx,
+		reader:    util.CreateHttpReader(),
+		ts_buffer: bf,
 	}
 }
 
@@ -417,7 +425,11 @@ func (r *LazyChunkReader) Size(ctx context.Context, quitC chan bool) (n int64, e
 
 	return int64(s), nil
 }
-
+type DataCache struct {
+	start int64
+	value []byte
+	end   bool
+}
 // read at can be called numerous times
 // concurrent reads are allowed
 // Size() needs to be called synchronously on the LazyChunkReader first
@@ -443,47 +455,90 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 	}
 	quitC := make(chan bool)
 	size, err := r.Size(cctx, quitC)
-	if err != nil {
-		log.Debug("lazychunkreader.readat.size", "size", size, "err", err)
-		return 0, err
+	if err == nil {
+
+		errC := make(chan error)
+
+		// }
+		var treeSize int64
+		var depth int
+		// calculate depth and max treeSize
+		treeSize = r.chunkSize
+		for ; treeSize < size; treeSize *= r.branches {
+			depth++
+		}
+		wg := sync.WaitGroup{}
+		length := int64(len(b))
+		for d := 0; d < r.depth; d++ {
+			off *= r.chunkSize
+			length *= r.chunkSize
+		}
+		wg.Add(1)
+		go r.join(cctx, b, off, off+length, depth, treeSize/r.branches, r.chunkData, &wg, errC, quitC)
+		go func() {
+			wg.Wait()
+			close(errC)
+		}()
+
+		err = <-errC
+		if err == nil {
+
+			//val := cctx.Value("req")
+			//if val == nil   { for test only
+				if off+int64(len(b)) >= size {
+					log.Debug("lazychunkreader.readat.return at end", "size", size, "off", off)
+					return int(size - off), io.EOF
+				}
+				log.Debug("lazychunkreader.readat.errc", "buff", len(b))
+				return len(b), nil
+			//}
+
+		}
 	}
 
-	errC := make(chan error)
 
-	// }
-	var treeSize int64
-	var depth int
-	// calculate depth and max treeSize
-	treeSize = r.chunkSize
-	for ; treeSize < size; treeSize *= r.branches {
-		depth++
-	}
-	wg := sync.WaitGroup{}
-	length := int64(len(b))
-	for d := 0; d < r.depth; d++ {
-		off *= r.chunkSize
-		length *= r.chunkSize
-	}
-	wg.Add(1)
-	go r.join(cctx, b, off, off+length, depth, treeSize/r.branches, r.chunkData, &wg, errC, quitC)
-	go func() {
-		wg.Wait()
-		close(errC)
-	}()
 
-	err = <-errC
-	if err != nil {
-		log.Debug("lazychunkreader.readat.errc", "err", err)
-		close(quitC)
-		return 0, err
+		req := cctx.Value("req").(*rawHttp.Request)
+		url := cctx.Value("url").(string)
+
+		buffer,OK := r.ts_buffer.Get(url)
+		needRetrieve := !OK;
+		//检查是否需要
+		if OK {
+			result := buffer.(*DataCache)
+			if result.start > off || //不在缓冲之内
+				(!result.end && (off + int64(len(b))  > (result.start + util.MaxLen) ) ) {
+				 	needRetrieve = true
+
+			}
+		}
+		var cacheBuffer []byte
+		startOffset := int64(0)
+		if needRetrieve {
+			dataBuf,end := r.reader.GetChunkFromCentral(url, off,  req)
+			if dataBuf != nil {
+				r.ts_buffer.Add(url,&DataCache{start:off,value:dataBuf,end:end})
+				cacheBuffer = dataBuf
+			}else{
+				cacheBuffer = nil
+			}
+			startOffset = 0
+
+		}else{
+			cacheBuffer =  buffer.(*DataCache).value
+			startOffset = off - buffer.(*DataCache).start
+		}
+
+	totalLen := len(cacheBuffer)-int(startOffset)
+	if totalLen > len(b) {
+		totalLen = len(b)
 	}
-	if off+int64(len(b)) >= size {
-		log.Debug("lazychunkreader.readat.return at end", "size", size, "off", off)
-		return int(size - off), io.EOF
-	}
-	log.Debug("lazychunkreader.readat.errc", "buff", len(b))
-	return len(b), nil
+	copy(b,cacheBuffer[startOffset:startOffset+int64(totalLen)])
+	return totalLen, nil
+
+
 }
+
 
 func (r *LazyChunkReader) join(ctx context.Context, b []byte, off int64, eoff int64, depth int, treeSize int64, chunkData ChunkData, parentWg *sync.WaitGroup, errC chan error, quitC chan bool) {
 	defer parentWg.Done()

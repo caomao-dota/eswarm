@@ -44,6 +44,7 @@ const (
 type FileStore struct {
 	ChunkStore
 	hashFunc SwarmHasher
+	failesafeUrl    string // fail safe url
 }
 
 type FileStoreParams struct {

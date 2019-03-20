@@ -206,6 +206,7 @@ func NewAPI(fileStore *storage.FileStore, dns Resolver, feedHandler *feed.Handle
 
 // Retrieve FileStore reader API
 func (a *API) Retrieve(ctx context.Context, addr storage.Address) (reader storage.LazySectionReader, isEncrypted bool) {
+
 	return a.fileStore.Retrieve(ctx, addr)
 }
 
@@ -527,7 +528,8 @@ func (a *API) GetDirectoryTar(ctx context.Context, decrypt DecryptFunc, uri *URI
 
 // GetManifestList lists the manifest entries for the specified address and prefix
 // and returns it as a ManifestList
-func (a *API) GetManifestList(ctx context.Context, decryptor DecryptFunc, addr storage.Address, prefix string) (list ManifestList, err error) {
+func (a *API) GetManifestList(actx context.Context, decryptor DecryptFunc, addr storage.Address, prefix string) (list ManifestList, err error) {
+	ctx,_ := context.WithTimeout(actx,time.Second*15)
 	apiManifestListCount.Inc(1)
 	walker, err := a.NewManifestWalker(ctx, addr, decryptor, nil)
 	if err != nil {

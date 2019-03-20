@@ -30,7 +30,7 @@ import (
 
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
-
+	 "github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/plotozhu/MDCMainnet/common"
 	"github.com/plotozhu/MDCMainnet/swarm/storage/mock"
 )
@@ -49,7 +49,7 @@ type GlobalStore struct {
 
 // NewGlobalStore creates a new instance of GlobalStore.
 func NewGlobalStore(path string) (s *GlobalStore, err error) {
-	db, err := leveldb.OpenFile(path, nil)
+	db, err := leveldb.OpenFile(path, &opt.Options{CompactionTableSize:opt.DefaultCompactionTableSize*32})
 	if err != nil {
 		return nil, err
 	}

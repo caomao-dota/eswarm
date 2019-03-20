@@ -22,6 +22,7 @@ package http
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -32,7 +33,9 @@ import (
 	"github.com/plotozhu/MDCMainnet/swarm/log"
 	"github.com/plotozhu/MDCMainnet/swarm/storage"
 	"github.com/plotozhu/MDCMainnet/swarm/storage/feed"
+	"github.com/plotozhu/MDCMainnet/swarm/util"
 	"github.com/rs/cors"
+	"github.com/syndtr/goleveldb/leveldb"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -41,11 +44,11 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
-
 )
 
 var (
@@ -86,8 +89,12 @@ func NewServer(api *api.API, corsString string) *Server {
 		MaxAge:         600,
 		AllowedHeaders: []string{"*"},
 	})
+	db, _ := leveldb.OpenFile("./cachelist.db", nil)
 
-	server := &Server{api: api}
+	server := &Server{api: api,
+		db:db,
+
+		}
 
 	defaultMiddlewares := []Adapter{
 		RecoverPanic,
@@ -189,7 +196,7 @@ func NewServer(api *api.API, corsString string) *Server {
 	server.Handler = c.Handler(mux)
 
 	server.entries,_ =  lru.New(10000)
-	server.httpClient = createHTTPClient()
+	server.httpClient = util.CreateHttpReader()
 	return server
 }
 
@@ -209,7 +216,8 @@ type Server struct {
 	chunks     uint64
 	entries    *lru.Cache
 	//保存一个和中心服务端的连接，是否长连接另外考虑
-	httpClient *http.Client
+	httpClient *util.HttpReader
+	db *leveldb.DB
 }
 
 func (s *Server) HandleBzzGet(w http.ResponseWriter, r *http.Request) {
@@ -779,7 +787,7 @@ func createHTTPClient() *http.Client {
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 			DialContext: (&net.Dialer{
-				Timeout:   30 * time.Second,
+				Timeout:   300 * time.Second,
 				KeepAlive: 300 * time.Second,
 			}).DialContext,
 			MaxIdleConns:        2,
@@ -789,53 +797,7 @@ func createHTTPClient() *http.Client {
 	}
 	return client
 }
-//get data from server and write to response
-func (s *Server)getDataFromCentralServer(uri string, r *http.Request,w http.ResponseWriter){
 
-
-	req, err := http.NewRequest("GET", uri, bytes.NewBuffer([]byte("")))
-	if err != nil {
-		log.Error("Error Occured. %+v", err)
-		respondError(w, r, fmt.Sprintf("Error Occured :%+v", err), http.StatusInternalServerError)
-		return
-	}
-	for k,vv := range r.Header {
-		vv2 := make([]string, len(vv))
-		copy(vv2, vv)
-		req.Header[k] = vv2
-	}
-
-	// use httpClient to send request
-	response, err := s.httpClient.Do(req)
-	if err != nil && response == nil {
-		log.Error("Error sending request to API endpoint. %+v", err)
-		respondError(w, r, fmt.Sprintf("Error Occured :%+v", err), http.StatusBadRequest)
-	} else {
-		// Close the connection to reuse it
-		defer response.Body.Close()
-
-		// Let's check if the work actually is done
-		// We have seen inconsistencies even when we get 200 OK response
-		body, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			log.Error("Couldn't parse response body. %+v", err)
-		}
-
-		for k,vv := range response.Header {
-			vv2 := make([]string, len(vv))
-			copy(vv2, vv)
-			if(w.Header().Get(k) == "" && k == "Content-Type") {
-				w.Header().Set(k,vv[0])
-			}
-
-		//	w.Header().Set(k,vv2)
-			//log.Trace(k,vv)
-		}
-		w.Write(body)
-		return
-		//log.Trace("Response Body:", string(body))
-	}
-}
 // HandleGetM3u8 处理m3u8
 // -
 //   given storage key
@@ -844,7 +806,7 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 	ruid := GetRUID(r.Context())
 	uri := GetURI(r.Context())
 
-	pattern_meu8 := regexp.MustCompile(`\/m3u8:\/(?P<schema>https?)\/(?P<path>(\S+\/)+)(?P<act>[^\?]+)(\?(\S+=\S+\&)*(hash=(?P<hash>[0-9a-fA-F]+))?(&\S+=\S+)*)?`)
+	pattern_meu8 := regexp.MustCompile(`\/m3u8:\/(?P<schema>https?)\/(?P<path>(\S+\/)+)(?P<act>[^\?]+)(\?(?P<param>(\S+=\S+\&)*)(hash=(?P<hash>[0-9a-fA-F]+))?(&\S+=\S+)*)?`)
 	log.Debug("handle.m3u8", "ruid", ruid, "uri", uri)
 	getCount.Inc(1)
 	_, pass, _ := r.BasicAuth()
@@ -856,65 +818,79 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 		schema := string(result[1])
 		path := schema+"://"+string(result[2])
 		act  := string(result[4])
-		hash := result[8]
+		param := string(result[6])
+		hash := result[9]
 		if len(hash) != 0 {  //有hash的，说明是要取hash对应的m3u8文件
 			//
 			// check the root chunk exists by retrieving the file's size
 			addr := common.Hex2Bytes(string(hash))
 
+			url := path+act
 
-
+			if param != "" {
+				url += "?"+param[0:len(param)-1] //删除&
+			}
 			list, err := s.api.GetManifestList(r.Context(), s.api.Decryptor(r.Context(), pass), addr, "")
-			if err != nil || len(list.Entries) == 0 {
-				respondError(w, r, fmt.Sprintf("root chunk not found %s: %s", addr, err), http.StatusNotFound)
-				return
+			if err == nil && len(list.Entries) != 0 {
+
+				s.entries,_ = lru.New(len(list.Entries))
+				for _,entry := range list.Entries {
+					//fmt.Print(entry)
+					s.entries.Add(path+entry.Path,entry.Hash)
+					s.db.Put([]byte(path+entry.Path),[]byte(entry.Hash),nil)
+				}
+
+				//fmt.Print(path)
+				//fmt.Print(act)
+
+				//取到了manifest文件，分析manifest文件，并且存入到数据库中
+
+				m3u8Hash,_ := s.entries.Get(url)
+
+				//从manifest文件中，取出m3u8文件，发送给客户端
+				if m3u8Hash != nil {
+					// check the root chunk exists by retrieving the file's size
+					newContext := context.WithValue(r.Context(),"url",url)
+					reader, isEncrypted := s.api.Retrieve(newContext, common.Hex2Bytes(m3u8Hash.(string)))
+					if _, err := reader.Size(r.Context(), nil); err != nil {
+						getFail.Inc(1)
+						respondError(w, r, fmt.Sprintf("root chunk not found %s: %s", addr, err), http.StatusNotFound)
+						return
+					}
+
+					w.Header().Set("X-Decrypted", fmt.Sprintf("%v", isEncrypted))
+
+					//if typ := r.URL.Query().Get("content_type"); typ != "" {
+					w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
+					//}
+
+					http.ServeContent(w, r, "", time.Now(), reader)
+					return;
+				}
+
 			}
 
-			s.entries,_ = lru.New(len(list.Entries))
-			for _,entry := range list.Entries {
-				//fmt.Print(entry)
-				s.entries.Add(path+entry.Path,entry.Hash)
-			}
-
-			//fmt.Print(path)
-			//fmt.Print(act)
-
-			//取到了manifest文件，分析manifest文件，并且存入到数据库中
-			m3u8Hash,_ := s.entries.Get(path+act)
-
-			//从manifest文件中，取出m3u8文件，发送给客户端
-			if m3u8Hash == nil {
-				s.getDataFromCentralServer(path+act,r,w)
-				return
-			}
-			// check the root chunk exists by retrieving the file's size
-			reader, isEncrypted := s.api.Retrieve(r.Context(), common.Hex2Bytes(m3u8Hash.(string)))
-			if _, err := reader.Size(r.Context(), nil); err != nil {
-				getFail.Inc(1)
-				respondError(w, r, fmt.Sprintf("root chunk not found %s: %s", addr, err), http.StatusNotFound)
-				return
-			}
-
-			w.Header().Set("X-Decrypted", fmt.Sprintf("%v", isEncrypted))
-
-			//if typ := r.URL.Query().Get("content_type"); typ != "" {
-				w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
-			//}
-
-			http.ServeContent(w, r, "", time.Now(), reader)
+			s.httpClient.GetDataFromCentralServer(url,r,w,respondError)
+			return
 
 		} else {
 			//没有hash,说明是一个数据片断，act是数据片断的名称
 			key := path+act
 			segHash,_ := s.entries.Get(key)
-			if segHash == nil {
+			if(segHash == nil) {
+				segHash,_ = s.db.Get([]byte(key),nil)
+			}
+			if segHash == nil  || reflect.ValueOf(segHash).IsNil(){
 				//如果这个没有找到，从中心化服务器上去取，地址就是key，这时候，我们就起了一个转接的作用
-				s.getDataFromCentralServer(path+act,r,w)
+				s.httpClient.GetDataFromCentralServer(path+act,r,w,respondError)
 
 				return
 			}
 			//数据片断与哈希的对应关系应该已经存储在数据库里
-			reader, isEncrypted := s.api.Retrieve(r.Context(), common.Hex2Bytes(segHash.(string)))
+			newContext := context.WithValue(r.Context(),"url",path+act)
+			newContext = context.WithValue(newContext,"server",*s)
+			newContext = context.WithValue(newContext,"req",r)
+			reader, isEncrypted := s.api.Retrieve(newContext, common.Hex2Bytes(segHash.(string)))
 			if _, err := reader.Size(r.Context(), nil); err != nil {
 				getFail.Inc(1)
 				respondError(w, r, fmt.Sprintf("root chunk not found %s: %s", act, err), http.StatusNotFound)

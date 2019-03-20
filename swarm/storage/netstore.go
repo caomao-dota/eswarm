@@ -205,7 +205,7 @@ func (n *NetStore) getOrCreateFetcher(ctx context.Context, ref Address) *fetcher
 	cctx, cancel := context.WithTimeout(ctx, fetcherTimeout)
 	// destroy is called when all requests finish
 	destroy := func() {
-		fmt.Printf("remove fetcher: %v\r\n",key)
+		//fmt.Printf("remove fetcher: %v\r\n",key)
 		// remove fetcher from fetchers
 		n.fetchers.Remove(key)
 		// stop fetcher by cancelling context called when
@@ -229,7 +229,7 @@ func (n *NetStore) getOrCreateFetcher(ctx context.Context, ref Address) *fetcher
 	//peers 连接的端点
 	fetcher := newFetcher(sp, ref, n.NewNetFetcherFunc(cctx, ref, peers), destroy, peers, n.closeC)
 	n.fetchers.Add(key, fetcher)
-	fmt.Printf("new fetcher: %v\r\n",key)
+	//fmt.Printf("new fetcher: %v\r\n",key)
 	return fetcher
 }
 
@@ -293,14 +293,14 @@ func newFetcher(span opentracing.Span, addr Address, nf NetFetcher, cancel func(
 // Fetch进行Chunk同步读取，它在NetStore.Get中，本地没有对应可用的Chunk时被调用
 func (f *fetcher) Fetch(rctx context.Context) (Chunk, error) {
 	atomic.AddInt32(&f.requestCnt, 1)
-	fmt.Printf("new fetcher action: %v %v %+v\r\n",f.addr.String(),f.requestCnt,time.Now())
+	//fmt.Printf("new fetcher action: %v %v %+v\r\n",f.addr.String(),f.requestCnt,time.Now())
 	defer func() {
 
 		// if all the requests are done the fetcher can be cancelled
 		if atomic.AddInt32(&f.requestCnt, -1) == 0 {
 			f.cancel()
 		}
-		fmt.Printf("delete fetcher action: %v %v %+v\r\n",f.addr.String(),f.requestCnt,time.Now())
+		//fmt.Printf("delete fetcher action: %v %v %+v\r\n",f.addr.String(),f.requestCnt,time.Now())
 		f.span.Finish()
 	}()
 

@@ -306,6 +306,9 @@ func (b *Bzz) checkHandshake(hs interface{}) error {
 	if rhs.Version != uint64(BzzSpec.Version) {
 		return fmt.Errorf("version mismatch %d (!= %d)", rhs.Version, BzzSpec.Version)
 	}
+	if rhs.LightNode == true && b.LightNode == true{
+		return fmt.Errorf("light node reject connecting from light node", rhs.Account,b.bzzAccount)
+	}
 	return nil
 }
 

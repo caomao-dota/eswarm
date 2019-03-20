@@ -66,6 +66,7 @@ type Hive struct {
 	// bookkeeping
 	lock   sync.Mutex
 	peers  map[enode.ID]*BzzPeer
+
 	ticker *time.Ticker
 }
 
@@ -81,6 +82,7 @@ func NewHive(params *HiveParams, kad *Kademlia, store state.Store) *Hive {
 		peers:      make(map[enode.ID]*BzzPeer),
 	}
 }
+
 
 // Start stars the hive, receives p2p.Server only at startup
 // server is used to connect to a peer based on its NodeID or enode URL
