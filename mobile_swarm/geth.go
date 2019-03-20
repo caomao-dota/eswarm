@@ -17,32 +17,21 @@
 // Contains all the wrappers from the node package to support client side node
 // management on mobile platforms.
 
-package geth
+package swarm
 
-import "C"
+//import "C"
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/plotozhu/MDCMainnet/accounts"
 	"github.com/plotozhu/MDCMainnet/accounts/keystore"
 	"github.com/plotozhu/MDCMainnet/common"
-	"io/ioutil"
-	"path/filepath"
-
-	"github.com/plotozhu/MDCMainnet/core"
-	"github.com/plotozhu/MDCMainnet/eth"
-	"github.com/plotozhu/MDCMainnet/eth/downloader"
-	"github.com/plotozhu/MDCMainnet/ethclient"
-	"github.com/plotozhu/MDCMainnet/ethstats"
-	"github.com/plotozhu/MDCMainnet/internal/debug"
-	"github.com/plotozhu/MDCMainnet/les"
 	"github.com/plotozhu/MDCMainnet/node"
 	"github.com/plotozhu/MDCMainnet/p2p"
 	"github.com/plotozhu/MDCMainnet/p2p/nat"
-	"github.com/plotozhu/MDCMainnet/params"
 	"github.com/plotozhu/MDCMainnet/swarm"
 	bzzapi "github.com/plotozhu/MDCMainnet/swarm/api"
-	whisper "github.com/plotozhu/MDCMainnet/whisper/whisperv6"
+	"io/ioutil"
+	"path/filepath"
 )
 
 // NodeConfig represents the collection of configuration values to fine tune the Geth
@@ -51,7 +40,7 @@ import (
 // complexity.
 type NodeConfig struct {
 	// Bootstrap nodes used to establish connectivity with the rest of the network.
-	BootstrapNodes *Enodes
+	//BootstrapNodes *Enodesv4
 
 	// MaxPeers is the maximum number of peers that can be connected. If this is
 	// set to zero, then only the configured static and trusted peers can connect.
@@ -63,29 +52,6 @@ type NodeConfig struct {
 	// EthereumNetworkID is the network identifier used by the Ethereum protocol to
 	// decide if remote peers should be accepted or not.
 	EthereumNetworkID int64 // uint64 in truth, but Java can't handle that...
-
-	// EthereumGenesis is the genesis JSON to use to seed the blockchain with. An
-	// empty genesis state is equivalent to using the mainnet's state.
-	EthereumGenesis string
-
-	// EthereumDatabaseCache is the system memory in MB to allocate for database caching.
-	// A minimum of 16MB is always reserved.
-	EthereumDatabaseCache int
-
-	// EthereumNetStats is a netstats connection string to use to report various
-	// chain, transaction and node stats to a monitoring server.
-	//
-	// It has the form "nodename:secret@host:port"
-	EthereumNetStats string
-
-	// WhisperEnabled specifies whether the node should run the Whisper protocol.
-	WhisperEnabled bool
-
-	// Listening address of pprof server.
-	PprofAddress string
-
-	// Ultra Light client options
-	ULC *eth.ULCConfig
 
 	// SwarmEnabled specifies whether the node should run the Swarm protocol.
 	SwarmEnabled bool
@@ -100,11 +66,9 @@ type NodeConfig struct {
 // defaultNodeConfig contains the default node configuration values to use if all
 // or some fields are missing from the user's specified list.
 var defaultNodeConfig = &NodeConfig{
-	BootstrapNodes:        FoundationBootnodes(),
-	MaxPeers:              25,
-	EthereumEnabled:       true,
-	EthereumNetworkID:     1,
-	EthereumDatabaseCache: 16,
+	MaxPeers:          25,
+	EthereumEnabled:   false,
+	EthereumNetworkID: 1278,
 }
 
 // NewNodeConfig creates a new node option set, initialized to the default values.
@@ -118,110 +82,9 @@ type Node struct {
 	node *node.Node
 }
 
-// NewNode creates and configures a new Geth node.
-func NewNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
-	// If no or partial configurations were specified, use defaults
-	if config == nil {
-		config = NewNodeConfig()
-	}
-	if config.MaxPeers == 0 {
-		config.MaxPeers = defaultNodeConfig.MaxPeers
-	}
-	if config.BootstrapNodes == nil || config.BootstrapNodes.Size() == 0 {
-		config.BootstrapNodes = defaultNodeConfig.BootstrapNodes
-	}
-
-	if config.PprofAddress != "" {
-		debug.StartPProf(config.PprofAddress)
-	}
-
-	// Create the empty networking stack
-	nodeConf := &node.Config{
-		Name:        clientIdentifier,
-		Version:     params.VersionWithMeta,
-		DataDir:     datadir,
-		KeyStoreDir: filepath.Join(datadir, "keystore"), // Mobile should never use internal keystores!
-		P2P: p2p.Config{
-			NoDiscovery:      true,
-			DiscoveryV5:      true,
-			BootstrapNodesV5: config.BootstrapNodes.nodes,
-			ListenAddr:       ":0",
-			NAT:              nat.Any(),
-			MaxPeers:         config.MaxPeers,
-		},
-	}
-
-	rawStack, err := node.New(nodeConf)
-	if err != nil {
-		return nil, err
-	}
-
-	debug.Memsize.Add("node", rawStack)
-
-	var genesis *core.Genesis
-	if config.EthereumGenesis != "" {
-		// Parse the user supplied genesis spec if not mainnet
-		genesis = new(core.Genesis)
-		if err := json.Unmarshal([]byte(config.EthereumGenesis), genesis); err != nil {
-			return nil, fmt.Errorf("invalid genesis spec: %v", err)
-		}
-		// If we have the testnet, hard code the chain configs too
-		if config.EthereumGenesis == TestnetGenesis() {
-			genesis.Config = params.TestnetChainConfig
-			if config.EthereumNetworkID == 1 {
-				config.EthereumNetworkID = 3
-			}
-		}
-	}
-	// Register the Ethereum protocol if requested
-	if config.EthereumEnabled {
-		ethConf := eth.DefaultConfig
-		ethConf.Genesis = genesis
-		ethConf.SyncMode = downloader.LightSync
-		ethConf.NetworkId = uint64(config.EthereumNetworkID)
-		ethConf.DatabaseCache = config.EthereumDatabaseCache
-		if err := rawStack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-			return les.New(ctx, &ethConf)
-		}); err != nil {
-			return nil, fmt.Errorf("ethereum init: %v", err)
-		}
-		// If netstats reporting is requested, do it
-		if config.EthereumNetStats != "" {
-			if err := rawStack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-				var lesServ *les.LightEthereum
-				ctx.Service(&lesServ)
-
-				return ethstats.New(config.EthereumNetStats, nil, lesServ)
-			}); err != nil {
-				return nil, fmt.Errorf("netstats init: %v", err)
-			}
-		}
-	}
-	// Register the Whisper protocol if requested
-	if config.WhisperEnabled {
-		if err := rawStack.Register(func(*node.ServiceContext) (node.Service, error) {
-			return whisper.New(&whisper.DefaultConfig), nil
-		}); err != nil {
-			return nil, fmt.Errorf("whisper init: %v", err)
-		}
-	}
-
-	// Register the Swarm (BZZ) protocol if requested
-	if config.SwarmEnabled {
-		bzzconfig := bzzapi.NewConfig()
-		key, err := getSwarmKey(rawStack, config.SwarmAccount, config.SwarmAccountPassword)
-		if err != nil {
-			return nil, fmt.Errorf("no key")
-		}
-		bzzconfig.Init(key.PrivateKey)
-		if err := rawStack.Register(func(*node.ServiceContext) (node.Service, error) {
-			return swarm.NewSwarm(bzzconfig, nil)
-		}); err != nil {
-			return nil, fmt.Errorf("swarm init: %v", err)
-		}
-	}
-
-	return &Node{rawStack}, nil
+// gomobile不支持切片类型参数
+type Bootnodes struct {
+	Enodes []string
 }
 
 // getSwarmKey is a helper for finding and decrypting given account's private key
@@ -257,24 +120,22 @@ func NewSwarmNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 	if config.MaxPeers == 0 {
 		config.MaxPeers = defaultNodeConfig.MaxPeers
 	}
-	if config.BootstrapNodes == nil || config.BootstrapNodes.Size() == 0 {
-		config.BootstrapNodes = defaultNodeConfig.BootstrapNodes
-	}
-
-	if config.PprofAddress != "" {
-		debug.StartPProf(config.PprofAddress)
-	}
+	/*
+		if config.BootstrapNodes == nil || config.BootstrapNodes.Size() == 0 {
+			config.BootstrapNodes = defaultNodeConfig.BootstrapNodes
+		}
+	*/
 
 	// Create the empty networking stack
 	nodeConf := &node.Config{
-		Name:        clientIdentifier,
-		Version:     params.VersionWithMeta,
+		Name: clientIdentifier,
+		//Version:     params.VersionWithMeta,
 		DataDir:     datadir,
+		IPCPath:     "bzzd.ipc",
 		KeyStoreDir: filepath.Join(datadir, "keystore"), // Mobile should never use internal keystores!
 		P2P: p2p.Config{
 			NoDiscovery: false,
 			NoDial:      true,
-			DiscoveryV5: false,
 			ListenAddr:  ":0",
 			NAT:         nat.Any(),
 			MaxPeers:    config.MaxPeers,
@@ -286,6 +147,7 @@ func NewSwarmNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 		return nil, err
 	}
 	bzzconfig := bzzapi.NewConfig()
+	bzzconfig.NetworkID = 1278
 	key, err := getSwarmKey(rawStack, config.SwarmAccount, config.SwarmAccountPassword)
 	if err != nil {
 		return nil, fmt.Errorf("no key")
@@ -326,13 +188,68 @@ func (n *Node) AddPeer(peer *Enodev4) {
 	n.node.Server().AddPeer(peer.node)
 }
 
-// GetEthereumClient retrieves a client to access the Ethereum subsystem.
-func (n *Node) GetEthereumClient() (client *EthereumClient, _ error) {
-	rpc, err := n.node.Attach()
-	if err != nil {
-		return nil, err
+func DefaultDataDir() string {
+	return node.DefaultDataDir()
+}
+
+/*
+func (n *Node) AddBootnodes(bootnodes []string) {
+	enodes :=  NewEnodesEmptyv4()
+	for _, url := range bootnodes {
+		node, err := NewEnodev4(url)
+		if err != nil {
+			//log.Error("Bootstrap URL invalid", "enode", url, "err", err)
+			fmt.Println("Bootstrap URL invalid", "enode", url, "err", err)
+		}else{
+			enodes.Append(node)
+		}
 	}
-	return &EthereumClient{ethclient.NewClient(rpc)}, nil
+
+	for i:=0;i<enodes.Size();i++{
+		enode ,err := enodes.Get(i)
+		if err == nil{
+			n.AddPeer(enode)
+		}
+	}
+}
+*/
+
+func (n *Node) AddBootnodes(enodes *Enodesv4) {
+	for i := 0; i < enodes.Size(); i++ {
+		enode, err := enodes.Get(i)
+		if err == nil {
+			n.AddPeer(enode)
+		}
+	}
+}
+
+/*
+// gomobile参数切片类型不支持
+func (n *Node) GetBootnodes(bootnodes []string) *Enodesv4 {
+	enodes :=  NewEnodesEmptyv4()
+	for _, url := range bootnodes {
+		node, err := NewEnodev4(url)
+		if err != nil {
+			fmt.Println("Bootstrap URL invalid", "enode", url, "err", err)
+		}else{
+			enodes.Append(node)
+		}
+	}
+	return enodes
+}
+*/
+
+func (n *Node) GetBootnodes(bootnodes *Bootnodes) *Enodesv4 {
+	enodes := NewEnodesEmptyv4()
+	for _, url := range bootnodes.Enodes {
+		node, err := NewEnodev4(url)
+		if err != nil {
+			fmt.Println("Bootstrap URL invalid", "enode", url, "err", err)
+		} else {
+			enodes.Append(node)
+		}
+	}
+	return enodes
 }
 
 // GetNodeInfo gathers and returns a collection of metadata known about the host.
