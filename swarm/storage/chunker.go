@@ -403,6 +403,7 @@ func (r *LazyChunkReader) Size(ctx context.Context, quitC chan bool) (n int64, e
 
 	var sp opentracing.Span
 	var cctx context.Context
+
 	cctx, sp = spancontext.StartSpan(
 		ctx,
 		"lcr.size")

@@ -54,7 +54,7 @@ type NetStore struct {
 	closeC            chan struct{}
 }
 
-var fetcherTimeout = 30 * time.Second // timeout to cancel the fetcher even if requests are coming in
+var fetcherTimeout = 15 * time.Second // timeout to cancel the fetcher even if requests are coming in
 
 // NewNetStore creates a new NetStore object using the given local store. newFetchFunc is a
 // constructor function that can create a fetch function for a specific chunk address.
@@ -330,7 +330,7 @@ func (f *fetcher) Fetch(rctx context.Context) (Chunk, error) {
 	// wait until either the chunk is delivered or the context is done
 	select {
 	case <-rctx.Done():
-		fmt.Printf("done fetcher %v\r\n",f.addr.String())
+		//fmt.Printf("done fetcher %v\r\n",f.addr.String())
 		return nil, rctx.Err()
 	case <-f.deliveredC:
 		return f.chunk, nil

@@ -92,7 +92,7 @@ func NewServer(api *api.API, corsString string) *Server {
 
 	server := &Server{api: api,
 		db:db,
-
+		m3u8:M3U8Opt{sizelost:0},
 		}
 
 	defaultMiddlewares := []Adapter{
@@ -203,7 +203,9 @@ func (s *Server) ListenAndServe(addr string) error {
 	s.listenAddr = addr
 	return http.ListenAndServe(addr, s)
 }
-
+type M3U8Opt struct {
+	sizelost  int   //timeout second
+}
 // browser API for registering bzz url scheme handlers:
 // https://developer.mozilla.org/en/docs/Web-based_protocol_handlers
 // electron (chromium) api for registering bzz url scheme handlers:
@@ -217,6 +219,8 @@ type Server struct {
 	//保存一个和中心服务端的连接，是否长连接另外考虑
 	httpClient *util.HttpReader
 	db *leveldb.DB
+	m3u8  M3U8Opt
+
 }
 
 func (s *Server) HandleBzzGet(w http.ResponseWriter, r *http.Request) {
@@ -845,17 +849,18 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 				//取到了manifest文件，分析manifest文件，并且存入到数据库中
 
 				m3u8Hash,_ := s.entries.Get(url)
-
+				newContext := context.WithValue(r.Context(),"url",url)
 				//从manifest文件中，取出m3u8文件，发送给客户端
 				if m3u8Hash != nil {
-					// check the root chunk exists by retrieving the file's size
-					newContext := context.WithValue(r.Context(),"url",url)
+
 					reader, isEncrypted := s.api.Retrieve(newContext, common.Hex2Bytes(m3u8Hash.(string)))
 					if _, err := reader.Size(r.Context(), nil); err != nil {
 						getFail.Inc(1)
+
 						respondError(w, r, fmt.Sprintf("root chunk not found %s: %s", addr, err), http.StatusNotFound)
 						return
 					}
+
 
 					w.Header().Set("X-Decrypted", fmt.Sprintf("%v", isEncrypted))
 
@@ -881,8 +886,9 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 				hashValue,err := s.db.Get([]byte(key),nil)
 				if err == nil{
 					segOk = true
+					segHash = string(hashValue)
 				}
-				segHash = hashValue
+
 
 			}else{
 				segHash = segHash.(string)
@@ -895,15 +901,26 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 			}
 			//数据片断与哈希的对应关系应该已经存储在数据库里
 			newContext := context.WithValue(r.Context(),"url",path+act)
-			newContext = context.WithValue(newContext,"server",*s)
+			//newContext = context.WithValue(newContext,"server",*s)
 			newContext = context.WithValue(newContext,"req",r)
+			// check the root chunk exists by retrieving the file's size
+
+			if(s.m3u8.sizelost == 0) {
+				newContext,_ = context.WithTimeout(newContext, 30*time.Second)
+			}else if( s.m3u8.sizelost < 10){
+				newContext,_ = context.WithTimeout(newContext, 5*time.Second)
+			} else {
+				newContext,_ = context.WithTimeout(newContext, 30*time.Second)
+				s.m3u8.sizelost = 0
+			}
 			reader, isEncrypted := s.api.Retrieve(newContext, common.Hex2Bytes(segHash.(string)))
-			if _, err := reader.Size(r.Context(), nil); err != nil {
-				getFail.Inc(1)
-				respondError(w, r, fmt.Sprintf("root chunk not found %s: %s", act, err), http.StatusNotFound)
+			if _, err := reader.Size(newContext, nil); err != nil {
+				s.m3u8.sizelost ++
+				s.httpClient.GetDataFromCentralServer(path+act,r,w,respondError)
+
 				return
 			}
-
+			s.m3u8.sizelost = 0
 			w.Header().Set("X-Decrypted", fmt.Sprintf("%v", isEncrypted))
 
 			//if typ := r.URL.Query().Get("content_type"); typ != "" {
