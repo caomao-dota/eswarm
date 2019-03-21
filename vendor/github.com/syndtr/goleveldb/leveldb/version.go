@@ -9,7 +9,6 @@ package leveldb
 import (
 	"fmt"
 	"sync/atomic"
-	"time"
 	"unsafe"
 
 	"github.com/syndtr/goleveldb/leveldb/iterator"
@@ -23,8 +22,7 @@ type tSet struct {
 }
 
 type version struct {
-	id int64 // unique monotonous increasing version id
-	s  *session
+	s *session
 
 	levels []tFiles
 
@@ -41,11 +39,8 @@ type version struct {
 	released bool
 }
 
-// newVersion creates a new version with an unique monotonous increasing id.
 func newVersion(s *session) *version {
-	id := atomic.AddInt64(&s.ntVersionId, 1)
-	nv := &version{s: s, id: id - 1}
-	return nv
+	return &version{s: s}
 }
 
 func (v *version) incref() {
@@ -55,11 +50,11 @@ func (v *version) incref() {
 
 	v.ref++
 	if v.ref == 1 {
-		select {
-		case v.s.refCh <- &vTask{vid: v.id, files: v.levels, created: time.Now()}:
-			// We can use v.levels directly here since it is immutable.
-		case <-v.s.closeC:
-			v.s.log("reference loop already exist")
+		// Incr file ref.
+		for _, tt := range v.levels {
+			for _, t := range tt {
+				v.s.addFileRef(t.fd, 1)
+			}
 		}
 	}
 }
@@ -71,11 +66,13 @@ func (v *version) releaseNB() {
 	} else if v.ref < 0 {
 		panic("negative version ref")
 	}
-	select {
-	case v.s.relCh <- &vTask{vid: v.id, files: v.levels, created: time.Now()}:
-		// We can use v.levels directly here since it is immutable.
-	case <-v.s.closeC:
-		v.s.log("reference loop already exist")
+
+	for _, tt := range v.levels {
+		for _, t := range tt {
+			if v.s.addFileRef(t.fd, -1) == 0 {
+				v.s.tops.remove(t)
+			}
+		}
 	}
 
 	v.released = true
@@ -487,12 +484,6 @@ func (p *versionStaging) finish(trivial bool) *version {
 					continue
 				}
 				nt = append(nt, t)
-			}
-
-			// Avoid resort if only files in this level are deleted
-			if len(scratch.added) == 0 {
-				nv.levels[level] = nt
-				continue
 			}
 
 			// For normal table compaction, one compaction will only involve two levels
