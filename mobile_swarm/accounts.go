@@ -74,6 +74,10 @@ func (a *Accounts) Set(index int, account *Account) error {
 	return nil
 }
 
+func (a *Address) GetHex() string {
+	return a.address.Hex()
+}
+
 type Address struct {
 	address common.Address
 }

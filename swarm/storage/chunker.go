@@ -503,7 +503,8 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 		if err:=recover();err!=nil{
 			log.Error("Error recovered!",err) // 这里的err其实就是panic传入的内容，55
 		}
-
+		read = 0
+		err = errors.New("Ooops, request is nil!")
 	}()
 
 		req := cctx.Value("req").(*rawHttp.Request)
