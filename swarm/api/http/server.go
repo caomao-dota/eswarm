@@ -42,6 +42,7 @@ import (
 	"mime/multipart"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"regexp"
@@ -762,7 +763,16 @@ func (s *Server) HandleGetChunk(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// check the root chunk exists by retrieving the file's size
-	chunk, err := s.api.RetrieveChunk(r.Context(), addr)
+	var chunk storage.Chunk
+	//var err error
+	queries,_ := url.ParseQuery(r.URL.RawQuery)
+	if(queries.Get("fromws")== "true" ){
+
+		chunk,err = s.api.RetrieveChunkFromGS(r.Context(), addr)
+	}else{
+		chunk,err = s.api.RetrieveChunk(r.Context(), addr)
+	}
+
 	if err != nil {
 		getFail.Inc(1)
 		respondError(w, r, fmt.Sprintf("root chunk not found %s: %s", addr, err), http.StatusNotFound)
@@ -833,7 +843,8 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 			if param != "" {
 				url += "?"+param[0:len(param)-1] //删除&
 			}
-			list, err := s.api.GetManifestList(r.Context(), s.api.Decryptor(r.Context(), pass), addr, "")
+			newContext,_ := context.WithTimeout(r.Context(),30 * time.Second)
+			list, err := s.api.GetManifestList(newContext, s.api.Decryptor(r.Context(), pass), addr, "")
 			if err == nil && len(list.Entries) != 0 {
 
 				s.entries,_ = lru.New(len(list.Entries))
@@ -849,27 +860,22 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 				//取到了manifest文件，分析manifest文件，并且存入到数据库中
 
 				m3u8Hash,_ := s.entries.Get(url)
-				newContext := context.WithValue(r.Context(),"url",url)
+				newContext = context.WithValue(newContext,"url",url)
 				//从manifest文件中，取出m3u8文件，发送给客户端
 				if m3u8Hash != nil {
 
 					reader, isEncrypted := s.api.Retrieve(newContext, common.Hex2Bytes(m3u8Hash.(string)))
-					if _, err := reader.Size(r.Context(), nil); err != nil {
-						getFail.Inc(1)
+					if _, err := reader.Size(r.Context(), nil); err == nil {
 
-						respondError(w, r, fmt.Sprintf("root chunk not found %s: %s", addr, err), http.StatusNotFound)
-						return
+						w.Header().Set("X-Decrypted", fmt.Sprintf("%v", isEncrypted))
+
+						//if typ := r.URL.Query().Get("content_type"); typ != "" {
+						w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
+						//}
+
+						http.ServeContent(w, r, "", time.Now(), reader)
+						return;
 					}
-
-
-					w.Header().Set("X-Decrypted", fmt.Sprintf("%v", isEncrypted))
-
-					//if typ := r.URL.Query().Get("content_type"); typ != "" {
-					w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
-					//}
-
-					http.ServeContent(w, r, "", time.Now(), reader)
-					return;
 				}
 
 			}

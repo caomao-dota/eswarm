@@ -215,6 +215,7 @@ type ChunkStore interface {
 	Put(ctx context.Context, ch Chunk) (err error)
 	Get(rctx context.Context, ref Address) (ch Chunk, err error)
 	Has(rctx context.Context, ref Address) bool
+	Validate(ch []byte, ref Address) bool
 	Close()
 }
 
@@ -249,4 +250,8 @@ func (f *FakeChunkStore) Get(_ context.Context, ref Address) (Chunk, error) {
 
 // Close doesn't store anything it is just here to implement ChunkStore
 func (f *FakeChunkStore) Close() {
+}
+func (f *FakeChunkStore) Validate(ch []byte,addr Address) bool {
+
+	return true
 }

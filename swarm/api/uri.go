@@ -130,6 +130,7 @@ func (u *URI) Hash() bool {
 func (u *URI) Chunk() bool {
 	return u.Scheme == "chunk"
 }
+
 func (u *URI) Metrics() bool {
 	return u.Scheme == "metrics"
 }

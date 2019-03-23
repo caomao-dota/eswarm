@@ -154,7 +154,7 @@ func (d *Delivery) AttachBzz(bzz *network.Bzz) {
 
 //收到了某个节点来的查询数据的请求
 func (d *Delivery) handleRetrieveRequestMsg(ctx context.Context, sp *Peer, req *RetrieveRequestMsg) error {
-	log.Trace("received request", "peer", sp.ID(), "hash", req.Addr)
+	log.Info("received request", "peer", sp.ID(), "hash", req.Addr)
 	handleRetrieveRequestMsgCount.Inc(1)
 
 	//记录
@@ -240,7 +240,15 @@ func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *Ch
 		}
 
 		req.peer = sp
-		err := d.chunkStore.Put(ctx, storage.NewChunk(req.Addr, req.SData))
+		validData := d.chunkStore.Validate(req.SData,req.Addr)
+		var err error
+		if(!validData) {
+			err = errors.New("Chunk Data Invalid")
+			fmt.Printf("Invalid Chunk Received: %v",req.Addr)
+		}else {
+			err = d.chunkStore.Put(ctx, storage.NewChunk(req.Addr, req.SData))
+		}
+
 		if err != nil {
 			if err == storage.ErrChunkInvalid {
 				// we removed this log because it spams the logs

@@ -60,7 +60,7 @@ func NewTestSwarmServer(t *testing.T, serverFunc func(*api.API) TestServer, reso
 		t.Fatal(err)
 	}
 
-	a := api.NewAPI(fileStore, resolver, rh.Handler, nil)
+	a := api.NewAPI(fileStore, nil, resolver, rh.Handler, nil)
 	srv := httptest.NewServer(serverFunc(a))
 	tss := &TestSwarmServer{
 		Server:    srv,
