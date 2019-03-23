@@ -505,6 +505,7 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 		}
 		read = 0
 		err = errors.New("Ooops, request is nil!")
+
 	}()
 
 		req := cctx.Value("req").(*rawHttp.Request)
