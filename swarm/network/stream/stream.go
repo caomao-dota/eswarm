@@ -607,7 +607,8 @@ func (p *Peer) HandleMsg(ctx context.Context, msg interface{}) error {
 		return nil
 	default:
 	}
-	log.Info("receive New Msg:","msg",msg)
+
+	ctx,_ =context.WithTimeout(ctx,30*time.Second)
 	switch msg := msg.(type) {
 
 	case *SubscribeMsg:

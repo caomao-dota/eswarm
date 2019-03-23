@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/plotozhu/MDCMainnet/swarm/log"
 	"io"
 	"io/ioutil"
 	"sync/atomic"
@@ -91,7 +90,6 @@ type MsgReadWriter interface {
 // Send writes an RLP-encoded message with the given code.
 // data should encode as an RLP list.
 func Send(w MsgWriter, msgcode uint64, data interface{}) error {
-	log.Info("Send Msg:","code:",msgcode)
 	size, r, err := rlp.EncodeToReader(data)
 	if err != nil {
 		return err

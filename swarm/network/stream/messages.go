@@ -358,13 +358,14 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 	if err != nil {
 		return fmt.Errorf("error initiaising bitvector of length %v: %v", l, err)
 	}
-	//针对所有的HAS，读取数据后，通过Deliver函数发给对方
+	//针对所有的HASH，读取数据后，通过Deliver函数发给对方
 	for i := 0; i < l; i++ {
 		if want.Get(i) {
 			metrics.GetOrRegisterCounter("peer.handlewantedhashesmsg.actualget", nil).Inc(1)
 
 			hash := hashes[i*HashSize : (i+1)*HashSize]
-			data, err := s.GetData(ctx, hash)
+			newCtx := ctx;// ,_ := context.WithTimeout(ctx,20*time.Second)
+			data, err := s.GetData(newCtx, hash)
 			if err != nil {
 				return fmt.Errorf("handleWantedHashesMsg get data %x: %v", hash, err)
 			}
@@ -372,7 +373,7 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 			//TODO Aegon 重新考虑一下，是否需要继续读取
 			chunk := storage.NewChunk(hash, data)
 			syncing := true
-			if err := p.Deliver(ctx, chunk, s.priority, syncing); err != nil {
+			if err := p.Deliver(newCtx, chunk, s.priority, syncing); err != nil {
 				return err
 			}
 			//在这里只要有一个发送失败，就会立即退出，后续的不再发送

@@ -27,7 +27,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/plotozhu/MDCMainnet/log"
 	"hash"
 	"io"
 	"io/ioutil"
@@ -644,7 +643,6 @@ func (rw *rlpxFrameRW) WriteMsg(msg Msg) error {
 }
 
 func (rw *rlpxFrameRW) ReadMsg() (msg Msg, err error) {
-	log.Info("read msg:")
 	// read the header
 	headbuf := make([]byte, 32)
 	if _, err := io.ReadFull(rw.conn, headbuf); err != nil {
@@ -710,7 +708,6 @@ func (rw *rlpxFrameRW) ReadMsg() (msg Msg, err error) {
 		}
 		msg.Size, msg.Payload = uint32(size), bytes.NewReader(payload)
 	}
-	log.Info("new Msg:","msg",msg)
 	return msg, nil
 }
 
