@@ -177,7 +177,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 	self.netStore.NewNetFetcherFunc = network.NewFetcherFactory(delivery.RequestFromPeers, delivery.GetDataFromCentral, config.DeliverySkipCheck).New
 
 	//SWAP是记录数据交易记录的交易体系，后面再研究
-	if config.SwapEnabled {
+	/*if config.SwapEnabled {
 		balancesStore, err := state.NewDBStore(filepath.Join(config.Path, "balances.db"))
 		if err != nil {
 			return nil, err
@@ -185,7 +185,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 		self.swap = swap.New(balancesStore)
 		self.accountingMetrics = protocols.SetupAccountingMetrics(10*time.Second, filepath.Join(config.Path, "metrics.db"))
 	}
-
+*/
 	var nodeID enode.ID
 	if err := nodeID.UnmarshalText([]byte(config.NodeID)); err != nil {
 		return nil, err
@@ -252,16 +252,16 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 	delivery.AttachBzz(self.bzz)
 	//创建PSS通信网络(暂略过，没有深入研究）
 	// Pss = postal service over swarm (devp2p over bzz)
-	self.ps, err = pss.NewPss(to, config.Pss)
+	/*self.ps, err = pss.NewPss(to, config.Pss)
 	if err != nil {
 		return nil, err
 	}
 	if pss.IsActiveHandshake {
 		pss.SetHandshakeController(self.ps, pss.NewHandshakeParams())
 	}
-
+*/
 	//创建api
-	self.api = api.NewAPI(self.fileStore, self.dns, feedsHandler, self.privateKey)
+	self.api = api.NewAPI(self.fileStore, mockStore,self.dns, feedsHandler, self.privateKey)
 	//创建可加载的文件系统 FUSE
 	self.sfs = fuse.NewSwarmFS(self.api)
 	log.Debug("Initialized FUSE filesystem")

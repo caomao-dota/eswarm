@@ -116,6 +116,7 @@ type LDBStore struct {
 	quit     chan struct{}
 	gc       *garbage
 
+
 	// Functions encodeDataFunc is used to bypass
 	// the default functionality of DbStore with
 	// mock.NodeStore for testing purposes.
@@ -985,7 +986,32 @@ func (s *LDBStore) Has(_ context.Context, addr Address) bool {
 
 	return err == nil
 }
+func StringSliceEqualBCE(a, b []byte) bool {
+	if len(a) != len(b) {
+		return false
+	}
 
+	if (a == nil) != (b == nil) {
+		return false
+	}
+
+	b = b[:len(a)]
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+
+	return true
+}
+func (s *LDBStore) VerifyHash(chunkData,address []byte) bool{
+
+		hasher := s.hashfunc()
+		hasher.ResetWithLength(chunkData[:8]) // 8 bytes of length
+		hasher.Write(chunkData[8:])           // minus 8 []byte length
+		targetAddr := hasher.Sum(nil)
+		return StringSliceEqualBCE(targetAddr,address)
+}
 // TODO: To conform with other private methods of this object indices should not be updated
 func (s *LDBStore) get(addr Address) (chunk Chunk, err error) {
 	if s.closed {
@@ -1015,7 +1041,11 @@ func (s *LDBStore) get(addr Address) (chunk Chunk, err error) {
 				s.deleteNow(index, getIndexKey(addr), s.po(addr))
 				return
 			}
+			if !s.VerifyHash(data[32:],addr) {
+				fmt.Printf("hash check error: %v\r\n",addr)
+			}
 		}
+
 
 		return decodeData(addr, data)
 	} else {
