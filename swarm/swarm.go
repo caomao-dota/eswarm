@@ -252,14 +252,14 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 	delivery.AttachBzz(self.bzz)
 	//创建PSS通信网络(暂略过，没有深入研究）
 	// Pss = postal service over swarm (devp2p over bzz)
-	self.ps, err = pss.NewPss(to, config.Pss)
+	/*self.ps, err = pss.NewPss(to, config.Pss)
 	if err != nil {
 		return nil, err
 	}
 	if pss.IsActiveHandshake {
 		pss.SetHandshakeController(self.ps, pss.NewHandshakeParams())
 	}
-
+*/
 	//创建api
 	self.api = api.NewAPI(self.fileStore, mockStore,self.dns, feedsHandler, self.privateKey)
 	//创建可加载的文件系统 FUSE

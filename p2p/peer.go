@@ -216,7 +216,9 @@ loop:
 		case err = <-writeErr:
 			// A write finished. Allow the next write to start if
 			// there was no error.
+
 			if err != nil {
+				log.Warn("write error:","reason",err)
 				reason = DiscNetworkError
 				break loop
 			}
@@ -228,12 +230,15 @@ loop:
 			} else {
 				reason = DiscNetworkError
 			}
+			log.Warn("read error:","reason",err)
 			break loop
 		case err = <-p.protoErr:
 			reason = discReasonForError(err)
+			log.Warn("protocol error:","reason",err)
 			break loop
 		case err = <-p.disc:
 			reason = discReasonForError(err)
+			log.Warn("discover error:","reason",err)
 			break loop
 		}
 	}
@@ -265,13 +270,20 @@ func (p *Peer) pingLoop() {
 func (p *Peer) readLoop(errc chan<- error) {
 	defer p.wg.Done()
 	for {
+		log.Info("StartRead:")
 		msg, err := p.rw.ReadMsg()
 		if err != nil {
+			log.Warn("error of read msg:","reason",err)
 			errc <- err
 			return
 		}
 		msg.ReceivedAt = time.Now()
-		if err = p.handle(msg); err != nil {
+		log.Info("begin Handle:","msg",msg)
+		err = p.handle(msg);
+		log.Info("finished Handle:","time",time.Now())
+		if  err != nil {
+
+			log.Warn("error of handle msg:","reason",err)
 			errc <- err
 			return
 		}
