@@ -306,6 +306,7 @@ func (f *fetcher) Fetch(rctx context.Context) (Chunk, error) {
 		f.span.Finish()
 	}()
 
+	rctx,_ = context.WithTimeout(rctx,20*time.Second)
 	// The peer asking for the chunk. Store in the shared peers map, but delete after the request
 	// has been delivered
 	peer := rctx.Value("peer")
