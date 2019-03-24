@@ -153,6 +153,7 @@ func (p *Peer) Deliver(ctx context.Context, chunk storage.Chunk, priority uint8,
 		spanName += ".retrieval"
 	}
 
+
 	ctx = context.WithValue(ctx, "stream_send_tag", nil)
 	return p.SendPriority(ctx, msg, priority)
 }

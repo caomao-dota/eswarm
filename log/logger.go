@@ -3,6 +3,7 @@ package log
 import (
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/go-stack/stack"
@@ -126,11 +127,15 @@ type Logger interface {
 }
 
 type logger struct {
+
 	ctx []interface{}
 	h   *swapHandler
+	mu sync.Mutex
 }
 
 func (l *logger) write(msg string, lvl Lvl, ctx []interface{}, skip int) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	l.h.Log(&Record{
 		Time: time.Now(),
 		Lvl:  lvl,
@@ -147,7 +152,7 @@ func (l *logger) write(msg string, lvl Lvl, ctx []interface{}, skip int) {
 }
 
 func (l *logger) New(ctx ...interface{}) Logger {
-	child := &logger{newContext(l.ctx, ctx), new(swapHandler)}
+	child := &logger{newContext(l.ctx, ctx), new(swapHandler),l.mu}
 	child.SetHandler(l.h)
 	return child
 }

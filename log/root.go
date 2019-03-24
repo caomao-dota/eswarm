@@ -2,10 +2,12 @@ package log
 
 import (
 	"os"
+	"sync"
 )
 
 var (
-	root          = &logger{[]interface{}{}, new(swapHandler)}
+	mu   = sync.Mutex{}
+	root          = &logger{[]interface{}{}, new(swapHandler),mu}
 	StdoutHandler = StreamHandler(os.Stdout, LogfmtFormat())
 	StderrHandler = StreamHandler(os.Stderr, LogfmtFormat())
 )
