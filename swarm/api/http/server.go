@@ -35,7 +35,6 @@ import (
 	"github.com/plotozhu/MDCMainnet/swarm/storage/feed"
 	"github.com/plotozhu/MDCMainnet/swarm/util"
 	"github.com/rs/cors"
-	"github.com/syndtr/goleveldb/leveldb"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -89,10 +88,10 @@ func NewServer(api *api.API, corsString string) *Server {
 		MaxAge:         600,
 		AllowedHeaders: []string{"*"},
 	})
-	db, _ := leveldb.OpenFile("./cachelist.db", nil)
+	//db, _ := leveldb.OpenFile("./cachelist.db", nil)
 
 	server := &Server{api: api,
-		db:db,
+	//	db:db,
 		m3u8:M3U8Opt{sizelost:0},
 		}
 
@@ -219,7 +218,7 @@ type Server struct {
 	entries    *lru.Cache
 	//保存一个和中心服务端的连接，是否长连接另外考虑
 	httpClient *util.HttpReader
-	db *leveldb.DB
+//	db *leveldb.DB
 	m3u8  M3U8Opt
 
 }
@@ -814,7 +813,7 @@ func createHTTPClient() *http.Client {
 // HandleGetM3u8 处理m3u8
 // -
 //   given storage key
-func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
+func (s *Server) HandleGetM3u8BAK(w http.ResponseWriter, r *http.Request) {
 
 	ruid := GetRUID(r.Context())
 	uri := GetURI(r.Context())
@@ -851,7 +850,7 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 				for _,entry := range list.Entries {
 					//fmt.Print(entry)
 					s.entries.Add(path+entry.Path,entry.Hash)
-					s.db.Put([]byte(path+entry.Path),[]byte(entry.Hash),nil)
+				//	s.db.Put([]byte(path+entry.Path),[]byte(entry.Hash),nil)
 				}
 
 				//fmt.Print(path)
@@ -888,15 +887,8 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 			key := path+act
 
 			segHash,segOk := s.entries.Get(key)
-			if !segOk {
-				hashValue,err := s.db.Get([]byte(key),nil)
-				if err == nil{
-					segOk = true
-					segHash = string(hashValue)
-				}
+			if segOk {
 
-
-			}else{
 				segHash = segHash.(string)
 			}
 			if !segOk {
@@ -938,6 +930,77 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 	}else{
 		fmt.Print(r.RequestURI)
 	}
+
+}
+
+
+// HandleGetM3u8 处理m3u8
+// -
+//   given storage key
+func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
+
+	ruid := GetRUID(r.Context())
+	uri := GetURI(r.Context())
+
+
+	log.Debug("handle.m3u8", "ruid", ruid, "uri", uri)
+	getCount.Inc(1)
+	_, pass, _ := r.BasicAuth()
+
+	//检查是否有.m3u8文件存在
+	isM3u8 := strings.Contains(r.RequestURI,".m3u8")
+
+	pattern_meu8 := regexp.MustCompile(`\/m3u8:\/(?P<schema>https?)\/(?P<path>(\S+\/)+)\{(?P<hash>[0-9a-fA-F]{64})\}(\/(?P<act>(\S*)))`)
+	replacedURL := strings.Replace(strings.Replace(r.RequestURI,"%7B","{",-1),"%7D","}",-1)
+	result := pattern_meu8.FindSubmatch([]byte(replacedURL))
+	if len (result) !=  0 {
+		schema := string(result[1])
+		path := schema+"://"+string(result[2])
+
+		hash := result[4]
+
+		act  := string(result[6])
+
+		if len(hash) != 0 {  //有hash的，说明是要取hash对应的m3u8文件
+			url := string(hash)+"/"+act
+
+			s.entries.Add(path,hash)
+			actUri,err := api.Parse("m3u8:/"+url )
+			if err == nil {
+				addr, err  := s.api.ResolveURI(r.Context(), actUri, pass)
+				if err == nil {
+					newContext,_ := context.WithTimeout(r.Context(),30 * time.Second)
+
+					reader, isEncrypted := s.api.Retrieve(newContext, addr)
+					if _, err := reader.Size(r.Context(), nil); err == nil {
+
+						w.Header().Set("X-Decrypted", fmt.Sprintf("%v", isEncrypted))
+
+						if isM3u8 {
+							w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
+						}else{
+							w.Header().Set("Content-Type", "video/MP2T")
+						}
+						//if typ := r.URL.Query().Get("content_type"); typ != "" {
+
+						//}
+
+						http.ServeContent(w, r, "", time.Now(), reader)
+						return;
+					}
+				}
+			}
+
+
+			s.httpClient.GetDataFromCentralServer(path+act,r,w,respondError)
+			return
+
+		}
+	}
+
+	respondError(w,r,"Invalid URL" + r.RequestURI,400)
+	return
+
 
 }
 // HandleGet handles a GET request to
