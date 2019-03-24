@@ -502,15 +502,17 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 
 		if err:=recover();err!=nil{
 			log.Error("Error recovered!","err",err) // 这里的err其实就是panic传入的内容，55
+			read = 0
+			err = errors.New("Ooops, request is nil!")
 		}
-		read = 0
-		err = errors.New("Ooops, request is nil!")
+
 
 	}()
 
+
 		req := cctx.Value("req").(*rawHttp.Request)
 		url := cctx.Value("url").(string)
-
+		fmt.Printf("Read hash from central node: %v len:%v from: %v\r\n",url,len(b),off)
 		buffer,OK := r.ts_buffer.Get(url)
 		needRetrieve := !OK;
 		//检查是否需要

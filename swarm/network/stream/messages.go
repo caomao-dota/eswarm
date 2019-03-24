@@ -367,6 +367,7 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 			newCtx := ctx;// ,_ := context.WithTimeout(ctx,20*time.Second)
 			data, err := s.GetData(newCtx, hash)
 			if err != nil {
+				_, err := s.GetData(newCtx, hash)
 				return fmt.Errorf("handleWantedHashesMsg get data %x: %v", hash, err)
 			}
 			//在这里也只要有一个数据不对，就立刻退出了，那这样的话，在一段里，如果有某一个HASH没有了，这一段后续的都没有了

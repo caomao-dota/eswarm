@@ -967,12 +967,27 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 			s.entries.Add(path,hash)
 			actUri,err := api.Parse("m3u8:/"+url )
 			if err == nil {
-				addr, err  := s.api.ResolveURI(r.Context(), actUri, pass)
+				//数据片断与哈希的对应关系应该已经存储在数据库里
+				newContext := context.WithValue(r.Context(),"url",path+act)
+				//newContext = context.WithValue(newContext,"server",*s)
+				newContext = context.WithValue(newContext,"req",r)
+				if s.m3u8.sizelost >0 &&  s.m3u8.sizelost <= 10 {
+					newContext,_ = context.WithTimeout(newContext,5 * time.Second)
+				}else if s.m3u8.sizelost > 10{
+					s.m3u8.sizelost = 0
+					newContext,_ = context.WithTimeout(newContext,30 * time.Second)
+				}else {
+					newContext,_ = context.WithTimeout(newContext,30 * time.Second)
+				}
+
+				addr, err  := s.api.ResolveURI(newContext, actUri, pass)
 				if err == nil {
-					newContext,_ := context.WithTimeout(r.Context(),30 * time.Second)
+
+
 
 					reader, isEncrypted := s.api.Retrieve(newContext, addr)
-					if _, err := reader.Size(r.Context(), nil); err == nil {
+
+					if _, err := reader.Size(newContext, nil); err == nil {
 
 						w.Header().Set("X-Decrypted", fmt.Sprintf("%v", isEncrypted))
 
@@ -984,13 +999,16 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 						//if typ := r.URL.Query().Get("content_type"); typ != "" {
 
 						//}
-
+						startServ := time.Now()
 						http.ServeContent(w, r, "", time.Now(), reader)
+						if time.Now().Sub(startServ) < 10*time.Second  {
+							s.m3u8.sizelost = 0
+						}
 						return;
 					}
 				}
 			}
-
+			s.m3u8.sizelost++
 
 			s.httpClient.GetDataFromCentralServer(path+act,r,w,respondError)
 			return

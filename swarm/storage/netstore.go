@@ -80,6 +80,7 @@ func (n *NetStore) Put(ctx context.Context, ch Chunk) error {
 	// put to the chunk to the store, there should be no error
 	err := n.store.Put(ctx, ch)
 	if err != nil {
+		log.Info("Put data Error:","address",ch.Address(),"reason",err)
 		return err
 	}
 

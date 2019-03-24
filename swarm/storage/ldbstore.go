@@ -757,7 +757,7 @@ func (s *LDBStore) deleteNow(idx *dpaDBIndex, idxKey []byte, po uint8) error {
 // if called directly, decrements entrycount regardless if the chunk exists upon deletion. Risk of wrap to max uint64
 func (s *LDBStore) delete(batch *leveldb.Batch, idx *dpaDBIndex, idxKey []byte, po uint8) {
 	metrics.GetOrRegisterCounter("ldbstore.delete", nil).Inc(1)
-
+	log.Info("delete chunk info","index key",idxKey)
 	gcIdxKey := getGCIdxKey(idx)
 	batch.Delete(gcIdxKey)
 	dataKey := getDataKey(idx.Idx, po)
@@ -1042,7 +1042,7 @@ func (s *LDBStore) get(addr Address) (chunk Chunk, err error) {
 				return
 			}
 			if !s.VerifyHash(data[32:],addr) {
-				fmt.Printf("hash check error: %v\r\n",addr)
+				fmt.Printf("hash check error: %v\r\n",addr,"data len",len(data))
 			}
 		}
 
@@ -1093,7 +1093,8 @@ func (s *LDBStore) Close() {
 // SyncIterator(start, stop, po, f) calls f on each hash of a bin po from start to stop
 func (s *LDBStore) SyncIterator(since uint64, until uint64, po uint8, f func(Address, uint64) bool) error {
 	metrics.GetOrRegisterCounter("ldbstore.synciterator", nil).Inc(1)
-
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	sincekey := getDataKey(since, po)
 	untilkey := getDataKey(until, po)
 	it := s.db.NewIterator()
