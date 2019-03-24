@@ -501,7 +501,7 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 	defer func(){ // 必须要先声明defer，否则不能捕获到panic异常
 
 		if err:=recover();err!=nil{
-			log.Error("Error recovered!",err) // 这里的err其实就是panic传入的内容，55
+			log.Error("Error recovered!","err",err) // 这里的err其实就是panic传入的内容，55
 		}
 		read = 0
 		err = errors.New("Ooops, request is nil!")
