@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"errors"
+	"fmt"
 	"github.com/plotozhu/MDCMainnet/crypto"
 	"golang.org/x/crypto/sha3"
 	"io"
@@ -144,7 +145,10 @@ func (r *Receipt) Signature(prvKey *ecdsa.PrivateKey) error {
 */
 func (r *Receipt) Verify() (*ecdsa.PublicKey, bool) {
 	//SigToPub
+	bodyData, _ := rlp.EncodeToBytes(r.ReceiptBody)
+	fmt.Println("array is:", bodyData)
 	h := rlpHash(r.ReceiptBody)
+	fmt.Println("hash:", h)
 	pubKey, err := crypto.SigToPub(h[:], r.Sign)
 	if err == nil {
 		pubKeyBytes := crypto.CompressPubkey(pubKey)
@@ -242,6 +246,7 @@ func (rs *Receipts) CurrentReceipt(account [20]byte) *ReceiptData {
 
 type ReceiptStore struct {
 	account     [20]byte
+	hex         string
 	db          *leveldb.DB
 	allReceipts Receipts
 	prvKey      *ecdsa.PrivateKey
@@ -260,6 +265,7 @@ func NewReceiptsStore(filePath string, prvKey *ecdsa.PrivateKey, serverAddr stri
 func newReceiptsStore(newDb *leveldb.DB, prvKey *ecdsa.PrivateKey, serverAddr string) *ReceiptStore {
 	store := ReceiptStore{
 		account:      crypto.PubkeyToAddress(prvKey.PublicKey),
+		hex:          crypto.PubkeyToAddress(prvKey.PublicKey).Hex(),
 		db:           newDb,
 		prvKey:       prvKey,
 		unpaidAmount: make(map[[20]byte]uint32),

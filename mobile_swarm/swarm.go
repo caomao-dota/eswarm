@@ -192,53 +192,11 @@ func DefaultDataDir() string {
 	return node.DefaultDataDir()
 }
 
-/*
-func (n *Node) AddBootnodes(bootnodes []string) {
-	enodes :=  NewEnodesEmptyv4()
-	for _, url := range bootnodes {
-		node, err := NewEnodev4(url)
-		if err != nil {
-			//log.Error("Bootstrap URL invalid", "enode", url, "err", err)
-			fmt.Println("Bootstrap URL invalid", "enode", url, "err", err)
-		}else{
-			enodes.Append(node)
-		}
-	}
-
-	for i:=0;i<enodes.Size();i++{
-		enode ,err := enodes.Get(i)
-		if err == nil{
-			n.AddPeer(enode)
-		}
-	}
-}
-*/
-
-func (n *Node) AddBootnodes(enodes *Enodesv4) {
-	for i := 0; i < enodes.Size(); i++ {
-		enode, err := enodes.Get(i)
-		if err == nil {
-			n.AddPeer(enode)
-		}
-	}
+func (n *Node) AddBootnode(enode *Enodev4) {
+	n.AddPeer(enode)
 }
 
 /*
-// gomobile参数切片类型不支持
-func (n *Node) GetBootnodes(bootnodes []string) *Enodesv4 {
-	enodes :=  NewEnodesEmptyv4()
-	for _, url := range bootnodes {
-		node, err := NewEnodev4(url)
-		if err != nil {
-			fmt.Println("Bootstrap URL invalid", "enode", url, "err", err)
-		}else{
-			enodes.Append(node)
-		}
-	}
-	return enodes
-}
-*/
-
 func (n *Node) GetBootnodes(bootnodes *Bootnodes) *Enodesv4 {
 	enodes := NewEnodesEmptyv4()
 	for _, url := range bootnodes.Enodes {
@@ -251,7 +209,7 @@ func (n *Node) GetBootnodes(bootnodes *Bootnodes) *Enodesv4 {
 	}
 	return enodes
 }
-
+*/
 // GetNodeInfo gathers and returns a collection of metadata known about the host.
 func (n *Node) GetNodeInfo() *NodeInfo {
 	return &NodeInfo{n.node.Server().NodeInfo()}
