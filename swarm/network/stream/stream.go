@@ -317,7 +317,7 @@ func (r *Registry) GetServerFunc(stream string) (func(*Peer, string, bool) (Serv
 	}
 	return f, nil
 }
-
+//注册一个订阅，方法是向peer发送一个订阅消息
 func (r *Registry) RequestSubscription(peerId enode.ID, s Stream, h *Range, prio uint8) error {
 	// check if the stream is registered
 	if _, err := r.GetServerFunc(s.Name); err != nil {

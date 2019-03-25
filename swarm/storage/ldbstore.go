@@ -104,7 +104,7 @@ type LDBStore struct {
 	accessCnt uint64 // ever-accumulating number increased every time we read/access an entry
 	dataIdx   uint64 // similar to entryCnt, but we only increment it
 	capacity  uint64
-	bucketCnt []uint64
+	bucketCnt []uint64     //每个桶里的dataIdex的最大值
 
 	hashfunc SwarmHasher
 	po       func(Address) uint8 //从地址计算属于哪个PO

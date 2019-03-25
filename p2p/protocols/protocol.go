@@ -241,9 +241,11 @@ func (p *Peer) Run(handler func(ctx context.Context, msg interface{}) error) err
 			if err != io.EOF {
 				metrics.GetOrRegisterCounter("peer.handleincoming.error", nil).Inc(1)
 				log.Error("peer.handleIncoming", "err", err)
+			}else{
+				return err
 			}
 
-			return err
+
 		}
 	}
 }

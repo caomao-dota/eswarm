@@ -205,7 +205,8 @@ func (p *Peer) SendOfferedHashes(s *server, f, t uint64) error {
 		To:            to,
 		Stream:        s.stream,
 	}
-	log.Trace("Swarm syncer offer batch", "peer", p.ID(), "stream", s.stream, "len", len(hashes), "from", from, "to", to)
+	//log.Trace
+	log.Debug("Swarm syncer offer batch", "peer", p.ID(), "stream", s.stream, "len", len(hashes), "from", from, "to", to)
 	ctx = context.WithValue(ctx, "stream_send_tag", "send.offered.hashes")
 	return p.SendPriority(ctx, msg, s.priority)
 }

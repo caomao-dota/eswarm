@@ -216,7 +216,6 @@ loop:
 		case err = <-writeErr:
 			// A write finished. Allow the next write to start if
 			// there was no error.
-
 			if err != nil {
 				reason = DiscNetworkError
 				break loop
@@ -239,6 +238,7 @@ loop:
 		}
 	}
 
+	log.Debug("peer closed:","id",p.ID())
 	close(p.closed)
 	p.rw.close(reason)
 	p.wg.Wait()

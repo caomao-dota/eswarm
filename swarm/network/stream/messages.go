@@ -87,7 +87,7 @@ func (p *Peer) handleRequestSubscription(ctx context.Context, req *RequestSubscr
 	}
 	return err
 }
-
+//处理订阅消息
 func (p *Peer) handleSubscribeMsg(ctx context.Context, req *SubscribeMsg) (err error) {
 	metrics.GetOrRegisterCounter("peer.handlesubscribemsg", nil).Inc(1)
 
@@ -110,15 +110,18 @@ func (p *Peer) handleSubscribeMsg(ctx context.Context, req *SubscribeMsg) (err e
 		return err
 	}
 
+	//分析获取相应的streamer
 	s, err := f(p, req.Stream.Key, req.Stream.Live)
 	if err != nil {
 		return err
 	}
+	//配置流化器
 	os, err := p.setServer(req.Stream, s, req.Priority)
 	if err != nil {
 		return err
 	}
 
+	//准备需要读取的范围，如果有，那么就从历史记录那里开始
 	var from uint64
 	var to uint64
 	if !req.Stream.Live && req.History != nil {
@@ -130,6 +133,8 @@ func (p *Peer) handleSubscribeMsg(ctx context.Context, req *SubscribeMsg) (err e
 		if err := p.SendOfferedHashes(os, from, to); err != nil {
 			log.Warn("SendOfferedHashes error", "peer", p.ID().TerminalString(), "err", err)
 		}
+
+
 	}()
 
 	if req.Stream.Live && req.History != nil {
@@ -147,6 +152,7 @@ func (p *Peer) handleSubscribeMsg(ctx context.Context, req *SubscribeMsg) (err e
 			if err := p.SendOfferedHashes(os, req.History.From, req.History.To); err != nil {
 				log.Warn("SendOfferedHashes error", "peer", p.ID().TerminalString(), "err", err)
 			}
+
 		}()
 	}
 
@@ -254,7 +260,7 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 			case err := <-errC:
 				if err != nil {
 					log.Debug("client.handleOfferedHashesMsg() error waiting for chunk, dropping peer", "peer", p.ID(), "err", err)
-					p.Drop(err)
+					//p.Drop(err)
 					return
 				}
 			case <-ctx.Done():
@@ -281,7 +287,7 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 	}
 	//看看还有没有
 	from, to := c.nextBatch(req.To + 1)
-	log.Trace("set next batch", "peer", p.ID(), "stream", req.Stream, "from", req.From, "to", req.To, "addr", p.streamer.addr)
+	log.Debug("set next batch", "peer", p.ID(), "stream", req.Stream, "from", req.From, "to", req.To, "addr", p.streamer.addr)
 	if from == to {
 		return nil
 	}
@@ -294,7 +300,7 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 		To:     to,
 	}
 	go func() {
-		log.Trace("sending want batch", "peer", p.ID(), "stream", msg.Stream, "from", msg.From, "to", msg.To)
+		log.Debug("sending want batch", "peer", p.ID(), "stream", msg.Stream, "from", msg.From, "to", msg.To)
 		select {
 		case err := <-c.next:
 			if err != nil {
