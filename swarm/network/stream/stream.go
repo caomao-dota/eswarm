@@ -214,7 +214,7 @@ func NewRegistry(localID enode.ID, delivery *Delivery, syncChunkStore storage.Sy
 			}
 
 			// initial requests for syncing subscription to peers
-			streamer.updateSyncing()
+			streamer.updateSyncing(nil)
 
 			for depth := range depthC {
 				log.Debug("Kademlia neighbourhood depth change", "depth", depth)
@@ -233,14 +233,14 @@ func NewRegistry(localID enode.ID, delivery *Delivery, syncChunkStore storage.Sy
 						// force syncing update when a hard timeout is reached
 						log.Trace("Sync subscriptions update on hard timeout")
 						// request for syncing subscription to new peers
-						streamer.updateSyncing()
+						streamer.updateSyncing(nil)
 						break loop
 					case <-timer.C:
 						// start syncing as no new peers has been added to kademlia
 						// for some time
 						log.Trace("Sync subscriptions update")
 						// request for syncing subscription to new peers
-						streamer.updateSyncing()
+						streamer.updateSyncing(nil)
 						break loop
 					case size := <-addressBookSizeC:
 						log.Trace("Kademlia address book size changed on depth change", "size", size)
@@ -317,7 +317,9 @@ func (r *Registry) GetServerFunc(stream string) (func(*Peer, string, bool) (Serv
 	}
 	return f, nil
 }
-//注册一个订阅，方法是向peer发送一个订阅消息
+
+//注册一个订阅，方法是向peer发送需要一个订阅消息
+//从这个角度来说说，每次peer建立后，都应该调用这个函数
 func (r *Registry) RequestSubscription(peerId enode.ID, s Stream, h *Range, prio uint8) error {
 	// check if the stream is registered
 	if _, err := r.GetServerFunc(s.Name); err != nil {
@@ -470,7 +472,13 @@ func (r *Registry) Run(p *network.BzzPeer) error {
 		if err != nil {
 			return err
 		}
+		//Aegon 注册同步流
+		peers := make(map[enode.ID]*Peer)
+		peers[sp.ID()]=sp
+
+		r.updateSyncing(peers)
 	}
+
 
 	return sp.Run(sp.HandleMsg)
 }
@@ -479,13 +487,16 @@ func (r *Registry) Run(p *network.BzzPeer) error {
 // kademlia connections and bins. If there are existing SYNC streams
 // and they are no longer required after iteration, request to Quit
 // them will be send to appropriate peers.
-func (r *Registry) updateSyncing() {
+func (r *Registry) updateSyncing(peers map[enode.ID]*Peer) {
 	kad := r.delivery.kad
 	// map of all SYNC streams for all peers
 	// used at the and of the function to remove servers
 	// that are not needed anymore
 	subs := make(map[enode.ID]map[Stream]struct{})
 	r.peersMu.RLock()
+	if( peers == nil ) {
+		peers = r.peers
+	}
 	for id, peer := range r.peers {
 		peer.serverMu.RLock()
 		for stream := range peer.servers {
@@ -500,9 +511,9 @@ func (r *Registry) updateSyncing() {
 	}
 	r.peersMu.RUnlock()
 
-	// start requesting subscriptions from peers
-	r.requestPeerSubscriptions(kad, subs)
 
+
+	//已经重新发request出去了，所以原来的stream可以删除了
 	// remove SYNC servers that do not need to be subscribed
 	for id, streams := range subs {
 		if len(streams) == 0 {
@@ -520,6 +531,9 @@ func (r *Registry) updateSyncing() {
 			}
 		}
 	}
+	//Aegon 我把这个放到了后面，先发取消，然后再发订阅
+	// start requesting subscriptions from peers
+	r.requestPeerSubscriptions(kad, subs)
 }
 
 // requestPeerSubscriptions calls on each live peer in the kademlia table
@@ -608,7 +622,7 @@ func (p *Peer) HandleMsg(ctx context.Context, msg interface{}) error {
 	default:
 	}
 
-	ctx,_ =context.WithTimeout(ctx,30*time.Second)
+	ctx, _ = context.WithTimeout(ctx, 30*time.Second)
 	switch msg := msg.(type) {
 
 	case *SubscribeMsg:

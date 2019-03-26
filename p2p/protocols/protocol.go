@@ -241,10 +241,9 @@ func (p *Peer) Run(handler func(ctx context.Context, msg interface{}) error) err
 			if err != io.EOF {
 				metrics.GetOrRegisterCounter("peer.handleincoming.error", nil).Inc(1)
 				log.Error("peer.handleIncoming", "err", err)
-			}else{
+			} else {
 				return err
 			}
-
 
 		}
 	}
@@ -323,6 +322,7 @@ func (p *Peer) Send(ctx context.Context, msg interface{}) error {
 // * handles decoding with reflection,
 // * call handlers as callbacks
 func (p *Peer) handleIncoming(handle func(ctx context.Context, msg interface{}) error) error {
+
 	msg, err := p.rw.ReadMsg()
 	if err != nil {
 		return err
@@ -341,7 +341,6 @@ func (p *Peer) handleIncoming(handle func(ctx context.Context, msg interface{}) 
 		log.Error(err.Error())
 		return err
 	}
-
 	ctx := context.Background()
 
 	// if tracing is enabled and the context coming within the request is
@@ -360,7 +359,6 @@ func (p *Peer) handleIncoming(handle func(ctx context.Context, msg interface{}) 
 
 		ctx = spancontext.WithContext(ctx, sctx)
 	}
-
 	val, ok := p.spec.NewMsg(msg.Code)
 	if !ok {
 		return errorf(ErrInvalidMsgCode, "%v", msg.Code)
@@ -368,7 +366,6 @@ func (p *Peer) handleIncoming(handle func(ctx context.Context, msg interface{}) 
 	if err := rlp.DecodeBytes(wmsg.Payload, val); err != nil {
 		return errorf(ErrDecode, "<= %v: %v", msg, err)
 	}
-
 	//if the accounting hook is set, call it
 	if p.spec.Hook != nil {
 		err := p.spec.Hook.Receive(p, wmsg.Size, val)
@@ -376,7 +373,6 @@ func (p *Peer) handleIncoming(handle func(ctx context.Context, msg interface{}) 
 			return err
 		}
 	}
-
 	// call the registered handler callbacks
 	// a registered callback take the decoded message as argument as an interface
 	// which the handler is supposed to cast to the appropriate type

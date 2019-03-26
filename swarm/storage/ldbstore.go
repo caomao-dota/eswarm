@@ -1042,7 +1042,7 @@ func (s *LDBStore) get(addr Address) (chunk Chunk, err error) {
 				return
 			}
 			if !s.VerifyHash(data[32:],addr) {
-				fmt.Printf("hash check error: %v\r\n",addr,"data len",len(data))
+				fmt.Printf("hash check error: %v datalen :%v \r\n",addr,len(data))
 			}
 		}
 

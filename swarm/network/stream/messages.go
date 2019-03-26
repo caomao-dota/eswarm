@@ -373,7 +373,6 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 			newCtx := ctx;// ,_ := context.WithTimeout(ctx,20*time.Second)
 			data, err := s.GetData(newCtx, hash)
 			if err == nil {
-				//在这里也只要有一个数据不对，就立刻退出了，那这样的话，在一段里，如果有某一个HASH没有了，这一段后续的都没有了
 				//TODO Aegon 重新考虑一下，是否需要继续读取
 				chunk := storage.NewChunk(hash, data)
 				syncing := true
