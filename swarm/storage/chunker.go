@@ -512,7 +512,7 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 
 		req := cctx.Value("req").(*rawHttp.Request)
 		url := cctx.Value("url").(string)
-		fmt.Printf("Read hash from central node: %v len:%v from: %v\r\n",url,len(b),off)
+
 		buffer,OK := r.ts_buffer.Get(url)
 		needRetrieve := !OK;
 		//检查是否需要
@@ -527,6 +527,7 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 		var cacheBuffer []byte
 		startOffset := int64(0)
 		if needRetrieve {
+			fmt.Printf("Read hash from central node: %v len:%v from: %v\r\n",url,len(b),off)
 			dataBuf,end := r.reader.GetChunkFromCentral(url, off,  req)
 			if dataBuf != nil {
 				r.ts_buffer.Add(url,&DataCache{start:off,value:dataBuf,end:end})

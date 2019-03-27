@@ -789,9 +789,10 @@ func (c *client) batchDone(p *Peer, req *OfferedHashesMsg, hashes []byte) error 
 		if err := p.SendPriority(context.TODO(), tp, c.priority); err != nil {
 			return err
 		}
-		if c.to > 0 && tp.Takeover.End >= c.to {
+	/*	if c.to > 0 && tp.Takeover.End >= c.to {
 			return p.streamer.Unsubscribe(p.Peer.ID(), req.Stream)
 		}
+	*/
 		return nil
 	}
 	return c.AddInterval(req.From, req.To)

@@ -800,9 +800,11 @@ func (s *LDBStore) Put(ctx context.Context, chunk Chunk) error {
 	batch := s.batch
 
 	log.Trace("ldbstore.put: s.db.Get", "key", chunk.Address(), "ikey", fmt.Sprintf("%x", ikey))
-	_, err := s.db.Get(ikey)
+	orgData, err := s.db.Get(ikey)
 	if err != nil {
 		s.doPut(chunk, &index, po)
+	}else {
+		decodeIndex(orgData, &index)
 	}
 	idata := encodeIndex(&index)
 	s.batch.Put(ikey, idata)
@@ -828,6 +830,10 @@ func (s *LDBStore) Put(ctx context.Context, chunk Chunk) error {
 
 // force putting into db, does not check or update necessary indices
 func (s *LDBStore) doPut(chunk Chunk, index *dpaDBIndex, po uint8) {
+
+	if !s.VerifyHash(chunk.Data(),chunk.Address()) {
+		fmt.Println("Chunk not correct!",chunk.Address())
+	}
 	data := s.encodeDataFunc(chunk)
 	dkey := getDataKey(s.dataIdx, po)
 	s.batch.Put(dkey, data) //Aegon TODO: 这里需要改造，存入到通用的存储器中

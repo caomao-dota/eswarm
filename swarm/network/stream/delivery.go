@@ -245,7 +245,7 @@ func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *Ch
 		req.peer = sp
 		validData := d.chunkStore.Validate(req.SData,req.Addr)
 		var err error
-		if(!validData) {
+		if !validData  {
 			err = errors.New("Chunk Data Invalid")
 			fmt.Printf("Invalid Chunk Received: %v",req.Addr)
 		}else {
