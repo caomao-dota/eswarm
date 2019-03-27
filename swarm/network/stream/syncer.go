@@ -191,7 +191,7 @@ func RegisterSwarmSyncerClient(streamer *Registry, store storage.SyncChunkStore)
 	})
 }
 
-// NeedData
+// NeedData需要检查数据地址是否更近，如果更近，返回fetch，否则，直接返回nil，
 func (s *SwarmSyncerClient) NeedData(ctx context.Context, key []byte) (wait func(context.Context) error) {
 	return s.store.FetchFunc(ctx, key)
 }

@@ -66,6 +66,7 @@ type Peer struct {
 	// on creating a new client in offered hashes handler.
 	clientParams map[Stream]*clientParams
 	quit         chan struct{}
+	lastHashTime  time.Time
 }
 
 type WrappedPriorityMsg struct {
@@ -83,6 +84,7 @@ func NewPeer(peer *protocols.Peer, streamer *Registry) *Peer {
 		clients:      make(map[Stream]*client),
 		clientParams: make(map[Stream]*clientParams),
 		quit:         make(chan struct{}),
+		lastHashTime: time.Now(),
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	go p.pq.Run(ctx, func(i interface{}) {

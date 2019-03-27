@@ -348,10 +348,19 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 	if err != nil {
 		return err
 	}
+
 	//currentBatch，是当前还没有提供给对端的所有哈希（上一次提供的）
 	hashes := s.currentBatch
 	// launch in go routine since GetBatch blocks until new hashes arrive
 	go func() {
+		timeDelay := time.Now().Sub(p.lastHashTime)
+		if timeDelay > 5*time.Second {
+			timeDelay = 5*time.Second
+		}
+		delay := time.NewTimer(timeDelay)
+		select {
+		case <-delay.C:
+		}
 		if err := p.SendOfferedHashes(s, req.From, req.To); err != nil {
 			log.Warn("SendOfferedHashes error", "peer", p.ID().TerminalString(), "err", err)
 		}

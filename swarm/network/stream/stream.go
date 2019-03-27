@@ -511,7 +511,9 @@ func (r *Registry) updateSyncing(peers map[enode.ID]*Peer) {
 	}
 	r.peersMu.RUnlock()
 
-
+	//Aegon 我把这个放到了后面，先发取消，然后再发订阅
+	// start requesting subscriptions from peers
+	r.requestPeerSubscriptions(kad, subs)
 
 	//已经重新发request出去了，所以原来的stream可以删除了
 	// remove SYNC servers that do not need to be subscribed
@@ -531,9 +533,7 @@ func (r *Registry) updateSyncing(peers map[enode.ID]*Peer) {
 			}
 		}
 	}
-	//Aegon 我把这个放到了后面，先发取消，然后再发订阅
-	// start requesting subscriptions from peers
-	r.requestPeerSubscriptions(kad, subs)
+
 }
 
 // requestPeerSubscriptions calls on each live peer in the kademlia table

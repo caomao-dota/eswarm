@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"errors"
-	"fmt"
 	"github.com/plotozhu/MDCMainnet/crypto"
 	"golang.org/x/crypto/sha3"
 	"io"
@@ -145,10 +144,10 @@ func (r *Receipt) Signature(prvKey *ecdsa.PrivateKey) error {
 */
 func (r *Receipt) Verify() (*ecdsa.PublicKey, bool) {
 	//SigToPub
-	bodyData, _ := rlp.EncodeToBytes(r.ReceiptBody)
-	fmt.Println("array is:", bodyData)
+	//bodyData, _ := rlp.EncodeToBytes(r.ReceiptBody)
+	//fmt.Println("array is:", bodyData)
 	h := rlpHash(r.ReceiptBody)
-	fmt.Println("hash:", h)
+	//fmt.Println("hash:", h)
 	pubKey, err := crypto.SigToPub(h[:], r.Sign)
 	if err == nil {
 		pubKeyBytes := crypto.CompressPubkey(pubKey)
