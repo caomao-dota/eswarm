@@ -805,6 +805,7 @@ func (s *LDBStore) Put(ctx context.Context, chunk Chunk) error {
 		s.doPut(chunk, &index, po)
 	}else {
 		decodeIndex(orgData, &index)
+
 	}
 	idata := encodeIndex(&index)
 	s.batch.Put(ikey, idata)
