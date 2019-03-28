@@ -3,12 +3,16 @@ package util
 import (
 	"bytes"
 	"fmt"
+	"github.com/plotozhu/MDCMainnet/common"
 	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/plotozhu/MDCMainnet/rlp"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"regexp"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -31,17 +35,27 @@ func createHTTPClient() *http.Client {
 
 type HttpReader struct {
 	httpClient *http.Client
+	unreported ReportData
+	reportMu   sync.Mutex
+	account    [20]byte
+	reportUrl string 
+
 }
 
-func CreateHttpReader()(*HttpReader){
+func CreateHttpReader( )(*HttpReader){
 	client := createHTTPClient
 	return &HttpReader{
 		httpClient:client(),
+		unreported:make(ReportData),
 	}
+}
+func (hr *HttpReader)SetCdnReporter ( account, serverUrl string){
+	hr.account = common.HexToAddress(account)
+	hr.reportUrl = serverUrl +"/cdn"
 }
 //从中心化服务端取数据，最多取1024*1024*8 （8M字节数据）
 const MaxLen  = 8*1024*1024
-func (hr *HttpReader)GetChunkFromCentral(uri string,start int64,r *http.Request) (result []byte, isEnd bool){
+func (hr *HttpReader)GetChunkFromCentral(uri string,start int64,topHash []byte,r *http.Request) (result []byte, isEnd bool){
 	req, err := http.NewRequest("GET", uri, bytes.NewBuffer([]byte("")))
 	if err != nil {
 		result = nil
@@ -88,6 +102,9 @@ func (hr *HttpReader)GetChunkFromCentral(uri string,start int64,r *http.Request)
 			}else{
 				isEnd = true
 			}
+			if len(hr.reportUrl) != 0 {
+				hr.doReport(hr.reportUrl,topHash,int64(len(result)))
+			}
 
 
 		}else{
@@ -103,7 +120,7 @@ func (hr *HttpReader)GetChunkFromCentral(uri string,start int64,r *http.Request)
 }
 type OnError func(http.ResponseWriter, *http.Request,  string,  int)
 //get data from server and write to response
-func (s *HttpReader)GetDataFromCentralServer(uri string, r *http.Request,w http.ResponseWriter, onError OnError  ){
+func (s *HttpReader)GetDataFromCentralServer(uri string, r *http.Request,w http.ResponseWriter, hash []byte, onError OnError  ){
 
 
 	req, err := http.NewRequest("GET", uri, bytes.NewBuffer([]byte("")))
@@ -133,7 +150,9 @@ func (s *HttpReader)GetDataFromCentralServer(uri string, r *http.Request,w http.
 		if err != nil {
 			log.Error("Couldn't parse response body. %+v", err)
 		}
-
+		if len(s.reportUrl) != 0 {
+			s.doReport(s.reportUrl,hash,int64(len(body)))
+		}
 		if w != nil {
 			for k,vv := range response.Header {
 				vv2 := make([]string, len(vv))
@@ -151,4 +170,80 @@ func (s *HttpReader)GetDataFromCentralServer(uri string, r *http.Request,w http.
 		return
 		//log.Trace("Response Body:", string(body))
 	}
+}
+
+type RpData struct{
+	Stime 	uint32
+	MSec    uint32
+	AmountH  uint32
+	AmountL  uint32
+}
+
+type ReportData map[time.Time]int64
+func (r *ReportData) EncodeRLP(w io.Writer) error {
+	value := make([]RpData,0)
+	for stime,amount := range *r {
+		stime := stime.UnixNano()
+		sec := stime/1e9
+		msec := stime-sec
+		data := RpData{uint32(sec),uint32(msec),uint32(amount>>32),uint32(amount)}
+		value = append(value,data)
+	}
+	return rlp.Encode(w, value)
+}
+func (rd *ReportData)DecodeRLP(s *rlp.Stream) error{
+	value := make([]*RpData,0)
+	if err := s.Decode(&value); err != nil {
+		return err
+	}
+	for _,res := range value {
+		(*rd)[time.Unix(0,int64(res.Stime*1e9) + int64(res.MSec))] = (int64(res.AmountH) << 32 )+int64(res.AmountL)
+	}
+
+	return nil
+}
+type ReportFmt struct{
+	Account [20]byte
+	Hash    []byte
+	Data    []byte
+}
+func (r *HttpReader) doReport(url string, hash []byte, dataLen int64) {
+	r.reportMu.Lock()
+	r.unreported[time.Now()] = dataLen
+	r.reportMu.Unlock()
+	go func(){
+		r.reportMu.Lock()
+		dataToReport := r.unreported
+		r.unreported = make(ReportData)
+		r.reportMu.Unlock()
+		result,_ := rlp.EncodeToBytes(&dataToReport)
+		data,_ := rlp.EncodeToBytes(ReportFmt{r.account,hash,result})
+		err := SendDataToServer(url,5*time.Second,data)
+		if err != nil {
+			r.reportMu.Lock()
+			for stime,amount := range dataToReport {
+				r.unreported[stime] = amount
+			}
+			r.reportMu.Unlock()
+		}
+	}()
+}
+func  SendDataToServer(url string, timeout time.Duration, data []byte) error {
+
+	client := &http.Client{
+		Timeout: timeout,
+	}
+
+	request, err := http.NewRequest("POST", url, bytes.NewReader(data))
+	if err != nil {
+		log.Info("error to send data","reason",err)
+	}
+	request.Header.Set("Connection", "Keep-Alive")
+	request.Header.Set("Content-Type", "text/plain")
+
+	res, err := client.Do(request)
+	if err == nil { //提交成功，本地删除
+		defer res.Body.Close()
+	}
+	return err
 }

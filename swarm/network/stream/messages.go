@@ -353,7 +353,7 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 	hashes := s.currentBatch
 	// launch in go routine since GetBatch blocks until new hashes arrive
 	go func() {
-		timeDelay := time.Now().Sub(p.lastHashTime)
+		timeDelay := time.Now().Sub(p.lastHashTime)/2
 		if timeDelay > 5*time.Second {
 			timeDelay = 5*time.Second
 		}

@@ -100,7 +100,7 @@ func NewConfig() (c *Config) {
 		DeliverySkipCheck:    true,
 		SyncUpdateDelay:      15 * time.Second,
 		SwapAPI:              "",
-		ServerAddr:           "http://124.156.115.14:4000/apis/v1/receipts",
+		ServerAddr:           "http://192.168.1.10:4000/apis/v1",
 		CentralAddr:          []string{"http://124.156.115.14:8500"},
 	}
 

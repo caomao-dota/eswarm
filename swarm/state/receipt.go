@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"github.com/plotozhu/MDCMainnet/crypto"
+	"github.com/plotozhu/MDCMainnet/swarm/util"
 	"golang.org/x/crypto/sha3"
 	"io"
 	"io/ioutil"
@@ -259,7 +260,7 @@ type ReceiptStore struct {
 
 func NewReceiptsStore(filePath string, prvKey *ecdsa.PrivateKey, serverAddr string) (*ReceiptStore, error) {
 	db, err := leveldb.OpenFile(filePath, nil)
-	return newReceiptsStore(db, prvKey, serverAddr), err
+	return newReceiptsStore(db, prvKey, serverAddr+"/receipts"), err
 }
 func newReceiptsStore(newDb *leveldb.DB, prvKey *ecdsa.PrivateKey, serverAddr string) *ReceiptStore {
 	store := ReceiptStore{
@@ -532,7 +533,7 @@ func (rs *ReceiptStore) doAutoSubmit() error {
 	result, err := rs.createReportData(receipts)
 
 	timeout := time.Duration(5 * time.Second) //超时时间50ms
-	err = rs.SendDataToServer(rs.server, timeout, result)
+	err = util.SendDataToServer(rs.server, timeout, result)
 
 	if err == nil { //提交成功，本地删除
 

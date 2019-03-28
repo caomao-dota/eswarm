@@ -21,8 +21,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hashicorp/golang-lru"
+	"github.com/plotozhu/MDCMainnet/rlp"
 	"github.com/plotozhu/MDCMainnet/swarm/util"
 	"io"
+	"reflect"
 	"sync"
 	"time"
 
@@ -362,7 +364,32 @@ func (tc *TreeChunker) runWorker(ctx context.Context) {
 		}
 	}()
 }
+type RpData struct{
+	Stime 	int64
 
+	Amount  int64
+}
+
+type ReportData map[time.Time]int64
+func (r *ReportData) EncodeRLP(w io.Writer) error {
+	value := make([]*RpData,0)
+	for stime,amount := range *r {
+		data := RpData{stime.UnixNano(),amount}
+		value = append(value,&data)
+	}
+	return rlp.Encode(w, &value)
+}
+func (rd *ReportData)DecodeRLP(s *rlp.Stream) error{
+	value := make([]*RpData,0)
+	if err := s.Decode(&value); err != nil {
+		return err
+	}
+	for _,res := range value {
+		(*rd)[time.Unix(0,res.Stime)] = res.Amount
+	}
+
+	return nil
+}
 // LazyChunkReader implements LazySectionReader
 type LazyChunkReader struct {
 	ctx       context.Context
@@ -374,8 +401,10 @@ type LazyChunkReader struct {
 	hashSize  int64 // inherit from chunker
 	depth     int
 	getter    Getter
-	reader    *util.HttpReader
+
 	ts_buffer    *lru.Cache
+
+
 }
 
 func (tc *TreeChunker) Join(ctx context.Context) *LazyChunkReader {
@@ -388,8 +417,9 @@ func (tc *TreeChunker) Join(ctx context.Context) *LazyChunkReader {
 		depth:     tc.depth,
 		getter:    tc.getter,
 		ctx:       tc.ctx,
-		reader:    util.CreateHttpReader(),
+
 		ts_buffer: bf,
+
 	}
 }
 
@@ -431,6 +461,7 @@ type DataCache struct {
 	value []byte
 	end   bool
 }
+
 // read at can be called numerous times
 // concurrent reads are allowed
 // Size() needs to be called synchronously on the LazyChunkReader first
@@ -513,6 +544,7 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 		req := cctx.Value("req").(*rawHttp.Request)
 		url := cctx.Value("url").(string)
 
+
 		buffer,OK := r.ts_buffer.Get(url)
 		needRetrieve := !OK;
 		//检查是否需要
@@ -527,15 +559,30 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 		var cacheBuffer []byte
 		startOffset := int64(0)
 		if needRetrieve {
-			fmt.Printf("Read hash from central node: %v len:%v from: %v\r\n",url,len(b),off)
-			dataBuf,end := r.reader.GetChunkFromCentral(url, off,  req)
-			if dataBuf != nil {
-				r.ts_buffer.Add(url,&DataCache{start:off,value:dataBuf,end:end})
-				cacheBuffer = dataBuf
+			httpClient := cctx.Value("reporter")
+			if httpClient != nil && !reflect.ValueOf(httpClient).IsNil() {
+				hash := cctx.Value("reporter")
+				var hashValue []byte
+				if( hash != nil && !reflect.ValueOf(hash).IsNil()){
+					hashValue = hash.([]byte)
+				}else {
+					hashValue = []byte{}
+				}
+				//	fmt.Printf("Read hash from central node: %v len:%v from: %v\r\n",url,len(b),off)
+				dataBuf,end := httpClient.(*util.HttpReader).GetChunkFromCentral(url, off, hashValue, req)
+				if dataBuf != nil {
+					r.ts_buffer.Add(url,&DataCache{start:off,value:dataBuf,end:end})
+					cacheBuffer = dataBuf
+
+
+				}else{
+					cacheBuffer = nil
+				}
+				startOffset = 0
 			}else{
 				cacheBuffer = nil
 			}
-			startOffset = 0
+
 
 		}else{
 			cacheBuffer =  buffer.(*DataCache).value

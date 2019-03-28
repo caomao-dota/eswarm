@@ -418,6 +418,7 @@ func (s *Swarm) Start(srv *p2p.Server) error {
 		addr := net.JoinHostPort(s.config.ListenAddr, s.config.Port)
 		server := httpapi.NewServer(s.api, s.config.Cors)
 
+		server.CreateCdnReporter(s.config.BzzAccount,s.config.ServerAddr)
 		if s.config.Cors != "" {
 			log.Debug("Swarm HTTP proxy CORS headers", "allowedOrigins", s.config.Cors)
 		}
