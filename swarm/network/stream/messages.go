@@ -300,7 +300,7 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 		To:     to,
 	}
 	go func() {
-		log.Debug("sending want batch", "peer", p.ID(), "stream", msg.Stream, "from", msg.From, "to", msg.To)
+		//log.Debug("sending want batch", "peer", p.ID(), "stream", msg.Stream, "from", msg.From, "to", msg.To)
 		select {
 		case err := <-c.next:
 			if err != nil {
@@ -361,6 +361,7 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 		select {
 		case <-delay.C:
 		}
+		p.lastHashTime = time.Now()
 		if err := p.SendOfferedHashes(s, req.From, req.To); err != nil {
 			log.Warn("SendOfferedHashes error", "peer", p.ID().TerminalString(), "err", err)
 		}
