@@ -17,24 +17,27 @@
 // Contains all the wrappers from the node package to support client side node
 // management on mobile platforms.
 
-package swarm
+package eswarm
 
 //import "C"
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/plotozhu/MDCMainnet/accounts"
 	"github.com/plotozhu/MDCMainnet/accounts/keystore"
 	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/log"
 	"github.com/plotozhu/MDCMainnet/node"
 	"github.com/plotozhu/MDCMainnet/p2p"
 	"github.com/plotozhu/MDCMainnet/p2p/nat"
 	"github.com/plotozhu/MDCMainnet/swarm"
 	bzzapi "github.com/plotozhu/MDCMainnet/swarm/api"
 	"io/ioutil"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 // NodeConfig represents the collection of configuration values to fine tune the Geth
@@ -85,46 +88,41 @@ type Node struct {
 	node *node.Node
 }
 
-// gomobile不支持切片类型参数
-type Bootnodes struct {
-	Enodes []string
-}
-
-type StartOptions struct {
-	Bootnode    []string
-	BzzPassword string
-}
-
-type ActivateOptions struct {
-	Addr        string
-	NewAccount  bool
-	BzzPassword string
-}
-
 type ActivatePost struct {
 	Appid      string
 	Credential string
+	Account    string
 }
 
-/*
-func PostToServer(url string, data *ActivatePost) int {
-	jsonstr,err := json.Marshal(data)
-	if err != nil { return }
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonstr))
-	if err != nil { return }
-	req.Header.Set("Content-Type", "application/json")
+type RespData struct {
+	ExpireTime int
+}
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil { return }
+func PostToServer(urlstr string, timeout time.Duration, data *ActivatePost) int {
+
+	postdata := make(url.Values)
+	postdata.Set("appId", data.Appid)
+	postdata.Set("account", data.Account)
+	postdata.Set("credential", data.Credential)
+	resp, err := http.PostForm(urlstr, postdata)
+	if err != nil {
+		return 0
+	}
 	defer resp.Body.Close()
-
-	fmt.Println("response Status:", resp.Status)
-	//fmt.Println("response Headers:", resp.Header)
-	body, _ := ioutil.ReadAll(resp.Body)
-	fmt.Println("response Body:", string(body))
+	if resp.StatusCode != 200 {
+		return 0
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return 0
+	}
+	respData := RespData{}
+	err = json.Unmarshal(body, &respData)
+	if err != nil {
+		return 0
+	}
+	return respData.ExpireTime
 }
-*/
 
 /*
 func SwarmStart1(path string, options interface{}) error {
@@ -193,7 +191,76 @@ func SwarmStart1(path string, options interface{}) error {
 }
 */
 
-func SwarmStart(path string, options interface{}) error {
+func SwarmStart(path string, password string, bootnode string) (stack *Node, _ error) {
+	//path keystore上一级目录
+	if path == "" {
+		return nil, errors.New("Must input path ...")
+	}
+
+	if password == "" {
+		password = "123"
+	}
+
+	/*
+		case StartOptions:
+			log.Info("%t, %v, %s", ins, ins, ins.Bootnode)
+			if ins.BzzPassword == "" {
+				passwd = "123"
+			} else {
+				passwd = ins.BzzPassword
+			}
+			if len(ins.Bootnode) == 0 {
+				enode, err := NewEnodev4(DefaultBootNode)
+				if err != nil {
+					return errors.New("NewEnodev4 func err...")
+				}
+				enodes = append(enodes, enode)
+			} else {
+				for _, str := range ins.Bootnode {
+					enode, err := NewEnodev4(str)
+					if err != nil {
+						return errors.New("NewEnodev4 func err...")
+					}
+					enodes = append(enodes, enode)
+				}
+			}
+	*/
+
+	var account string
+	fileinfo, err := ioutil.ReadDir(path + "/keystore")
+	if err != nil && len(fileinfo) == 0 {
+		return nil, errors.New("Please input the correct directory or keystore dir is empty. Please activate first...")
+	}
+	for _, file := range fileinfo {
+		if !file.IsDir() { //UTC--2019-03-26T10-26-19.431075000Z--3de7c66e10c0f476c9b0d221e9cf1affd50eeac2
+			account = file.Name()
+			account = account[len(account)-40:]
+			break
+		}
+	}
+
+	config := NewNodeConfig()
+	config.SwarmAccount = account
+	config.SwarmAccountPassword = password
+	stack, err = NewSwarmNode(path, config)
+	if err != nil {
+		return nil, errors.New("NewSwarmNode func err...")
+	}
+	stack.Start()
+
+	if bootnode != "" {
+		err := stack.AddBootnode(bootnode)
+		if err != nil {
+			stack.Close()
+			return nil, err
+		}
+	}
+
+	return stack, nil
+}
+
+/*
+func SwarmStart1(path string, options interface{}) error {
 	//path keystore上一级目录
 	if path == "" {
 		return errors.New("Must input path...")
@@ -285,14 +352,15 @@ func SwarmStart(path string, options interface{}) error {
 
 	return nil
 }
+*/
 
-func CreateKeyStore(path, passwd string, ScryptN, ScryptP int) error {
+func CreateKeyStore(path, passwd string, ScryptN, ScryptP int) (string, error) {
 	keystore := NewKeyStore(path, ScryptN, ScryptP)
-	_, err := keystore.NewAccount(passwd)
+	account, err := keystore.NewAccount(passwd)
 	if err != nil {
-		return errors.New("keystore.NewAccount func err...")
+		return "", errors.New("keystore.NewAccount func err...")
 	}
-	return nil
+	return account.GetAddress().GetHex(), nil
 }
 
 func PathExists(path string) (bool, error) {
@@ -306,7 +374,132 @@ func PathExists(path string) (bool, error) {
 	return false, err
 }
 
-func Activate(path, appid, credential string, options interface{}) error {
+func Activate(path string, appId string, credential string, addr string, newAccount bool, password string) int {
+	if path == "" {
+		return 0
+	}
+
+	if addr == "" {
+		addr = "http://172.16.1.10:4000/apis/v1/activate"
+	}
+
+	if password == "" {
+		password = "123"
+	}
+
+	keystorepath := path + "/keystore/"
+	exist, err := PathExists(keystorepath)
+	if err != nil {
+		return 0
+	}
+	if !exist {
+		err = os.Mkdir(path+"/keystore", os.ModePerm)
+		if err != nil {
+			return 0
+		}
+	}
+
+	bzzAccount := ""
+	fileinfo, err := ioutil.ReadDir(keystorepath)
+	if err != nil {
+		return 0
+	}
+	for _, file := range fileinfo {
+		if !file.IsDir() {
+			//UTC--2019-03-26T10-26-19.431075000Z--3de7c66e10c0f476c9b0d221e9cf1affd50eeac2
+			if newAccount == false {
+				bzzAccount = file.Name()
+				bzzAccount = bzzAccount[len(bzzAccount)-40:]
+			} else { //重新生成一个keystore
+				err := os.Remove(keystorepath + file.Name())
+				if err != nil {
+					return 0
+				}
+			}
+
+			break
+		}
+	}
+
+	if bzzAccount == "" {
+		account, err := CreateKeyStore(keystorepath, password, StandardScryptN, StandardScryptP)
+		if err != nil {
+			return 0
+		}
+		bzzAccount = account
+	}
+
+	/*
+		switch ins := options.(type) {
+		case ActivateOptions:
+			if ins.NewAccount == true { //重新生成一个keystore
+				fileinfo, err := ioutil.ReadDir(keystorepath)
+				if err != nil {
+					return err
+				}
+				for _, file := range fileinfo {
+					if !file.IsDir() { //UTC--2019-03-26T10-26-19.431075000Z--3de7c66e10c0f476c9b0d221e9cf1affd50eeac2
+						err := os.Remove(keystorepath + file.Name())
+						if err != nil {
+							return errors.New("os.Remove(file.Name()) err. delete keystore file fail...")
+						}
+						break
+					}
+				}
+			}
+
+			fileinfo, err := ioutil.ReadDir(keystorepath)
+			if err != nil {
+				return errors.New("Please input the correct directory...")
+			}
+
+			if len(fileinfo) == 0 {
+				err := CreateKeyStore(keystorepath, ins.BzzPassword, StandardScryptN, StandardScryptP)
+				if err != nil {
+					return errors.New("CreateKeyStore func err...")
+				}
+			}
+
+		case *ActivateOptions:
+			if ins.NewAccount == true { //重新生成一个keystore
+				err := os.RemoveAll(keystorepath)
+				if err != nil {
+					return errors.New("os.RemoveAll err...")
+				}
+			}
+
+			fileinfo, err := ioutil.ReadDir(keystorepath)
+			if err != nil {
+				return errors.New("Please input the correct directory...")
+			}
+
+			if len(fileinfo) == 0 {
+				err := CreateKeyStore(keystorepath, ins.BzzPassword, StandardScryptN, StandardScryptP)
+				if err != nil {
+					return errors.New("CreateKeyStore func err...")
+				}
+			}
+
+		case nil:
+			fileinfo, err := ioutil.ReadDir(keystorepath)
+			if err != nil {
+				return errors.New("Please input the correct directory...")
+			}
+			if len(fileinfo) == 0 {
+				err := CreateKeyStore(keystorepath, "123", StandardScryptN, StandardScryptP)
+				if err != nil {
+					return errors.New("CreateKeyStore func err...")
+				}
+			}
+	*/
+
+	activatePost := &ActivatePost{appId, credential, bzzAccount}
+	ti := PostToServer(addr, time.Second, activatePost)
+	return ti
+}
+
+/*
+func Activate1(path, appid, credential string, options interface{}) error {
 	if path == "" {
 		return errors.New("Must input path...")
 	}
@@ -388,6 +581,7 @@ func Activate(path, appid, credential string, options interface{}) error {
 	}
 	return nil
 }
+*/
 
 /*
 func Activate(path, appId, clientId, credential string, options *OptionsArgs) (int, error) {
@@ -404,7 +598,7 @@ func Activate(path, appId, clientId, credential string, options *OptionsArgs) (i
 
 // getSwarmKey is a helper for finding and decrypting given account's private key
 // to be used with Swarm.
-func getSwarmKey(stack *node.Node, account, password string) (*keystore.Key, error) {
+func getSwarmKey(stack *node.Node, account string, password string) (*keystore.Key, error) {
 	if account == "" {
 		return nil, nil // it's not an error, just skip
 	}
@@ -510,8 +704,14 @@ func DefaultDataDir() string {
 	return node.DefaultDataDir()
 }
 
-func (n *Node) AddBootnode(enode *Enodev4) {
+func (n *Node) AddBootnode(enodeStr string) error {
+
+	enode, err := NewEnodev4(enodeStr)
+	if err != nil {
+		return err
+	}
 	n.AddPeer(enode)
+	return nil
 }
 
 /*
