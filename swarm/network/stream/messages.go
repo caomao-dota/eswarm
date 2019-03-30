@@ -261,11 +261,11 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 				if err != nil {
 					log.Debug("client.handleOfferedHashesMsg() error waiting for chunk, dropping peer", "peer", p.ID(), "err", err)
 					//p.Drop(err)
-					return
+					//return
 				}
 			case <-ctx.Done():
 				log.Debug("client.handleOfferedHashesMsg() context done", "ctx.Err()", ctx.Err())
-				return
+				break
 			case <-c.quit:
 				log.Debug("client.handleOfferedHashesMsg() quit")
 				return
@@ -289,6 +289,7 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 	from, to := c.nextBatch(req.To + 1)
 	log.Debug("set next batch", "peer", p.ID(), "stream", req.Stream, "from", req.From, "to", req.To, "addr", p.streamer.addr)
 	if from == to {
+		log.Debug("Sync finished", "peer", p.ID(), "stream", req.Stream, "from", from, "to", to, "addr", p.streamer.addr)
 		return nil
 	}
 
@@ -300,12 +301,12 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 		To:     to,
 	}
 	go func() {
-		log.Debug("sending want batch", "peer", p.ID(), "stream", msg.Stream, "from", msg.From, "to", msg.To)
+		log.Debug("waiting for sending want batch", "peer", p.ID(), "stream", msg.Stream, "from", msg.From, "to", msg.To)
 		select {
 		case err := <-c.next:
 			if err != nil {
 				log.Warn("c.next error dropping peer", "err", err)
-				p.Drop(err)
+				//p.Drop(err)
 				return
 			}
 		case <-c.quit:
@@ -315,7 +316,7 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 			log.Debug("client.handleOfferedHashesMsg() context done", "ctx.Err()", ctx.Err())
 			return
 		}
-		log.Trace("sending want batch", "peer", p.ID(), "stream", msg.Stream, "from", msg.From, "to", msg.To)
+		log.Debug("ready sending want batch", "peer", p.ID(), "stream", msg.Stream, "from", msg.From, "to", msg.To)
 		err := p.SendPriority(ctx, msg, c.priority)
 		if err != nil {
 			log.Warn("SendPriority error", "err", err)
@@ -353,7 +354,7 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 	hashes := s.currentBatch
 	// launch in go routine since GetBatch blocks until new hashes arrive
 	go func() {
-		timeDelay := time.Now().Sub(p.lastHashTime)
+		timeDelay := time.Now().Sub(p.lastHashTime)/2
 		if timeDelay > 5*time.Second {
 			timeDelay = 5*time.Second
 		}
@@ -361,6 +362,7 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 		select {
 		case <-delay.C:
 		}
+		p.lastHashTime = time.Now()
 		if err := p.SendOfferedHashes(s, req.From, req.To); err != nil {
 			log.Warn("SendOfferedHashes error", "peer", p.ID().TerminalString(), "err", err)
 		}
@@ -391,7 +393,7 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 				}
 			}
 
-			//在这里只要有一个发送失败，就会立即退出，后续的不再发送
+
 		}
 	}
 	return nil

@@ -21,8 +21,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hashicorp/golang-lru"
+	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/plotozhu/MDCMainnet/rlp"
 	"github.com/plotozhu/MDCMainnet/swarm/util"
 	"io"
+	"reflect"
 	"sync"
 	"time"
 
@@ -363,6 +366,34 @@ func (tc *TreeChunker) runWorker(ctx context.Context) {
 	}()
 }
 
+type RpData struct {
+	Stime int64
+
+	Amount int64
+}
+
+type ReportData map[time.Time]int64
+
+func (r *ReportData) EncodeRLP(w io.Writer) error {
+	value := make([]*RpData, 0)
+	for stime, amount := range *r {
+		data := RpData{stime.UnixNano(), amount}
+		value = append(value, &data)
+	}
+	return rlp.Encode(w, &value)
+}
+func (rd *ReportData) DecodeRLP(s *rlp.Stream) error {
+	value := make([]*RpData, 0)
+	if err := s.Decode(&value); err != nil {
+		return err
+	}
+	for _, res := range value {
+		(*rd)[time.Unix(0, res.Stime)] = res.Amount
+	}
+
+	return nil
+}
+
 // LazyChunkReader implements LazySectionReader
 type LazyChunkReader struct {
 	ctx       context.Context
@@ -374,12 +405,12 @@ type LazyChunkReader struct {
 	hashSize  int64 // inherit from chunker
 	depth     int
 	getter    Getter
-	reader    *util.HttpReader
-	ts_buffer    *lru.Cache
+
+	ts_buffer *lru.Cache
 }
 
 func (tc *TreeChunker) Join(ctx context.Context) *LazyChunkReader {
-	bf,_ := lru.New(20)
+	bf, _ := lru.New(20)
 	return &LazyChunkReader{
 		addr:      tc.addr,
 		chunkSize: tc.chunkSize,
@@ -388,7 +419,7 @@ func (tc *TreeChunker) Join(ctx context.Context) *LazyChunkReader {
 		depth:     tc.depth,
 		getter:    tc.getter,
 		ctx:       tc.ctx,
-		reader:    util.CreateHttpReader(),
+
 		ts_buffer: bf,
 	}
 }
@@ -426,11 +457,13 @@ func (r *LazyChunkReader) Size(ctx context.Context, quitC chan bool) (n int64, e
 
 	return int64(s), nil
 }
+
 type DataCache struct {
 	start int64
 	value []byte
 	end   bool
 }
+
 // read at can be called numerous times
 // concurrent reads are allowed
 // Size() needs to be called synchronously on the LazyChunkReader first
@@ -486,72 +519,80 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 
 			//val := cctx.Value("req")
 			//if val == nil   { for test only
-				if off+int64(len(b)) >= size {
-					log.Debug("lazychunkreader.readat.return at end", "size", size, "off", off)
-					return int(size - off), io.EOF
-				}
-				log.Debug("lazychunkreader.readat.errc", "buff", len(b))
-				return len(b), nil
+			if off+int64(len(b)) >= size {
+				log.Debug("lazychunkreader.readat.return at end", "size", size, "off", off)
+				return int(size - off), io.EOF
+			}
+			log.Debug("lazychunkreader.readat.errc", "buff", len(b))
+			return len(b), nil
 			//}
 
 		}
 	}
 
+	defer func() { // 必须要先声明defer，否则不能捕获到panic异常
 
-	defer func(){ // 必须要先声明defer，否则不能捕获到panic异常
-
-		if err:=recover();err!=nil{
-			log.Error("Error recovered!","err",err) // 这里的err其实就是panic传入的内容，55
+		if err := recover(); err != nil {
+			log.Error("Error recovered!", "err", err) // 这里的err其实就是panic传入的内容，55
 			read = 0
 			err = errors.New("Ooops, request is nil!")
 		}
 
-
 	}()
 
+	req := cctx.Value("request").(*rawHttp.Request)
+	url := cctx.Value("url").(string)
 
-		req := cctx.Value("req").(*rawHttp.Request)
-		url := cctx.Value("url").(string)
+	buffer, OK := r.ts_buffer.Get(url)
+	needRetrieve := !OK
+	//检查是否需要
+	if OK {
+		result := buffer.(*DataCache)
+		if result.start > off || //不在缓冲之内
+			(!result.end && (off+int64(len(b)) > (result.start + util.MaxLen))) {
+			needRetrieve = true
 
-		buffer,OK := r.ts_buffer.Get(url)
-		needRetrieve := !OK;
-		//检查是否需要
-		if OK {
-			result := buffer.(*DataCache)
-			if result.start > off || //不在缓冲之内
-				(!result.end && (off + int64(len(b))  > (result.start + util.MaxLen) ) ) {
-				 	needRetrieve = true
-
-			}
 		}
-		var cacheBuffer []byte
-		startOffset := int64(0)
-		if needRetrieve {
-			fmt.Printf("Read hash from central node: %v len:%v from: %v\r\n",url,len(b),off)
-			dataBuf,end := r.reader.GetChunkFromCentral(url, off,  req)
+	}
+	var cacheBuffer []byte
+	startOffset := int64(0)
+	if needRetrieve {
+		httpClient := cctx.Value("reporter")
+		if httpClient != nil && !reflect.ValueOf(httpClient).IsNil() {
+			hash := cctx.Value("hash")
+			var hashValue common.Hash
+			if hash != nil && reflect.ValueOf(hash).IsValid() {
+				hashValue = hash.(common.Hash)
+			} else {
+				hashValue = common.Hash{0}
+			}
+			//	fmt.Printf("Read hash from central node: %v len:%v from: %v\r\n",url,len(b),off)
+			dataBuf, end := httpClient.(*util.HttpReader).GetChunkFromCentral(url, off, hashValue[:], req)
 			if dataBuf != nil {
-				r.ts_buffer.Add(url,&DataCache{start:off,value:dataBuf,end:end})
+				r.ts_buffer.Add(url, &DataCache{start: off, value: dataBuf, end: end})
 				cacheBuffer = dataBuf
-			}else{
+
+			} else {
 				cacheBuffer = nil
 			}
 			startOffset = 0
-
-		}else{
-			cacheBuffer =  buffer.(*DataCache).value
-			startOffset = off - buffer.(*DataCache).start
+		} else {
+			cacheBuffer = nil
 		}
 
-	totalLen := len(cacheBuffer)-int(startOffset)
+	} else {
+		cacheBuffer = buffer.(*DataCache).value
+		startOffset = off - buffer.(*DataCache).start
+	}
+
+	totalLen := len(cacheBuffer) - int(startOffset)
 	if totalLen > len(b) {
 		totalLen = len(b)
 	}
-	copy(b,cacheBuffer[startOffset:startOffset+int64(totalLen)])
+	copy(b, cacheBuffer[startOffset:startOffset+int64(totalLen)])
 	return totalLen, nil
 
-
 }
-
 
 func (r *LazyChunkReader) join(ctx context.Context, b []byte, off int64, eoff int64, depth int, treeSize int64, chunkData ChunkData, parentWg *sync.WaitGroup, errC chan error, quitC chan bool) {
 	defer parentWg.Done()
