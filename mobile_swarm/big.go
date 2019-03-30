@@ -16,7 +16,7 @@
 
 // Contains all the wrappers from the math/big package.
 
-package swarm
+package eswarm
 
 import (
 	"errors"
