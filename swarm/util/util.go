@@ -2,6 +2,7 @@ package util
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/plotozhu/MDCMainnet/common"
 	"github.com/plotozhu/MDCMainnet/log"
@@ -242,8 +243,12 @@ func  SendDataToServer(url string, timeout time.Duration, data []byte) error {
 	request.Header.Set("Content-Type", "text/plain")
 
 	res, err := client.Do(request)
+
 	if err == nil { //提交成功，本地删除
 		defer res.Body.Close()
+		if res.StatusCode != 200 {
+			err = errors.New(res.Status)
+		}
 	}
 	return err
 }

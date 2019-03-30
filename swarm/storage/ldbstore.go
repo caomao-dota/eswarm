@@ -832,9 +832,9 @@ func (s *LDBStore) Put(ctx context.Context, chunk Chunk) error {
 // force putting into db, does not check or update necessary indices
 func (s *LDBStore) doPut(chunk Chunk, index *dpaDBIndex, po uint8) {
 
-	if !s.VerifyHash(chunk.Data(),chunk.Address()) {
+	/*if !s.VerifyHash(chunk.Data(),chunk.Address()) {
 		fmt.Println("Chunk not correct!",chunk.Address())
-	}
+	}*/
 	data := s.encodeDataFunc(chunk)
 	dkey := getDataKey(s.dataIdx, po)
 	s.batch.Put(dkey, data) //Aegon TODO: 这里需要改造，存入到通用的存储器中
@@ -1048,9 +1048,9 @@ func (s *LDBStore) get(addr Address) (chunk Chunk, err error) {
 				s.deleteNow(index, getIndexKey(addr), s.po(addr))
 				return
 			}
-			if !s.VerifyHash(data[32:],addr) {
+		/*	if !s.VerifyHash(data[32:],addr) {
 				fmt.Printf("hash check error: %v datalen :%v \r\n",addr,len(data))
-			}
+			}*/
 		}
 
 
