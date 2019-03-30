@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"github.com/opentracing/opentracing-go"
 	"github.com/plotozhu/MDCMainnet/swarm/tracing"
+	"io/ioutil"
+	"net/http"
 
 	"github.com/plotozhu/MDCMainnet/metrics"
 	"github.com/plotozhu/MDCMainnet/p2p/enode"
@@ -30,8 +32,6 @@ import (
 	"github.com/plotozhu/MDCMainnet/swarm/spancontext"
 	"github.com/plotozhu/MDCMainnet/swarm/state"
 	"github.com/plotozhu/MDCMainnet/swarm/storage"
-	"io/ioutil"
-	"net/http"
 	"sync"
 	"time"
 )
@@ -237,6 +237,7 @@ func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *Ch
 	spanId := fmt.Sprintf("stream.send.request.%v.%v", sp.ID(), req.Addr)
 	span := tracing.ShiftSpanByKey(spanId)
 
+	log.Info(" chunk received:","info",spanId)
 	go func() {
 		if span != nil {
 			defer span.(opentracing.Span).Finish()
@@ -331,7 +332,8 @@ func (d *Delivery) RequestFromPeers(ctx context.Context, req *network.Request) (
 		return nil, nil, err
 	}
 	requestFromPeersEachCount.Inc(1)
-
+	spanId := fmt.Sprintf("stream.send.request.%v.%v", sp.ID(), req.Addr)
+	log.Info(" chunk request:","info",spanId)
 	return spID, sp.quit, nil
 }
 func (d *Delivery) UpdateNodes(nodes []string) {
@@ -339,7 +341,10 @@ func (d *Delivery) UpdateNodes(nodes []string) {
 	defer d.mu.Unlock()
 	d.centralNodes = nodes
 }
-
+/**
+	not used, read one chunk from center is a very inefficient routine
+	We will research if read from another data-distribute network is very viable
+ */
 func (d *Delivery) GetDataFromCentral(ctx context.Context, address storage.Address) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
