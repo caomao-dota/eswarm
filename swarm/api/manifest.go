@@ -175,11 +175,11 @@ type WalkFn func(entry *ManifestEntry) error
 
 // Walk recursively walks the manifest calling walkFn for each entry in the
 // manifest, including submanifests
-func (m *ManifestWalker) Walk(walkFn WalkFn) error {
-	return m.walk(m.trie, "", walkFn)
+func (m *ManifestWalker) Walk(ctx context.Context, walkFn WalkFn) error {
+	return m.walk(ctx,m.trie, "", walkFn)
 }
 
-func (m *ManifestWalker) walk(trie *manifestTrie, prefix string, walkFn WalkFn) error {
+func (m *ManifestWalker) walk(ctx context.Context,  trie *manifestTrie, prefix string, walkFn WalkFn) error {
 	for _, entry := range &trie.entries {
 		if entry == nil {
 			continue
@@ -195,10 +195,10 @@ func (m *ManifestWalker) walk(trie *manifestTrie, prefix string, walkFn WalkFn) 
 		if entry.ContentType != ManifestType {
 			continue
 		}
-		if err := trie.loadSubTrie(entry, nil); err != nil {
+		if err := trie.loadSubTrie(ctx, entry, nil); err != nil {
 			return err
 		}
-		if err := m.walk(entry.subtrie, entry.Path, walkFn); err != nil {
+		if err := m.walk(ctx,entry.subtrie, entry.Path, walkFn); err != nil {
 			return err
 		}
 	}
@@ -318,7 +318,7 @@ func (mt *manifestTrie) addEntry(entry *manifestTrieEntry, quitC chan bool) erro
 	}
 
 	if (oldentry.ContentType == ManifestType) && (cpl == len(oldentry.Path)) {
-		if mt.loadSubTrie(oldentry, quitC) != nil {
+		if mt.loadSubTrie(context.TODO(),oldentry, quitC) != nil {
 			return nil
 		}
 		entry.Path = entry.Path[cpl:]
@@ -375,7 +375,7 @@ func (mt *manifestTrie) deleteEntry(path string, quitC chan bool) {
 
 	epl := len(entry.Path)
 	if (entry.ContentType == ManifestType) && (len(path) >= epl) && (path[:epl] == entry.Path) {
-		if mt.loadSubTrie(entry, quitC) != nil {
+		if mt.loadSubTrie(context.TODO(),entry, quitC) != nil {
 			return
 		}
 		entry.subtrie.deleteEntry(path[epl:], quitC)
@@ -430,7 +430,7 @@ func (mt *manifestTrie) recalcAndStore() error {
 	return err2
 }
 
-func (mt *manifestTrie) loadSubTrie(entry *manifestTrieEntry, quitC chan bool) (err error) {
+func (mt *manifestTrie) loadSubTrie(ctx context.Context, entry *manifestTrieEntry, quitC chan bool) (err error) {
 	if entry.ManifestEntry.Access != nil {
 		if mt.decrypt == nil {
 			return errors.New("dont have decryptor")
@@ -444,13 +444,13 @@ func (mt *manifestTrie) loadSubTrie(entry *manifestTrieEntry, quitC chan bool) (
 
 	if entry.subtrie == nil {
 		hash := common.Hex2Bytes(entry.Hash)
-		entry.subtrie, err = loadManifest(context.TODO(), mt.fileStore, hash, quitC, mt.decrypt)
+		entry.subtrie, err = loadManifest(ctx, mt.fileStore, hash, quitC, mt.decrypt)
 		entry.Hash = "" // might not match, should be recalculated
 	}
 	return
 }
 
-func (mt *manifestTrie) listWithPrefixInt(prefix, rp string, quitC chan bool, cb func(entry *manifestTrieEntry, suffix string)) error {
+func (mt *manifestTrie) listWithPrefixInt(ctx context.Context, prefix, rp string, quitC chan bool, cb func(entry *manifestTrieEntry, suffix string)) error {
 	plen := len(prefix)
 	var start, stop int
 	if plen == 0 {
@@ -476,11 +476,11 @@ func (mt *manifestTrie) listWithPrefixInt(prefix, rp string, quitC chan bool, cb
 					l = epl
 				}
 				if prefix[:l] == entry.Path[:l] {
-					err := mt.loadSubTrie(entry, quitC)
+					err := mt.loadSubTrie(ctx,entry, quitC)
 					if err != nil {
 						return err
 					}
-					err = entry.subtrie.listWithPrefixInt(prefix[l:], rp+entry.Path[l:], quitC, cb)
+					err = entry.subtrie.listWithPrefixInt(ctx,prefix[l:], rp+entry.Path[l:], quitC, cb)
 					if err != nil {
 						return err
 					}
@@ -495,11 +495,11 @@ func (mt *manifestTrie) listWithPrefixInt(prefix, rp string, quitC chan bool, cb
 	return nil
 }
 
-func (mt *manifestTrie) listWithPrefix(prefix string, quitC chan bool, cb func(entry *manifestTrieEntry, suffix string)) (err error) {
-	return mt.listWithPrefixInt(prefix, "", quitC, cb)
+func (mt *manifestTrie) listWithPrefix(ctx context.Context, prefix string, quitC chan bool, cb func(entry *manifestTrieEntry, suffix string)) (err error) {
+	return mt.listWithPrefixInt(ctx, prefix, "", quitC, cb)
 }
 
-func (mt *manifestTrie) findPrefixOf(path string, quitC chan bool) (entry *manifestTrieEntry, pos int) {
+func (mt *manifestTrie) findPrefixOf(ctx context.Context, path string, quitC chan bool) (entry *manifestTrieEntry, pos int) {
 	log.Trace(fmt.Sprintf("findPrefixOf(%s)", path))
 
 	if len(path) == 0 {
@@ -518,7 +518,7 @@ func (mt *manifestTrie) findPrefixOf(path string, quitC chan bool) (entry *manif
 	if len(path) <= epl {
 		if entry.Path[:len(path)] == path {
 			if entry.ContentType == ManifestType {
-				err := mt.loadSubTrie(entry, quitC)
+				err := mt.loadSubTrie(ctx, entry, quitC)
 				if err == nil && entry.subtrie != nil {
 					subentries := entry.subtrie.entries
 					for i := 0; i < len(subentries); i++ {
@@ -539,11 +539,11 @@ func (mt *manifestTrie) findPrefixOf(path string, quitC chan bool) (entry *manif
 		log.Trace(fmt.Sprintf("entry.ContentType = %v", entry.ContentType))
 		//the subentry is a manifest, load subtrie
 		if entry.ContentType == ManifestType && (strings.Contains(entry.Path, path) || strings.Contains(path, entry.Path)) {
-			err := mt.loadSubTrie(entry, quitC)
+			err := mt.loadSubTrie(ctx,entry, quitC)
 			if err != nil {
 				return nil, 0
 			}
-			sub, pos := entry.subtrie.findPrefixOf(path[epl:], quitC)
+			sub, pos := entry.subtrie.findPrefixOf(ctx,path[epl:], quitC)
 			if sub != nil {
 				entry = sub
 				pos += epl
@@ -576,10 +576,10 @@ func RegularSlashes(path string) (res string) {
 	return
 }
 
-func (mt *manifestTrie) getEntry(spath string) (entry *manifestTrieEntry, fullpath string) {
+func (mt *manifestTrie) getEntry(ctx context.Context, spath string) (entry *manifestTrieEntry, fullpath string) {
 	path := RegularSlashes(spath)
 	var pos int
 	quitC := make(chan bool)
-	entry, pos = mt.findPrefixOf(path, quitC)
+	entry, pos = mt.findPrefixOf(ctx,path, quitC)
 	return entry, path[:pos]
 }

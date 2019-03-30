@@ -218,7 +218,7 @@ func (fs *FileSystem) Download(bzzpath, localpath string) error {
 	var mde error
 
 	prevPath := lpath
-	err = trie.listWithPrefix(path, quitC, func(entry *manifestTrieEntry, suffix string) {
+	err = trie.listWithPrefix(context.TODO(),path, quitC, func(entry *manifestTrieEntry, suffix string) {
 		log.Trace(fmt.Sprintf("fs.Download: %#v", entry))
 
 		addr = common.Hex2Bytes(entry.Hash)

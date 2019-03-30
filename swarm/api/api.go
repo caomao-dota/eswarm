@@ -285,7 +285,7 @@ func (a *API) ResolveURI(ctx context.Context, uri *URI, credentials string) (sto
 		return nil, err
 	}
 	var entry *ManifestEntry
-	walker.Walk(func(e *ManifestEntry) error {
+	walker.Walk(ctx,func(e *ManifestEntry) error {
 		// if the entry matches the path, set entry and stop
 		// the walk
 		if e.Path == uri.Path {
@@ -351,7 +351,7 @@ func (a *API) Get(ctx context.Context, decrypt DecryptFunc, manifestAddr storage
 	}
 
 	log.Debug("trie getting entry", "key", manifestAddr, "path", path)
-	entry, _ := trie.getEntry(path)
+	entry, _ := trie.getEntry(ctx,path)
 
 	if entry != nil {
 		log.Debug("trie got entry", "key", manifestAddr, "path", path, "entry.Hash", entry.Hash)
@@ -408,7 +408,7 @@ func (a *API) Get(ctx context.Context, decrypt DecryptFunc, manifestAddr storage
 
 			// finally, get the manifest entry
 			// it will always be the entry on path ""
-			entry, _ = trie.getEntry(path)
+			entry, _ = trie.getEntry(ctx,path)
 			if entry == nil {
 				status = http.StatusNotFound
 				apiGetNotFound.Inc(1)
@@ -482,7 +482,7 @@ func (a *API) GetDirectoryTar(ctx context.Context, decrypt DecryptFunc, uri *URI
 	tw := tar.NewWriter(pipew)
 
 	go func() {
-		err := walker.Walk(func(entry *ManifestEntry) error {
+		err := walker.Walk(ctx,func(entry *ManifestEntry) error {
 			// ignore manifests (walk will recurse into them)
 			if entry.ContentType == ManifestType {
 				return nil
@@ -546,7 +546,7 @@ func (a *API) GetManifestList(actx context.Context, decryptor DecryptFunc, addr 
 		return ManifestList{}, err
 	}
 
-	err = walker.Walk(func(entry *ManifestEntry) error {
+	err = walker.Walk(ctx,func(entry *ManifestEntry) error {
 		// handle non-manifest files
 		if entry.ContentType != ManifestType {
 			// ignore the file if it doesn't have the specified prefix
@@ -909,7 +909,7 @@ func (a *API) BuildDirectoryTree(ctx context.Context, mhash string, nameresolver
 	}
 
 	manifestEntryMap = map[string]*manifestTrieEntry{}
-	err = rootTrie.listWithPrefix(uri.Path, quitC, func(entry *manifestTrieEntry, suffix string) {
+	err = rootTrie.listWithPrefix(ctx,uri.Path, quitC, func(entry *manifestTrieEntry, suffix string) {
 		manifestEntryMap[suffix] = entry
 	})
 
@@ -956,7 +956,7 @@ func (a *API) ResolveFeedManifest(ctx context.Context, addr storage.Address) (*f
 		return nil, ErrCannotLoadFeedManifest
 	}
 
-	entry, _ := trie.getEntry("")
+	entry, _ := trie.getEntry(ctx,"")
 	if entry.ContentType != FeedContentType {
 		return nil, ErrNotAFeedManifest
 	}
