@@ -138,7 +138,7 @@ func (s *HttpReader)GetDataFromCentralServer(uri string, r *http.Request,w http.
 
 	// use httpClient to send request
 	response, err := s.httpClient.Do(req)
-	if err != nil && response == nil {
+	if err != nil || response == nil || (response.StatusCode < 200 || response.StatusCode >= 300) {
 		log.Error("Error sending request to API endpoint. %+v", "error:", err)
 		onError(w, r, fmt.Sprintf("Error Occured :%+v", err), http.StatusBadRequest)
 	} else {

@@ -329,7 +329,7 @@ func (p *Peer) handleIncoming(handle func(ctx context.Context, msg interface{}) 
 	}
 	// make sure that the payload has been fully consumed
 	defer msg.Discard()
-
+	log.Info("Msg arrival:","code",msg.Code,"size:",msg.Size)
 	if msg.Size > p.spec.MaxMsgSize {
 		return errorf(ErrMsgTooLong, "%v > %v", msg.Size, p.spec.MaxMsgSize)
 	}

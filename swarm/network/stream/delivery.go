@@ -329,6 +329,7 @@ func (d *Delivery) RequestFromPeers(ctx context.Context, req *network.Request) (
 		HopCount:  req.HopCount,
 	}, Top)
 	if err != nil {
+		log.Warn("send request error","request:",req.Addr,"reason",err)
 		return nil, nil, err
 	}
 	requestFromPeersEachCount.Inc(1)

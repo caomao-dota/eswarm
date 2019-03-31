@@ -69,7 +69,7 @@ READ:
 		case <-ctx.Done():
 			return
 		case x := <-q:
-			log.Trace("priority.queue f(x)", "p", p, "len(Queues[p])", len(pq.Queues[p]))
+			log.Info("priority.queue f(x)", "p", p, "len(Queues[p])", len(pq.Queues[p]))
 			f(x)
 			p = top
 		default:
