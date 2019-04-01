@@ -324,8 +324,7 @@ func (rs *ReceiptStore) saveHRecord() error {
 }
 
 func (rs *ReceiptStore) loadReceipts(key []byte) Receipts {
-	rs.hmu.Lock()
-	defer rs.hmu.Unlock()
+
 	data, err := rs.db.Get(key, nil)
 	result := make(Receipts)
 	if err == nil {
@@ -338,8 +337,7 @@ func (rs *ReceiptStore) loadReceipts(key []byte) Receipts {
 }
 func (rs *ReceiptStore) saveReceipts(key []byte, receipts Receipts) error {
 	//持久化数据
-	rs.hmu.Lock()
-	defer rs.hmu.Unlock()
+
 	data, err := rlp.EncodeToBytes(receipts)
 	err = rs.db.Put(key, data, nil)
 	return err
@@ -422,6 +420,8 @@ func (rs *ReceiptStore) OnNewReceipt(receipt *Receipt) error {
 }
 
 func (rs *ReceiptStore) GetReceiptsToReport() Receipts {
+	rs.hmu.Lock()
+	defer rs.hmu.Unlock()
 	toReport := rs.extractReportReceipts()
 	//从数据库中检查是否有上一次未提交成功的
 	fromDB := rs.loadReceipts(RPREF)
@@ -448,8 +448,7 @@ func (rs *ReceiptStore) GetReceiptsToReport() Receipts {
     超过两小时的返回，小于两个小时的那个替换当前的allReceipts
 */
 func (rs *ReceiptStore) extractReportReceipts() Receipts {
-	rs.hmu.Lock()
-	defer rs.hmu.Unlock()
+
 	result := make(Receipts)
 	newReceipts := make(Receipts)
 
@@ -590,6 +589,10 @@ func (rs *ReceiptStore) OnChunkDelivered(nodeId [20]byte) uint32 {
 }
 
 func (rs *ReceiptStore) decreaseOnNewReceipt(account [20]byte, count uint32) {
+	_,ok := rs.unpaidAmount[account]
+	if !ok {
+		rs.unpaidAmount[account] = 0
+	}
 	if rs.unpaidAmount[account] > count {
 		rs.unpaidAmount[account] -= count
 	} else {

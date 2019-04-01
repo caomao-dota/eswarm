@@ -20,10 +20,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/plotozhu/MDCMainnet/swarm/tracing"
 	"sync"
 	"time"
 
-	opentracing "github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go"
 	"github.com/plotozhu/MDCMainnet/metrics"
 	"github.com/plotozhu/MDCMainnet/p2p/protocols"
 	"github.com/plotozhu/MDCMainnet/swarm/log"
@@ -32,7 +33,6 @@ import (
 	"github.com/plotozhu/MDCMainnet/swarm/spancontext"
 	"github.com/plotozhu/MDCMainnet/swarm/state"
 	"github.com/plotozhu/MDCMainnet/swarm/storage"
-	"github.com/plotozhu/MDCMainnet/swarm/tracing"
 )
 
 type notFoundError struct {
@@ -192,6 +192,7 @@ func (p *Peer) SendOfferedHashes(s *server, f, t uint64) error {
 	}
 	// true only when quitting
 	if len(hashes) == 0 {
+		log.Info("Send Offered batch finished", "peer", p.ID(), "stream", s.stream, "len", len(hashes), "from", from, "to", to)
 		return nil
 	}
 	if proof == nil {
@@ -208,7 +209,7 @@ func (p *Peer) SendOfferedHashes(s *server, f, t uint64) error {
 		Stream:        s.stream,
 	}
 	//log.Trace
-	log.Debug("Swarm syncer offer batch", "peer", p.ID(), "stream", s.stream, "len", len(hashes), "from", from, "to", to)
+	log.Info("Send Offered batch", "peer", p.ID(), "stream", s.stream, "len", len(hashes), "from", from, "to", to)
 	ctx = context.WithValue(ctx, "stream_send_tag", "send.offered.hashes")
 	return p.SendPriority(ctx, msg, s.priority)
 }
@@ -328,39 +329,37 @@ func (p *Peer) getOrSetClient(s Stream, from, to uint64) (c *client, created boo
 	}()
 
 	intervalsKey := peerStreamIntervalsKey(p, s)
-
+	if s.Live {
 		// try to find previous history and live intervals and merge live into history
 		historyKey := peerStreamIntervalsKey(p, NewStream(s.Name, s.Key, false))
 		historyIntervals := &intervals.Intervals{}
-		err = p.streamer.intervalsStore.Get(historyKey, historyIntervals)
+		err := p.streamer.intervalsStore.Get(historyKey, historyIntervals)
 		switch err {
 		case nil:
-			if s.Live {
-				liveIntervals := &intervals.Intervals{}
-				err := p.streamer.intervalsStore.Get(intervalsKey, liveIntervals)
-				switch err {
-				case nil:
-					historyIntervals.Merge(liveIntervals)
-					if err := p.streamer.intervalsStore.Put(historyKey, historyIntervals); err != nil {
-						log.Error("stream set client: put history intervals", "stream", s, "peer", p, "err", err)
-					}
-				case state.ErrNotFound:
-				default:
-					log.Error("stream set client: get live intervals", "stream", s, "peer", p, "err", err)
+			liveIntervals := &intervals.Intervals{}
+			err := p.streamer.intervalsStore.Get(intervalsKey, liveIntervals)
+			switch err {
+			case nil:
+				historyIntervals.Merge(liveIntervals)
+				if err := p.streamer.intervalsStore.Put(historyKey, historyIntervals); err != nil {
+					log.Error("stream set client: put history intervals", "stream", s, "peer", p, "err", err)
 				}
+			case state.ErrNotFound:
+			default:
+				log.Error("stream set client: get live intervals", "stream", s, "peer", p, "err", err)
 			}
 		case state.ErrNotFound:
 		default:
 			log.Error("stream set client: get history intervals", "stream", s, "peer", p, "err", err)
 		}
 
-
-/*
-	if err := p.streamer.intervalsStore.Put(intervalsKey, intervals.NewIntervals(from)); err != nil {
-		return nil, false, err
+		if err := p.streamer.intervalsStore.Put(intervalsKey, intervals.NewIntervals(from)); err != nil {
+			return nil, false, err
+		}
 	}
 
-*/
+
+
 	next := make(chan error, 1)
 	c = &client{
 		Client:         is,

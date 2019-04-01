@@ -376,7 +376,7 @@ func (r *Registry) Subscribe(peerId enode.ID, s Stream, h *Range, priority uint8
 			return err
 		}
 	}
-	var f,t uint64
+	/*var f,t uint64
 	if h == nil {
 		f=0
 		t=0
@@ -386,11 +386,11 @@ func (r *Registry) Subscribe(peerId enode.ID, s Stream, h *Range, priority uint8
 	}
 	c, _, err := peer.getOrSetClient(s, f, t)
 
-	f,err = c.Last()
+	f,t,err = c.NextInterval()
 	if err == nil && h != nil {
 		h.From = f
-		h.To = math.MaxUint64
-	}
+		h.To = t
+	}*/
 	msg := &SubscribeMsg{
 		Stream:   s,
 		History:  h,
@@ -694,14 +694,14 @@ type server struct {
 // stream is live or history. It calls Server SetNextBatch with adjusted
 // interval and returns batch hashes and their interval.
 func (s *server) setNextBatch(from, to uint64) ([]byte, uint64, uint64, *HandoverProof, error) {
-	if s.stream.Live {
+	if s.stream.Live { //实时的部分，从当前的sessionIndex开始同步
 		if from == 0 {
 			from = s.sessionIndex
 		}
-		if to <= from || from >= s.sessionIndex {
+		if to <= from || from >= s.sessionIndex { //如果实时的同步完成了，要求同步未来所有的数据	to足够大
 			to = math.MaxUint64
 		}
-	} else {
+	} else {  //如果是历史的，同步超过了当前的session，完成了，不需要再同部了，因为 from=to=0,调用者不再发送OfferedHashes
 		if (to < from && to != 0) || from > s.sessionIndex {
 			return nil, 0, 0, nil, nil
 		}
@@ -744,11 +744,11 @@ func peerStreamIntervalsKey(p *Peer, s Stream) string {
 func (c *client) AddInterval(start, end uint64) (err error) {
 	i := &intervals.Intervals{}
 	if err = c.intervalsStore.Get(c.intervalsKey, i); err != nil {
-		return err
+
 	}
 	i.Add(start, end)
-	log.Info("Put intervals ","key",c.intervalsKey,"value",i,"latest",i.Last())
 
+	i.Merge(i)
 	return c.intervalsStore.Put(c.intervalsKey, i)
 }
 
@@ -762,15 +762,6 @@ func (c *client) NextInterval() (start, end uint64, err error) {
 	return start, end, nil
 }
 
-func (c *client) Last() ( last uint64,err error) {
-	i := &intervals.Intervals{}
-	if err = c.intervalsStore.Get(c.intervalsKey, i); err != nil {
-		return
-	}
-	log.Info("load intervals ","key",c.intervalsKey,"value",i)
-	last = i.Last()
-	return
-}
 // Client interface for incoming peer Streamer
 type Client interface {
 	NeedData(context.Context, []byte) func(context.Context) error
@@ -782,14 +773,15 @@ func (c *client) nextBatch(from uint64) (nextFrom uint64, nextTo uint64) {
 	if c.to > 0 && from >= c.to {
 		return 0, 0
 	}
-	if c.stream.Live {
+	if c.stream.Live {  //实时的，并不清楚需要哪些，总是把to设置成0
 		return from, 0
-	} else if from >= c.sessionAt {
+	} else if from >= c.sessionAt { //非实时的，当前的已经超过记录的实时开始的部分了，
 		if c.to > 0 {
 			return from, c.to
 		}
-		return from, math.MaxUint64
+		return from, math.MaxUint64  //要一个超级大的数字，作用？<-- 对应handleWantedHashes
 	}
+	//非实时，还在实时的开始位置之前
 	nextFrom, nextTo, err := c.NextInterval()
 	if err != nil {
 		log.Error("next intervals", "stream", c.stream)

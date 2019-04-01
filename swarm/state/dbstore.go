@@ -20,6 +20,7 @@ import (
 	"encoding"
 	"encoding/json"
 	"errors"
+	"github.com/plotozhu/MDCMainnet/log"
 
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/storage"

@@ -191,9 +191,7 @@ func (d *Delivery) handleRetrieveRequestMsg(ctx context.Context, sp *Peer, req *
 			log.Debug("ChunkStore.Get can not retrieve chunk", "peer", sp.ID().String(), "addr", req.Addr, "hopcount", req.HopCount, "err", err)
 			return
 		}
-		if(len(chunk.Data()) == 10) {
-			fmt.Printf("Data Len is 10, address %v",req.Addr)
-		}
+
 		if req.SkipCheck {
 			syncing := false
 			err = sp.Deliver(ctx, chunk, s.priority, syncing)
