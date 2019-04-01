@@ -498,6 +498,42 @@ func Activate(path string, appId string, credential string, addr string, newAcco
 	return ti
 }
 
+func Clear(path string, all bool) error {
+	//path keystore上一级目录
+	if path == "" {
+		return errors.New("Must input path...")
+	}
+	exist, err := PathExists(path)
+	if err != nil {
+		return err
+	}
+	if !exist {
+		return nil
+	}
+
+	fileinfo, err := ioutil.ReadDir(path)
+	if err != nil {
+		return err
+	}
+	for _, file := range fileinfo {
+		if all {
+			err := os.RemoveAll(path + file.Name())
+			if err != nil {
+				return fmt.Errorf("Clear fail: %v", err)
+			}
+		} else {
+			if len(file.Name()) == 44 && file.Name()[:4] == "bzz-" {
+				err := os.RemoveAll(path + file.Name())
+				if err != nil {
+					return fmt.Errorf("Clear fail: %v", err)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 /*
 func Activate1(path, appid, credential string, options interface{}) error {
 	if path == "" {
