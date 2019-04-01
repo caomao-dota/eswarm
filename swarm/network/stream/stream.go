@@ -376,7 +376,21 @@ func (r *Registry) Subscribe(peerId enode.ID, s Stream, h *Range, priority uint8
 			return err
 		}
 	}
+	var f,t uint64
+	if h == nil {
+		f=0
+		t=0
+	}else {
+		f = h.From
+		t = h.To
+	}
+	c, _, err := peer.getOrSetClient(s, f, t)
 
+	f,err = c.Last()
+	if err == nil && h != nil {
+		h.From = f
+		h.To = math.MaxUint64
+	}
 	msg := &SubscribeMsg{
 		Stream:   s,
 		History:  h,
@@ -733,6 +747,8 @@ func (c *client) AddInterval(start, end uint64) (err error) {
 		return err
 	}
 	i.Add(start, end)
+	log.Info("Put intervals ","key",c.intervalsKey,"value",i,"latest",i.Last())
+
 	return c.intervalsStore.Put(c.intervalsKey, i)
 }
 
@@ -746,6 +762,15 @@ func (c *client) NextInterval() (start, end uint64, err error) {
 	return start, end, nil
 }
 
+func (c *client) Last() ( last uint64,err error) {
+	i := &intervals.Intervals{}
+	if err = c.intervalsStore.Get(c.intervalsKey, i); err != nil {
+		return
+	}
+	log.Info("load intervals ","key",c.intervalsKey,"value",i)
+	last = i.Last()
+	return
+}
 // Client interface for incoming peer Streamer
 type Client interface {
 	NeedData(context.Context, []byte) func(context.Context) error

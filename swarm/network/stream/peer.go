@@ -328,35 +328,39 @@ func (p *Peer) getOrSetClient(s Stream, from, to uint64) (c *client, created boo
 	}()
 
 	intervalsKey := peerStreamIntervalsKey(p, s)
-	if s.Live {
+
 		// try to find previous history and live intervals and merge live into history
 		historyKey := peerStreamIntervalsKey(p, NewStream(s.Name, s.Key, false))
 		historyIntervals := &intervals.Intervals{}
-		err := p.streamer.intervalsStore.Get(historyKey, historyIntervals)
+		err = p.streamer.intervalsStore.Get(historyKey, historyIntervals)
 		switch err {
 		case nil:
-			liveIntervals := &intervals.Intervals{}
-			err := p.streamer.intervalsStore.Get(intervalsKey, liveIntervals)
-			switch err {
-			case nil:
-				historyIntervals.Merge(liveIntervals)
-				if err := p.streamer.intervalsStore.Put(historyKey, historyIntervals); err != nil {
-					log.Error("stream set client: put history intervals", "stream", s, "peer", p, "err", err)
+			if s.Live {
+				liveIntervals := &intervals.Intervals{}
+				err := p.streamer.intervalsStore.Get(intervalsKey, liveIntervals)
+				switch err {
+				case nil:
+					historyIntervals.Merge(liveIntervals)
+					if err := p.streamer.intervalsStore.Put(historyKey, historyIntervals); err != nil {
+						log.Error("stream set client: put history intervals", "stream", s, "peer", p, "err", err)
+					}
+				case state.ErrNotFound:
+				default:
+					log.Error("stream set client: get live intervals", "stream", s, "peer", p, "err", err)
 				}
-			case state.ErrNotFound:
-			default:
-				log.Error("stream set client: get live intervals", "stream", s, "peer", p, "err", err)
 			}
 		case state.ErrNotFound:
 		default:
 			log.Error("stream set client: get history intervals", "stream", s, "peer", p, "err", err)
 		}
-	}
 
+
+/*
 	if err := p.streamer.intervalsStore.Put(intervalsKey, intervals.NewIntervals(from)); err != nil {
 		return nil, false, err
 	}
 
+*/
 	next := make(chan error, 1)
 	c = &client{
 		Client:         is,

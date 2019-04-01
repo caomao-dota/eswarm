@@ -242,6 +242,7 @@ func (p *Peer) Run(handler func(ctx context.Context, msg interface{}) error) err
 				metrics.GetOrRegisterCounter("peer.handleincoming.error", nil).Inc(1)
 				log.Error("peer.handleIncoming", "err", err)
 			} else {
+				log.Error("peer.handleIncoming EOF", "err", err)
 				return err
 			}
 
@@ -329,7 +330,7 @@ func (p *Peer) handleIncoming(handle func(ctx context.Context, msg interface{}) 
 	}
 	// make sure that the payload has been fully consumed
 	defer msg.Discard()
-	log.Info("Msg arrival:","code",msg.Code,"size:",msg.Size)
+	//log.Info("Msg arrival:","code",msg.Code,"size:",msg.Size)
 	if msg.Size > p.spec.MaxMsgSize {
 		return errorf(ErrMsgTooLong, "%v > %v", msg.Size, p.spec.MaxMsgSize)
 	}
