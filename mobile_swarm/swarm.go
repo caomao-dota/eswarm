@@ -498,7 +498,7 @@ func Activate(path string, appId string, credential string, addr string, newAcco
 	return ti
 }
 
-func Clear(path string, all bool) error {
+func Clean(path string, all bool) error {
 	//path keystore上一级目录
 	if path == "" {
 		return errors.New("Must input path...")
