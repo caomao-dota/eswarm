@@ -208,6 +208,7 @@ func (m OfferedHashesMsg) String() string {
 func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg) error {
 	metrics.GetOrRegisterCounter("peer.handleofferedhashes", nil).Inc(1)
 
+	log.Info("Received offered batch","peer", p.ID(), "stream", req.Stream, "from", req.From, "to", req.To)
 	var sp opentracing.Span
 	ctx, sp = spancontext.StartSpan(
 		ctx,
@@ -215,6 +216,11 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 	defer sp.Finish()
 
 	c, _, err := p.getOrSetClient(req.Stream, req.From, req.To)
+	var c_live *client
+	if !req.Stream.Live {
+		c_live,_ = p.clients[Stream{req.Stream.Name,req.Stream.Key,true}]
+	}
+
 	if err != nil {
 		return err
 	}
@@ -286,7 +292,7 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 		c.sessionAt = req.From
 	}
 	//看看还有没有,因为不知道会不会还有，所以总是要发
-	from, to := c.nextBatch(req.To + 1)
+	from, to := c.nextBatch(req.To + 1,c_live)
 
 
 	log.Debug("set next batch", "peer", p.ID(), "stream", req.Stream, "from", req.From, "to", req.To, "addr", p.streamer.addr)
@@ -346,7 +352,7 @@ func (m WantedHashesMsg) String() string {
 func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) error {
 	metrics.GetOrRegisterCounter("peer.handlewantedhashesmsg", nil).Inc(1)
 
-	log.Trace("received wanted batch", "peer", p.ID(), "stream", req.Stream, "from", req.From, "to", req.To)
+	log.Info("Received wanted batch", "peer", p.ID(), "stream", req.Stream, "from", req.From, "to", req.To)
 	s, err := p.getServer(req.Stream)
 	if err != nil {
 		return err

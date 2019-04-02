@@ -242,14 +242,7 @@ func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *Ch
 		}
 
 		req.peer = sp
-		validData := d.chunkStore.Validate(req.SData,req.Addr)
-		var err error
-		if !validData  {
-			err = errors.New("Chunk Data Invalid")
-			fmt.Printf("Invalid Chunk Received: %v",req.Addr)
-		}else {
-			err = d.chunkStore.Put(ctx, storage.NewChunk(req.Addr, req.SData))
-		}
+		err := d.chunkStore.Put(ctx, storage.NewChunk(req.Addr, req.SData))
 
 		if err != nil {
 			if err == storage.ErrChunkInvalid {
@@ -332,7 +325,7 @@ func (d *Delivery) RequestFromPeers(ctx context.Context, req *network.Request) (
 	}
 	requestFromPeersEachCount.Inc(1)
 	spanId := fmt.Sprintf("stream.send.request.%v.%v", sp.ID(), req.Addr)
-	log.Info(" chunk request:","info",spanId)
+	log.Trace(" chunk request:","info",spanId)
 	return spID, sp.quit, nil
 }
 func (d *Delivery) UpdateNodes(nodes []string) {

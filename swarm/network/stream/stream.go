@@ -755,6 +755,7 @@ func (c *client) NextInterval() (start, end uint64, err error) {
 	i := &intervals.Intervals{}
 	err = c.intervalsStore.Get(c.intervalsKey, i)
 	if err != nil {
+		log.Error("next intervals", "key", c.intervalsKey,"error",err)
 		return 0, 0, err
 	}
 	start, end = i.Next()
@@ -768,13 +769,13 @@ type Client interface {
 	Close()
 }
 
-func (c *client) nextBatch(from uint64) (nextFrom uint64, nextTo uint64) {
+func (c *client) nextBatch(from uint64,live_Stream *client) (nextFrom uint64, nextTo uint64) {
 	if c.to > 0 && from >= c.to {
 		return 0, 0
 	}
 	if c.stream.Live {  //实时的，并不清楚需要哪些，总是把to设置成0
 		return from, 0
-	} else if from >= c.sessionAt { //非实时的，当前的已经超过记录的实时开始的部分了，
+	} else if live_Stream == nil || from >= live_Stream.sessionAt { //非实时的，当前的已经超过记录的实时开始的部分了，
 		if c.to > 0 {
 			return from, c.to
 		}
@@ -783,15 +784,16 @@ func (c *client) nextBatch(from uint64) (nextFrom uint64, nextTo uint64) {
 	//非实时，还在实时的开始位置之前
 	nextFrom, nextTo, err := c.NextInterval()
 	if err != nil {
-		log.Error("next intervals", "stream", c.stream)
+
 		return
 	}
-	if nextTo > c.to {
-		nextTo = c.to
+	if nextTo > live_Stream.sessionAt {
+		nextTo = live_Stream.sessionAt
 	}
-	if nextTo == 0 {
-		nextTo = c.sessionAt
+/*	if nextTo == 0 {
+		nextTo = live_Stream.sessionAt
 	}
+*/
 	return
 }
 
