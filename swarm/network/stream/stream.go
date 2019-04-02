@@ -748,7 +748,6 @@ func (c *client) AddInterval(start, end uint64) (err error) {
 	}
 	i.Add(start, end)
 
-	i.Merge(i)
 	return c.intervalsStore.Put(c.intervalsKey, i)
 }
 

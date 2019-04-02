@@ -235,7 +235,7 @@ func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *Ch
 	spanId := fmt.Sprintf("stream.send.request.%v.%v", sp.ID(), req.Addr)
 	span := tracing.ShiftSpanByKey(spanId)
 
-	log.Info(" chunk received:","info",spanId)
+	log.Trace(" chunk received:","info",spanId)
 	go func() {
 		if span != nil {
 			defer span.(opentracing.Span).Finish()
