@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/opentracing/opentracing-go"
+	"github.com/plotozhu/MDCMainnet/common"
 	"github.com/plotozhu/MDCMainnet/swarm/tracing"
 	"io/ioutil"
 	"net/http"
@@ -58,6 +59,8 @@ type Delivery struct {
 	centralNodes []string
 	mu           sync.RWMutex
 	bzz          *network.Bzz
+	recvCount    map[common.Address]int64
+	rmu          sync.RWMutex
 }
 
 func NewDelivery(kad *network.Kademlia, chunkStore storage.SyncChunkStore, receiptStore *state.ReceiptStore) *Delivery {
@@ -65,6 +68,7 @@ func NewDelivery(kad *network.Kademlia, chunkStore storage.SyncChunkStore, recei
 		chunkStore:   chunkStore,
 		kad:          kad,
 		receiptStore: receiptStore,
+		recvCount:make(map[common.Address]int64),
 	}
 }
 
@@ -150,6 +154,21 @@ type RetrieveRequestMsg struct {
 //收到了某个节点来的查询数据的请求
 func (d *Delivery) AttachBzz(bzz *network.Bzz) {
 	d.bzz = bzz
+}
+
+func (d *Delivery) IncreaseAccount(account common.Address){
+	d.rmu.Lock()
+	defer d.rmu.Unlock()
+	_,ok := d.recvCount[account]
+	if !ok {
+		d.recvCount[account] = 1
+	}else {
+		d.recvCount[account] += 1
+	}
+}
+
+func (d *Delivery) GetReceivedChunkInfo() map[common.Address]int64{
+	return d.recvCount
 }
 
 //收到了某个节点来的查询数据的请求
@@ -256,6 +275,7 @@ func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *Ch
 			hs, _ := d.bzz.GetOrCreateHandshake(sp.ID())
 			//用最低的优先级，发送一个收据
 			receipt, err := d.receiptStore.OnNodeChunkReceived(hs.Account)
+			d.IncreaseAccount(hs.Account)
 			if err == nil {
 				err = sp.SendPriority(ctx, &ReceiptsMsg{receipt.Account, uint32(receipt.Stime.Unix()), receipt.Amount, receipt.Sign}, Mid)
 				if err != nil {
@@ -376,4 +396,7 @@ func (d *Delivery) handleReceiptsMsg(sp *Peer, receipt *ReceiptsMsg) error {
 
 	return d.receiptStore.OnNewReceipt(&state.Receipt{state.ReceiptBody{receipt.PA, time.Unix(int64(receipt.STime), 0), receipt.AMount}, receipt.Sig})
 
+}
+func (d *Delivery)GetReceiptsLogs() []state.Receipts{
+	return d.receiptStore.GetReceiptsLogs()
 }

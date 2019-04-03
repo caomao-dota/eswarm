@@ -26,6 +26,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/plotozhu/MDCMainnet/swarm/state"
 	"github.com/plotozhu/MDCMainnet/swarm/storage/mock"
 	"io"
 	"math/big"
@@ -80,6 +81,10 @@ var (
 	apiGetInvalid          = metrics.NewRegisteredCounter("api.get.invalid", nil)
 )
 
+type Counter interface {
+	GetReceivedChunkInfo() map[common.Address]int64
+	GetReceiptsLogs()  []state.Receipts
+}
 // Resolver interface resolve a domain name to a hash using ENS
 type Resolver interface {
 	Resolve(string) (common.Hash, error)
@@ -191,6 +196,7 @@ type API struct {
 	mockStore *mock.NodeStore
 	dns       Resolver
 	Decryptor func(context.Context, string) DecryptFunc
+	counter   Counter
 }
 
 // NewAPI the api constructor initialises a new API instance.
@@ -1030,4 +1036,24 @@ func DetectContentType(fileName string, f io.ReadSeeker) (string, error) {
 	}
 
 	return ctype, nil
+}
+func (a *API)SetCounter( _counter Counter){
+	a.counter = _counter
+}
+
+type DelivryState struct {
+	ReceivedChunks map[common.Address]int64
+	Receipts       []state.Receipts
+}
+// ResolveFeed attempts to extract feed information out of the manifest, if provided
+// If not, it attempts to extract the feed out of a set of key-value pairs
+func (a *API) GetReadCount(ctx context.Context) (*DelivryState, error) {
+	if a.counter == nil {
+		return nil ,errors.New("No counter exists")
+	}else{
+
+
+		return &DelivryState{ a.counter.GetReceivedChunkInfo(),a.counter.GetReceiptsLogs()}, nil
+	}
+
 }

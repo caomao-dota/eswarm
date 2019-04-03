@@ -177,6 +177,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 	//创建一个fetcher工厂,然后传递给netStore，该工厂在需要读取chunk的时候，创建一个fetccher对象进行chunk读取，读取完毕后，销毁该对像
 	self.netStore.NewNetFetcherFunc = network.NewFetcherFactory(delivery.RequestFromPeers, delivery.GetDataFromCentral, config.DeliverySkipCheck).New
 
+
 	//SWAP是记录数据交易记录的交易体系，后面再研究
 	/*if config.SwapEnabled {
 		balancesStore, err := state.NewDBStore(filepath.Join(config.Path, "balances.db"))
@@ -263,6 +264,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 */
 	//创建api
 	self.api = api.NewAPI(self.fileStore, mockStore,self.dns, feedsHandler, self.privateKey)
+	self.api.SetCounter(delivery)
 	//创建可加载的文件系统 FUSE
 	self.sfs = fuse.NewSwarmFS(self.api)
 	log.Debug("Initialized FUSE filesystem")

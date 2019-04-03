@@ -185,6 +185,12 @@ func NewServer(api *api.API, corsString string) *Server {
 			defaultMiddlewares...,
 		),
 	})
+	mux.Handle("/receipts:/", methodHandler{
+		"GET": Adapt(
+			http.HandlerFunc(server.HandleGetReceived),
+			defaultMiddlewares...,
+		),
+	})
 	mux.Handle("/", methodHandler{
 		"GET": Adapt(
 			http.HandlerFunc(server.HandleRootPaths),
@@ -993,7 +999,48 @@ func (s *Server) HandleGetList(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(&list)
 }
+type datacount struct {
+	Address common.Address
+	Count   int32
+}
+// map[[20]byte]ReceiptItems -->map[time.Time]ReceiptItem
+type receiptInfo struct {
+	Address common.Address
+	Time    time.Time
+	Amount uint32
+	Sign   []byte
+}
 
+type receiptResult struct {
+	Chunks []datacount
+	Receipts []receiptInfo
+}
+// HandleGetFile handles a GET request to bzz://<manifest>/<path> and responds
+// with the content of the file at <path> from the given <manifest>
+func (s *Server) HandleGetReceived(w http.ResponseWriter, r *http.Request) {
+	result,err := s.api.GetReadCount(r.Context())
+	if err != nil{
+		respondError(w,r,err.Error(),http.StatusInternalServerError)
+	}else {
+		w.Header().Set("Content-Type", "application/json")
+		ret := receiptResult{
+			make([]datacount,0),
+			make([]receiptInfo,0),
+		}
+		for addr,count := range result.ReceivedChunks {
+			ret.Chunks = append(ret.Chunks,datacount{addr,int32(count)})
+		}
+		for _,receipt := range result.Receipts {
+			for addr,items := range receipt {
+				for _time,item := range items {
+					ret.Receipts = append(ret.Receipts,receiptInfo{common.Address(addr),_time,item.Amount,item.Sign})
+				}
+			}
+		}
+
+		json.NewEncoder(w).Encode(&ret)
+	}
+}
 // HandleGetFile handles a GET request to bzz://<manifest>/<path> and responds
 // with the content of the file at <path> from the given <manifest>
 func (s *Server) HandleGetFile(w http.ResponseWriter, r *http.Request) {

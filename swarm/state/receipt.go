@@ -256,6 +256,7 @@ type ReceiptStore struct {
 	cmu           sync.RWMutex
 	hmu           sync.RWMutex
 	server        string
+	receiptsLogs  []Receipts
 }
 
 func NewReceiptsStore(filePath string, prvKey *ecdsa.PrivateKey, serverAddr string) (*ReceiptStore, error) {
@@ -271,6 +272,7 @@ func newReceiptsStore(newDb *leveldb.DB, prvKey *ecdsa.PrivateKey, serverAddr st
 		unpaidAmount: make(map[[20]byte]uint32),
 		allReceipts:  make(Receipts),
 		server:       serverAddr,
+		receiptsLogs: make([]Receipts,0),
 	}
 	store.nodeCommCache, _ = lru.New(MAX_C_REC_LIMIT)
 
@@ -418,7 +420,18 @@ func (rs *ReceiptStore) OnNewReceipt(receipt *Receipt) error {
 	//持久化
 	return rs.saveHRecord()
 }
+func (rs *ReceiptStore) GetReceiptsLogs() []Receipts{
 
+	toReport := rs.GetReceiptsToReport()
+	rs.hmu.Lock()
+	defer rs.hmu.Unlock()
+	result := make([]Receipts,0)
+
+	result = append(result,rs.receiptsLogs...)
+	result = append(result,toReport)
+	result = append(result,rs.allReceipts)
+	return result
+}
 func (rs *ReceiptStore) GetReceiptsToReport() Receipts {
 	rs.hmu.Lock()
 	defer rs.hmu.Unlock()
@@ -536,12 +549,13 @@ func (rs *ReceiptStore) doAutoSubmit() error {
 
 	timeout := time.Duration(5 * time.Second) //超时时间50ms
 	err = util.SendDataToServer(rs.server, timeout, result)
-
+	rs.hmu.Lock()
+	defer rs.hmu.Unlock()
 	if err == nil { //提交成功，本地删除
-
+		rs.receiptsLogs = append(rs.receiptsLogs,receipts)
 		rs.saveReceipts(RPREF, Receipts{})
 	} else {
-		//提交失败，本地存储
+		//提交失败，本地已经存储过了
 		rs.saveReceipts(RPREF, receipts)
 	}
 	return err

@@ -1,8 +1,11 @@
 package state
 
 import (
+	"bytes"
 	"crypto/ecdsa"
+	"encoding/binary"
 	"fmt"
+	"github.com/plotozhu/MDCMainnet/common"
 	"github.com/plotozhu/MDCMainnet/crypto"
 	"github.com/plotozhu/MDCMainnet/rlp"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -73,6 +76,40 @@ func createReceiptStore(t *testing.T,index int) *ReceiptStore{
 	 return receiptStore
  }
 
+
+ func testReceipt(receipt Receipt) ( common.Address,error) {
+	 pubKey, isOk := receipt.Verify()
+	 if !isOk {
+		 return common.Address{0},ErrInvalidSignature
+	 }
+	 //根据这个pubKey生成nodeId
+	 nodeId := crypto.PubkeyToAddress(*pubKey)
+	 return nodeId,nil
+ }
+
+ func Test_SpecSign(t *testing.T){
+
+ 	timeSecond := []byte{92,163,115,63}
+	b_buf :=  bytes .NewBuffer(timeSecond)
+	var x uint32
+	 binary.Read(b_buf, binary.BigEndian, &x)
+
+
+	amount_ := []byte{0,0,29,132}
+	amount_buf := bytes.NewBuffer(amount_)
+	var amount uint32
+	 binary.Read(amount_buf, binary.BigEndian, &amount)
+
+	 aReceipt := Receipt{ReceiptBody{common.HexToAddress("3b2c32a3e1da99a3037fcd80921b1cb925cecdfb"),time.Unix(int64(x),int64(0)),amount},[]byte{70,39,232,77,177,223,35,192,239,239,231,223,112,1,107,87,127,237,97,183,170,250,12,37,131,177,111,225,55,180,11,19,50,121,33,60,161,31,17,98,110,11,117,53,226,224,94,231,62,129,57,125,27,21,5,40,116,109,101,138,192,207,223,3,0}}
+
+	 nodeId,err := testReceipt(aReceipt)
+	 if err == nil {
+		 t.Log("Verify Ok:","nodeId",nodeId)
+	 }else {
+	 	t.Error("errror in verify:","reason",err)
+	 }
+
+ }
  func Test_SignAny(t *testing.T){
  	vkey,_ := crypto.GenerateKey()
  	hash := [32]byte{0x01}
