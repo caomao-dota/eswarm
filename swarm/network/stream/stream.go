@@ -577,6 +577,10 @@ func (r *Registry) requestPeerSubscriptions(kad *network.Kademlia, subs map[enod
 		if !p.HasCap("stream") {
 			return true
 		}
+		//如果bucket中有轻节点，就跳过，这个是保护措施，其实bucket中不应该有轻节
+		if p.LightNode {
+			return true
+		}
 		//if the peer's bin is shallower than the kademlia depth,
 		//only the peer's bin should be subscribed
 		if po < kadDepth {
