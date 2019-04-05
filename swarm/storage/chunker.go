@@ -468,6 +468,7 @@ type DataCache struct {
 // concurrent reads are allowed
 // Size() needs to be called synchronously on the LazyChunkReader first
 func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
+
 	metrics.GetOrRegisterCounter("lazychunkreader.readat", nil).Inc(1)
 
 	var sp opentracing.Span
@@ -501,18 +502,14 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 		for ; treeSize < size; treeSize *= r.branches {
 			depth++
 		}
-		wg := sync.WaitGroup{}
+
 		length := int64(len(b))
 		for d := 0; d < r.depth; d++ {
 			off *= r.chunkSize
 			length *= r.chunkSize
 		}
-		wg.Add(1)
-		go r.join(cctx, b, off, off+length, depth, treeSize/r.branches, r.chunkData, &wg, errC, quitC)
-		go func() {
-			wg.Wait()
-			close(errC)
-		}()
+
+		go r.join(cctx, b, off, off+length, depth, treeSize/r.branches, r.chunkData,  errC)
 
 		err = <-errC
 		if err == nil {
@@ -520,10 +517,10 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 			//val := cctx.Value("req")
 			//if val == nil   { for test only
 			if off+int64(len(b)) >= size {
-				log.Debug("lazychunkreader.readat.return at end", "size", size, "off", off)
+				log.Trace("lazychunkreader.readat.return at end", "size", size, "off", off)
 				return int(size - off), io.EOF
 			}
-			log.Debug("lazychunkreader.readat.errc", "buff", len(b))
+			log.Trace("lazychunkreader.readat.errc", "buff", len(b))
 			return len(b), nil
 			//}
 
@@ -594,14 +591,22 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 
 }
 
-func (r *LazyChunkReader) join(ctx context.Context, b []byte, off int64, eoff int64, depth int, treeSize int64, chunkData ChunkData, parentWg *sync.WaitGroup, errC chan error, quitC chan bool) {
-	defer parentWg.Done()
+func (r *LazyChunkReader) join(ctx context.Context, b []byte, off int64, eoff int64, depth int, treeSize int64, chunkData ChunkData,  errC chan error) {
+	result := error(nil)
+
+	defer func(){
+		//把错误信息提交给上一层
+		errC <- result
+	}()
 	// find appropriate block level
 	for chunkData.Size() < uint64(treeSize) && depth > r.depth {
 		treeSize /= r.branches
 		depth--
 	}
+	//sec := time.Now().UnixNano()
+	//log.Info("Join Start","uuid",sec,"offset",off,"eoff",eoff,"depth",depth,"addr",chunkData[0:20])
 
+	//defer func() {log.Info("Join end","uuid",sec,"offset",off,"eoff",eoff,"depth",depth,"addr",chunkData[0:20])}()
 	// leaf chunk found
 	if depth == r.depth {
 		extra := 8 + eoff - int64(len(chunkData))
@@ -622,8 +627,8 @@ func (r *LazyChunkReader) join(ctx context.Context, b []byte, off int64, eoff in
 		end = currentBranches
 	}
 
-	wg := &sync.WaitGroup{}
-	defer wg.Wait()
+
+	errs := make(chan error,end-start)
 	for i := start; i < end; i++ {
 		soff := i * treeSize
 		roff := soff
@@ -635,10 +640,7 @@ func (r *LazyChunkReader) join(ctx context.Context, b []byte, off int64, eoff in
 		if seoff > eoff {
 			seoff = eoff
 		}
-		if depth > 1 {
-			wg.Wait()
-		}
-		wg.Add(1)
+
 		go func(j int64) {
 			childAddress := chunkData[8+j*r.hashSize : 8+(j+1)*r.hashSize]
 			startTime := time.Now()
@@ -647,25 +649,39 @@ func (r *LazyChunkReader) join(ctx context.Context, b []byte, off int64, eoff in
 				metrics.GetOrRegisterResettingTimer("lcr.getter.get.err", nil).UpdateSince(startTime)
 				log.Debug("lazychunkreader.join", "key", fmt.Sprintf("%x", childAddress), "err", err)
 				select {
-				case errC <- fmt.Errorf("chunk %v-%v not found; key: %s", off, off+treeSize, fmt.Sprintf("%x", childAddress)):
-				case <-quitC:
+				case errs <- fmt.Errorf("chunk %v-%v not found; key: %s", off, off+treeSize, fmt.Sprintf("%x", childAddress)):
+				case <-ctx.Done():
+					errs <- errors.New("quited")
 				}
 				return
 			}
 			metrics.GetOrRegisterResettingTimer("lcr.getter.get", nil).UpdateSince(startTime)
 			if l := len(chunkData); l < 9 {
 				select {
-				case errC <- fmt.Errorf("chunk %v-%v incomplete; key: %s, data length %v", off, off+treeSize, fmt.Sprintf("%x", childAddress), l):
-				case <-quitC:
+				case errs <- fmt.Errorf("chunk %v-%v incomplete; key: %s, data length %v", off, off+treeSize, fmt.Sprintf("%x", childAddress), l):
+				case <-ctx.Done():
+					errs <- errors.New("quited")
 				}
 				return
 			}
 			if soff < off {
 				soff = off
 			}
-			r.join(ctx, b[soff-off:seoff-off], soff-roff, seoff-roff, depth-1, treeSize/r.branches, chunkData, wg, errC, quitC)
+			r.join(ctx, b[soff-off:seoff-off], soff-roff, seoff-roff, depth-1, treeSize/r.branches, chunkData,  errs)
 		}(i)
 	} //for
+
+	//查看所有的errs，如果有错误，返回给上一层,这一段具有阻塞作用，只有等所有的子线程都返回后，才会返回
+
+	for i := 0; i < int(end-start); i++{
+		select {
+		case res := <-errs:
+			if res != nil {
+				result = res
+			}
+		}
+	}
+
 }
 
 // Read keeps a cursor so cannot be called simulateously, see ReadAt

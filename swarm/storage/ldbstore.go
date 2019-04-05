@@ -807,6 +807,9 @@ func (s *LDBStore) Put(ctx context.Context, chunk Chunk) error {
 		decodeIndex(orgData, &index)
 
 	}
+	if(index.Idx == 0 ) {
+		log.Error("Error in db put", "index",0)
+	}
 	idata := encodeIndex(&index)
 	s.batch.Put(ikey, idata)
 

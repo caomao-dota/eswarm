@@ -497,6 +497,9 @@ func (k *Kademlia) NeighbourhoodDepth() (depth int) {
 // contain at least neighbourhoodSize connected peers
 // if there is altogether less than neighbourhoodSize peers connected, it returns 0
 // caller must hold the lock
+/*
+	neighbourhoodRadiusForPot 检查Pot，根据pivotAddr从近到远，检查每个桶，找到第一个桶里的size < neighbourhoodSize的值
+ */
 func neighbourhoodRadiusForPot(p *pot.Pot, neighbourhoodSize int, pivotAddr []byte) (depth int) {
 	if p.Size() <= neighbourhoodSize {
 		return 0

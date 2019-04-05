@@ -48,7 +48,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
 )
+import _ "net/http/pprof"
+
 
 var (
 	postRawCount    = metrics.NewRegisteredCounter("api.http.post.raw.count", nil)
@@ -199,7 +202,9 @@ func NewServer(api *api.API, corsString string) *Server {
 		),
 	})
 	server.Handler = c.Handler(mux)
-
+	go func() {
+		http.ListenAndServe("0.0.0.0:8080", nil)
+	}()
 	server.entries, _ = lru.New(10000)
 	server.httpClient = util.CreateHttpReader()
 	return server
