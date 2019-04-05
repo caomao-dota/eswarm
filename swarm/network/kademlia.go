@@ -433,21 +433,27 @@ func (k *Kademlia) Off(p *Peer) {
 			del = true
 			return newEntry(p.BzzAddr)
 		})
-	} else {
-		del = true
-	}
 
-	if del {
-		k.conns, _, _, _ = pot.Swap(k.conns, p, Pof, func(_ pot.Val) pot.Val {
+		if del {
+			k.conns, _, _, _ = pot.Swap(k.conns, p, Pof, func(_ pot.Val) pot.Val {
+				// v cannot be nil, but no need to check
+				return nil
+			})
+			// send new address count value only if the peer is deleted
+			if k.addrCountC != nil {
+				k.addrCountC <- k.addrs.Size()
+			}
+			k.sendNeighbourhoodDepthChange()
+		}
+	} else {
+		k.lconns, _, _, _ = pot.Swap(k.lconns, p, Pof, func(_ pot.Val) pot.Val {
 			// v cannot be nil, but no need to check
 			return nil
 		})
-		// send new address count value only if the peer is deleted
-		if k.addrCountC != nil {
-			k.addrCountC <- k.addrs.Size()
-		}
-		k.sendNeighbourhoodDepthChange()
+
 	}
+
+
 }
 
 func (k *Kademlia) ListKnown() []*BzzAddr {
