@@ -571,10 +571,12 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 
 			} else {
 				cacheBuffer = nil
+				err = errors.New("Read Central Found")
 			}
 			startOffset = 0
 		} else {
 			cacheBuffer = nil
+			err = errors.New("No Central Found")
 		}
 
 	} else {
@@ -587,7 +589,8 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 		totalLen = len(b)
 	}
 	copy(b, cacheBuffer[startOffset:startOffset+int64(totalLen)])
-	return totalLen, nil
+	read = totalLen
+	return
 
 }
 
