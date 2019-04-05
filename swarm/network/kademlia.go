@@ -86,6 +86,7 @@ type Kademlia struct {
 	base       []byte   // immutable baseaddress of the table
 	addrs      *pot.Pot // pots container for known peer addresses
 	conns      *pot.Pot // pots container for live peer connections
+	lconns     *pot.Pot // pots container for light
 	depth      uint8    // stores the last current depth of saturation
 	nDepth     int      // stores the last neighbourhood depth
 	nDepthC    chan int // returned by DepthC function to signal neighbourhood depth change
@@ -104,6 +105,7 @@ func NewKademlia(addr []byte, params *KadParams) *Kademlia {
 		KadParams: params,
 		addrs:     pot.NewPot(nil, 0),
 		conns:     pot.NewPot(nil, 0),
+		lconns:     pot.NewPot(nil, 0),
 	}
 }
 
@@ -298,38 +300,56 @@ func (k *Kademlia) On(p *Peer) (uint8, bool) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	var ins bool
-	k.conns, _, _, _ = pot.Swap(k.conns, p, Pof, func(v pot.Val) pot.Val {
-		// if not found live
-		if v == nil {
-			ins = true
-			// insert new online peer into conns
-			return p
-		}
-		// found among live peers, do nothing
-		return v
-	})
-	if ins && !p.BzzPeer.LightNode {
-		a := newEntry(p.BzzAddr)
-		a.conn = p
-		// insert new online peer into addrs
-		k.addrs, _, _, _ = pot.Swap(k.addrs, p, Pof, func(v pot.Val) pot.Val {
-			return a
+	 changed  := false
+	if !p.BzzPeer.LightNode {
+		k.conns, _, _, _ = pot.Swap(k.conns, p, Pof, func(v pot.Val) pot.Val {
+			// if not found live
+			if v == nil {
+				ins = true
+				// insert new online peer into conns
+				return p
+			}
+			// found among live peers, do nothing
+			return v
 		})
-		// send new address count value only if the peer is inserted
-		if k.addrCountC != nil {
-			k.addrCountC <- k.addrs.Size()
+
+		if ins && !p.BzzPeer.LightNode {
+			a := newEntry(p.BzzAddr)
+			a.conn = p
+			// insert new online peer into addrs
+			k.addrs, _, _, _ = pot.Swap(k.addrs, p, Pof, func(v pot.Val) pot.Val {
+				return a
+			})
+			// send new address count value only if the peer is inserted
+			if k.addrCountC != nil {
+				k.addrCountC <- k.addrs.Size()
+			}
 		}
+
+		log.Trace(k.string())
+		// calculate if depth of saturation changed
+		depth := uint8(k.saturation())
+
+		if depth != k.depth {
+			changed = true
+			k.depth = depth
+		}
+		k.sendNeighbourhoodDepthChange()
+
+	}else{
+		k.lconns, _, _, _ = pot.Swap(k.lconns, p, Pof, func(v pot.Val) pot.Val {
+			// if not found live
+			if v == nil {
+				// insert new online peer into conns
+				return p
+			}
+			// found among live peers, do nothing
+			return v
+		})
 	}
-	log.Trace(k.string())
-	// calculate if depth of saturation changed
-	depth := uint8(k.saturation())
-	var changed bool
-	if depth != k.depth {
-		changed = true
-		k.depth = depth
-	}
-	k.sendNeighbourhoodDepthChange()
+
 	return k.depth, changed
+
 }
 
 // NeighbourhoodDepthC returns the channel that sends a new kademlia
@@ -612,11 +632,11 @@ func (k *Kademlia) string() string {
 		rows = append(rows, fmt.Sprintf("commit hash: %s", sv.GitCommit))
 	}
 	rows = append(rows, fmt.Sprintf("%v KΛÐΞMLIΛ hive: queen's address: %x", time.Now().UTC().Format(time.UnixDate), k.BaseAddr()[:3]))
-	rows = append(rows, fmt.Sprintf("population: %d (%d), NeighbourhoodSize: %d, MinBinSize: %d, MaxBinSize: %d", k.conns.Size(), k.addrs.Size(), k.NeighbourhoodSize, k.MinBinSize, k.MaxBinSize))
+	rows = append(rows, fmt.Sprintf("population: %d,%d (%d), NeighbourhoodSize: %d, MinBinSize: %d, MaxBinSize: %d", k.conns.Size(),  k.lconns.Size(),k.addrs.Size(), k.NeighbourhoodSize, k.MinBinSize, k.MaxBinSize))
 
 	liverows := make([]string, k.MaxProxDisplay)
 	peersrows := make([]string, k.MaxProxDisplay)
-
+	lightrows := make([]string, k.MaxProxDisplay)
 	depth := depthForPot(k.conns, k.NeighbourhoodSize, k.base)
 	rest := k.conns.Size()
 	k.conns.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
@@ -657,6 +677,24 @@ func (k *Kademlia) string() string {
 		peersrows[po] = strings.Join(row, " ")
 		return true
 	})
+	k.lconns.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
+		var rowlen int
+		if po >= k.MaxProxDisplay {
+			po = k.MaxProxDisplay - 1
+		}
+		row := []string{fmt.Sprintf("%2d", size)}
+		rest -= size
+		f(func(val pot.Val) bool {
+			e := val.(*Peer)
+			row = append(row, fmt.Sprintf("%x", e.Address()[:2]))
+			rowlen++
+			return rowlen < 4
+		})
+		r := strings.Join(row, " ")
+		r = r + wsrow
+		lightrows[po] = r[:31]
+		return true
+	})
 
 	for i := 0; i < k.MaxProxDisplay; i++ {
 		if i == depth {
@@ -664,13 +702,19 @@ func (k *Kademlia) string() string {
 		}
 		left := liverows[i]
 		right := peersrows[i]
+		third := lightrows[i]
 		if len(left) == 0 {
 			left = " 0                             "
 		}
 		if len(right) == 0 {
-			right = " 0"
+			right = " 0                             "
 		}
-		rows = append(rows, fmt.Sprintf("%03d %v | %v", i, left, right))
+
+		if len(third) == 0 {
+			third = " 0"
+		}
+
+		rows = append(rows, fmt.Sprintf("%03d %v | %v | %v", i, left, right,third))
 	}
 	rows = append(rows, "=========================================================================")
 	return "\n" + strings.Join(rows, "\n")
