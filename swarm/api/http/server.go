@@ -866,9 +866,9 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 					newContext, _ = context.WithTimeout(newContext, 5*time.Second)
 				} else if s.m3u8.sizelost > 10 {
 					s.m3u8.sizelost = 0
-					newContext, _ = context.WithTimeout(newContext, 30*time.Second)
+					newContext, _ = context.WithTimeout(newContext, 20*time.Second)
 				} else {
-					newContext, _ = context.WithTimeout(newContext, 30*time.Second)
+					newContext, _ = context.WithTimeout(newContext, 20*time.Second)
 				}
 
 				addr, err := s.api.ResolveURI(newContext, actUri, pass)
