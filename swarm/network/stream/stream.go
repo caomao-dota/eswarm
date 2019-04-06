@@ -760,7 +760,7 @@ func (c *client) NextInterval() (start, end uint64, err error) {
 	err = c.intervalsStore.Get(c.intervalsKey, i)
 	if err != nil {
 		log.Error("next intervals", "key", c.intervalsKey,"error",err)
-		return 0, 0, err
+	//	return 0, 0, err
 	}
 	start, end = i.Next()
 	return start, end, nil
