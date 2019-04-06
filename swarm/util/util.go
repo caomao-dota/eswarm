@@ -158,7 +158,7 @@ func (s *HttpReader)GetDataFromCentralServer(uri string, r *http.Request,w http.
 			for k,vv := range response.Header {
 				vv2 := make([]string, len(vv))
 				copy(vv2, vv)
-				if w.Header().Get(k) == "" && k == "Content-Type" {
+				if w.Header().Get(k) == ""  {
 					w.Header().Set(k,vv[0])
 				}
 
