@@ -35,12 +35,15 @@ import (
 	"github.com/plotozhu/MDCMainnet/swarm/storage/mock"
 )
 
+const (
+	BucketLen = 16
+)
 // GlobalStore contains the LevelDB database that is storing
 // chunk data for all swarm nodes.
 // Closing the GlobalStore with Close method is required to
 // release resources used by the database.
 type GlobalStore struct {
-	db *leveldb.DB
+	db [BucketLen]*leveldb.DB
 	// protects nodes and keys indexes
 	// in Put and Delete methods
 	nodesLocks sync.Map
@@ -49,18 +52,41 @@ type GlobalStore struct {
 
 // NewGlobalStore creates a new instance of GlobalStore.
 func NewGlobalStore(path string) (s *GlobalStore, err error) {
-	db, err := leveldb.OpenFile(path, &opt.Options{CompactionTableSize:opt.DefaultCompactionTableSize*32})
-	if err != nil {
-		return nil, err
+	dbs := new([BucketLen]*leveldb.DB)
+	errString := ""
+	for i:= 0; i <BucketLen; i++ {
+		db, err := leveldb.OpenFile(path+fmt.Sprintf("/bucket%v",i), &opt.Options{CompactionTableSize:opt.DefaultCompactionTableSize*32})
+		if err != nil {
+			errString += fmt.Sprintf("dbNumber:%v,err,%v",i,err.Error())
+		}else {
+			dbs[i] = db
+		}
+	}
+
+	if errString != "" {
+		return nil,errors.New(errString)
 	}
 	return &GlobalStore{
-		db: db,
+		db: *dbs,
 	}, nil
 }
 
 // Close releases the resources used by the underlying LevelDB.
 func (s *GlobalStore) Close() error {
-	return s.db.Close()
+	errString := ""
+	for i:=0; i < BucketLen; i++{
+		err := s.db[i].Close()
+		if err != nil {
+			errString += fmt.Sprintf("dbNumber:%v,err,%v",i,err.Error())
+		}
+	}
+
+	if errString != "" {
+		return errors.New(errString)
+	}else{
+		return nil
+	}
+
 }
 
 // NewNodeStore returns a new instance of NodeStore that retrieves and stores
@@ -68,18 +94,21 @@ func (s *GlobalStore) Close() error {
 func (s *GlobalStore) NewNodeStore(addr common.Address) *mock.NodeStore {
 	return mock.NewNodeStore(addr, s)
 }
-
+func getBucket(key []byte) int {
+	return int(key[0]&0x0f)
+}
 // Get returns chunk data if the chunk with key exists for node
 // on address addr.
 func (s *GlobalStore) Get(addr common.Address, key []byte) (data []byte, err error) {
-	has, err := s.db.Has(indexForHashesPerNode(addr, key), nil)
+	bucket := getBucket(key[:])
+	has, err := s.db[bucket].Has(indexForHashesPerNode(addr, key), nil)
 	if err != nil {
 		return nil, mock.ErrNotFound
 	}
 	if !has {
 		return nil, mock.ErrNotFound
 	}
-	data, err = s.db.Get(indexDataKey(key), nil)
+	data, err = s.db[bucket].Get(indexDataKey(key), nil)
 	if err == leveldb.ErrNotFound {
 		err = mock.ErrNotFound
 	}
@@ -88,6 +117,7 @@ func (s *GlobalStore) Get(addr common.Address, key []byte) (data []byte, err err
 
 // Put saves the chunk data for node with address addr.
 func (s *GlobalStore) Put(addr common.Address, key []byte, data []byte) error {
+	bucket := getBucket(key[:])
 	unlock, err := s.lock(addr, key)
 	if err != nil {
 		return err
@@ -100,11 +130,13 @@ func (s *GlobalStore) Put(addr common.Address, key []byte, data []byte) error {
 	batch.Put(indexForNodes(addr), nil)
 	batch.Put(indexForHashes(key), nil)
 	batch.Put(indexDataKey(key), data)
-	return s.db.Write(batch, nil)
+	return s.db[bucket].Write(batch, nil)
 }
 
 // Delete removes the chunk reference to node with address addr.
 func (s *GlobalStore) Delete(addr common.Address, key []byte) error {
+
+	bucket := getBucket(key[:])
 	unlock, err := s.lock(addr, key)
 	if err != nil {
 		return err
@@ -118,20 +150,21 @@ func (s *GlobalStore) Delete(addr common.Address, key []byte) error {
 	// check if this node contains any keys, and if not
 	// remove it from the
 	x := indexForHashesPerNodePrefix(addr)
-	if k, _ := s.db.Get(x, nil); !bytes.HasPrefix(k, x) {
+	if k, _ := s.db[bucket].Get(x, nil); !bytes.HasPrefix(k, x) {
 		batch.Delete(indexForNodes(addr))
 	}
 
 	x = indexForNodesWithHashPrefix(key)
-	if k, _ := s.db.Get(x, nil); !bytes.HasPrefix(k, x) {
+	if k, _ := s.db[bucket].Get(x, nil); !bytes.HasPrefix(k, x) {
 		batch.Delete(indexForHashes(key))
 	}
-	return s.db.Write(batch, nil)
+	return s.db[bucket].Write(batch, nil)
 }
 
 // HasKey returns whether a node with addr contains the key.
 func (s *GlobalStore) HasKey(addr common.Address, key []byte) bool {
-	has, err := s.db.Has(indexForHashesPerNode(addr, key), nil)
+	bucket := getBucket(key[:])
+	has, err := s.db[bucket].Has(indexForHashesPerNode(addr, key), nil)
 	if err != nil {
 		has = false
 	}
@@ -161,7 +194,8 @@ func (s *GlobalStore) KeyNodes(key []byte, startAddr *common.Address, limit int)
 // keys returns a paginated list of keys. If addr is not nil, only keys on that
 // node will be returned.
 func (s *GlobalStore) keys(addr *common.Address, startKey []byte, limit int) (keys mock.Keys, err error) {
-	iter := s.db.NewIterator(nil, nil)
+	bucket := getBucket(startKey[:])
+	iter := s.db[bucket].NewIterator(nil, nil)
 	defer iter.Release()
 
 	if limit <= 0 {
@@ -206,7 +240,8 @@ func (s *GlobalStore) keys(addr *common.Address, startKey []byte, limit int) (ke
 // nodes returns a paginated list of node addresses. If key is not nil,
 // only nodes that contain that key will be returned.
 func (s *GlobalStore) nodes(key []byte, startAddr *common.Address, limit int) (nodes mock.Nodes, err error) {
-	iter := s.db.NewIterator(nil, nil)
+	bucket := getBucket(key[:])
+	iter := s.db[bucket].NewIterator(nil, nil)
 	defer iter.Release()
 
 	if limit <= 0 {
@@ -252,44 +287,62 @@ func (s *GlobalStore) nodes(key []byte, startAddr *common.Address, limit int) (n
 func (s *GlobalStore) Import(r io.Reader) (n int, err error) {
 	tr := tar.NewReader(r)
 
-	for {
-		hdr, err := tr.Next()
-		if err != nil {
-			if err == io.EOF {
-				break
+	ImportBucket := func(i int)(n int, err error) {
+		for {
+			hdr, err := tr.Next()
+			if err != nil {
+				if err == io.EOF {
+					break
+				}
+				return n, err
 			}
-			return n, err
+
+			data, err := ioutil.ReadAll(tr)
+			if err != nil {
+				return n, err
+			}
+
+			var c mock.ExportedChunk
+			if err = json.Unmarshal(data, &c); err != nil {
+				return n, err
+			}
+
+			key := common.Hex2Bytes(hdr.Name)
+
+			batch := new(leveldb.Batch)
+			for _, addr := range c.Addrs {
+				batch.Put(indexForHashesPerNode(addr, key), nil)
+				batch.Put(indexForNodesWithHash(key, addr), nil)
+				batch.Put(indexForNodes(addr), nil)
+			}
+
+			batch.Put(indexForHashes(key), nil)
+			batch.Put(indexDataKey(key), c.Data)
+
+			if err = s.db[i].Write(batch, nil); err != nil {
+				return n, err
+			}
+
+			n++
 		}
-
-		data, err := ioutil.ReadAll(tr)
-		if err != nil {
-			return n, err
-		}
-
-		var c mock.ExportedChunk
-		if err = json.Unmarshal(data, &c); err != nil {
-			return n, err
-		}
-
-		key := common.Hex2Bytes(hdr.Name)
-
-		batch := new(leveldb.Batch)
-		for _, addr := range c.Addrs {
-			batch.Put(indexForHashesPerNode(addr, key), nil)
-			batch.Put(indexForNodesWithHash(key, addr), nil)
-			batch.Put(indexForNodes(addr), nil)
-		}
-
-		batch.Put(indexForHashes(key), nil)
-		batch.Put(indexDataKey(key), c.Data)
-
-		if err = s.db.Write(batch, nil); err != nil {
-			return n, err
-		}
-
-		n++
+		return n, err
 	}
-	return n, err
+	count := 0
+	errStr := ""
+	for i:= 0; i < BucketLen; i++{
+		n,err := ImportBucket(i)
+		if err == nil {
+			count +=  n
+		}else{
+			errStr += fmt.Sprintf("\t bucket %v:error %v",i,err.Error())
+		}
+	}
+	if errStr == "" {
+		return count, errors.New(fmt.Sprintf("Error in import data, reason is:%v",errStr))
+	}else{
+		return count,nil
+	}
+
 }
 
 // Export writes to a writer a tar archive with all chunk data from
@@ -298,83 +351,102 @@ func (s *GlobalStore) Export(w io.Writer) (n int, err error) {
 	tw := tar.NewWriter(w)
 	defer tw.Close()
 
-	buf := bytes.NewBuffer(make([]byte, 0, 1024))
-	encoder := json.NewEncoder(buf)
+	ExportBucket := func (i int) (n int, err error){
+		buf := bytes.NewBuffer(make([]byte, 0, 1024))
+		encoder := json.NewEncoder(buf)
 
-	snap, err := s.db.GetSnapshot()
-	if err != nil {
-		return 0, err
-	}
-
-	iter := snap.NewIterator(util.BytesPrefix([]byte{indexForHashesByNodePrefix}), nil)
-	defer iter.Release()
-
-	var currentKey string
-	var addrs []common.Address
-
-	saveChunk := func() error {
-		hexKey := currentKey
-
-		data, err := snap.Get(indexDataKey(common.Hex2Bytes(hexKey)), nil)
+		snap, err := s.db[i].GetSnapshot()
 		if err != nil {
-			return fmt.Errorf("get data %s: %v", hexKey, err)
+			return 0, err
 		}
 
-		buf.Reset()
-		if err = encoder.Encode(mock.ExportedChunk{
-			Addrs: addrs,
-			Data:  data,
-		}); err != nil {
-			return err
+		iter := snap.NewIterator(util.BytesPrefix([]byte{indexForHashesByNodePrefix}), nil)
+		defer iter.Release()
+
+		var currentKey string
+		var addrs []common.Address
+
+		saveChunk := func() error {
+			hexKey := currentKey
+
+			data, err := snap.Get(indexDataKey(common.Hex2Bytes(hexKey)), nil)
+			if err != nil {
+				return fmt.Errorf("get data %s: %v", hexKey, err)
+			}
+
+			buf.Reset()
+			if err = encoder.Encode(mock.ExportedChunk{
+				Addrs: addrs,
+				Data:  data,
+			}); err != nil {
+				return err
+			}
+
+			d := buf.Bytes()
+			hdr := &tar.Header{
+				Name: hexKey,
+				Mode: 0644,
+				Size: int64(len(d)),
+			}
+			if err := tw.WriteHeader(hdr); err != nil {
+				return err
+			}
+			if _, err := tw.Write(d); err != nil {
+				return err
+			}
+			n++
+			return nil
 		}
 
-		d := buf.Bytes()
-		hdr := &tar.Header{
-			Name: hexKey,
-			Mode: 0644,
-			Size: int64(len(d)),
-		}
-		if err := tw.WriteHeader(hdr); err != nil {
-			return err
-		}
-		if _, err := tw.Write(d); err != nil {
-			return err
-		}
-		n++
-		return nil
-	}
+		for iter.Next() {
+			k := bytes.TrimPrefix(iter.Key(), []byte{indexForHashesByNodePrefix})
+			i := bytes.Index(k, []byte{keyTermByte})
+			if i < 0 {
+				continue
+			}
+			hexKey := string(k[:i])
 
-	for iter.Next() {
-		k := bytes.TrimPrefix(iter.Key(), []byte{indexForHashesByNodePrefix})
-		i := bytes.Index(k, []byte{keyTermByte})
-		if i < 0 {
-			continue
-		}
-		hexKey := string(k[:i])
+			if currentKey == "" {
+				currentKey = hexKey
+			}
 
-		if currentKey == "" {
+			if hexKey != currentKey {
+				if err = saveChunk(); err != nil {
+					return n, err
+				}
+
+				addrs = addrs[:0]
+			}
+
 			currentKey = hexKey
+			addrs = append(addrs, common.BytesToAddress(k[i+1:]))
 		}
 
-		if hexKey != currentKey {
+		if len(addrs) > 0 {
 			if err = saveChunk(); err != nil {
 				return n, err
 			}
-
-			addrs = addrs[:0]
 		}
 
-		currentKey = hexKey
-		addrs = append(addrs, common.BytesToAddress(k[i+1:]))
+		return n, iter.Error()
 	}
-
-	if len(addrs) > 0 {
-		if err = saveChunk(); err != nil {
-			return n, err
+	count := 0
+	errStr := ""
+	for i:= 0; i < BucketLen; i++{
+		n,err := ExportBucket(i)
+		if err == nil {
+			count +=  n
+		}else{
+			errStr += fmt.Sprintf("\t bucket %v:error %v",i,err.Error())
 		}
 	}
+	if errStr == "" {
+		return count, errors.New(fmt.Sprintf("Error in export data, reason is:%v",errStr))
+	}else{
+		return count,nil
+	}
 
-	return n, iter.Error()
+
 }
 
 var (

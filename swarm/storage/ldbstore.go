@@ -30,12 +30,12 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/plotozhu/MDCMainnet/rlp"
 	"io"
 	"io/ioutil"
 	"sync"
 
 	"github.com/plotozhu/MDCMainnet/metrics"
-	"github.com/plotozhu/MDCMainnet/rlp"
 	"github.com/plotozhu/MDCMainnet/swarm/log"
 	"github.com/plotozhu/MDCMainnet/swarm/storage/mock"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -116,7 +116,6 @@ type LDBStore struct {
 	quit     chan struct{}
 	gc       *garbage
 
-
 	// Functions encodeDataFunc is used to bypass
 	// the default functionality of DbStore with
 	// mock.NodeStore for testing purposes.
@@ -125,6 +124,9 @@ type LDBStore struct {
 	// retrieving the chunk data instead from the local
 	// LevelDB database.
 	getDataFunc func(key Address) (data []byte, err error)
+
+	//deleteChunkFunc is used to delete data from boltdb
+	deleteChunkFunc func(addr Address) (err error)
 }
 
 type dbBatch struct {
@@ -148,16 +150,28 @@ func NewLDBStore(params *LDBStoreParams) (s *LDBStore, err error) {
 	s.batchesC = make(chan struct{}, 1)
 	go s.writeBatches()
 	s.batch = newBatch()
-	// associate encodeData with default functionality
-	s.encodeDataFunc = encodeData
 
 	s.db, err = NewLDBDatabase(params.Path)
+
+	if err != nil {
+		return nil, err
+	}
+	// associate encodeData with default functionality
+	s.encodeDataFunc = encodeData
+/*	db, err := bolt.Open(params.Path+"/rawchunk", 0644, nil)
+
 	if err != nil {
 		return nil, err
 	}
 
+	s.chunkDb = db
+	s.encodeDataFunc = newBoltDbEncodeDataFunc(db)
+	s.getDataFunc    = newBoltDbGetDataFunc(db)
+	s.deleteChunkFunc = newBoltDbDeleteDataFunc(db)
+*/
 	s.po = params.Po
 	s.setCapacity(params.DbCapacity)
+
 
 	s.bucketCnt = make([]uint64, 0x100)
 	for i := 0; i < 0x100; i++ {
@@ -187,6 +201,8 @@ func NewLDBStore(params *LDBStoreParams) (s *LDBStore, err error) {
 	return s, nil
 }
 
+
+//func (s *LDBStore) GetChunkFromDb()
 // MarkAccessed increments the access counter as a best effort for a chunk, so
 // the chunk won't get garbage collected.
 func (s *LDBStore) MarkAccessed(addr Address) {
@@ -228,7 +244,9 @@ func NewMockDbStore(params *LDBStoreParams, mockStore *mock.NodeStore) (s *LDBSt
 	if mockStore != nil {
 		s.encodeDataFunc = newMockEncodeDataFunc(mockStore)
 		s.getDataFunc = newMockGetDataFunc(mockStore)
+		s.deleteChunkFunc = nil   //delete func is not need here
 	}
+
 	return
 }
 
@@ -761,6 +779,13 @@ func (s *LDBStore) delete(batch *leveldb.Batch, idx *dpaDBIndex, idxKey []byte, 
 	gcIdxKey := getGCIdxKey(idx)
 	batch.Delete(gcIdxKey)
 	dataKey := getDataKey(idx.Idx, po)
+	if s.deleteChunkFunc != nil {
+		addr,_err := s.db.Get(dataKey)
+		if _err == nil {
+			s.deleteChunkFunc(addr)
+		}
+	}
+
 	batch.Delete(dataKey)
 	batch.Delete(idxKey)
 	s.entryCnt--
@@ -838,9 +863,9 @@ func (s *LDBStore) doPut(chunk Chunk, index *dpaDBIndex, po uint8) {
 	/*if !s.VerifyHash(chunk.Data(),chunk.Address()) {
 		fmt.Println("Chunk not correct!",chunk.Address())
 	}*/
-	data := s.encodeDataFunc(chunk)
+	data := s.encodeDataFunc(chunk)  //数据存入到boltdb,返回的是address
 	dkey := getDataKey(s.dataIdx, po)
-	s.batch.Put(dkey, data) //Aegon TODO: 这里需要改造，存入到通用的存储器中
+	s.batch.Put(dkey, data)			//记录了address
 	index.Idx = s.dataIdx
 	s.bucketCnt[po] = s.dataIdx
 	s.entryCnt++

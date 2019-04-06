@@ -72,6 +72,7 @@ type Config struct {
 	Cors                 string
 	BzzAccount           string
 	GlobalStoreAPI       string
+	ChunkDbPath          string
 	privateKey           *ecdsa.PrivateKey
 	ServerAddr           string
 	CentralAddr          []string
@@ -100,6 +101,7 @@ func NewConfig() (c *Config) {
 		DeliverySkipCheck:    true,
 		SyncUpdateDelay:      15 * time.Second,
 		SwapAPI:              "",
+
 		ServerAddr:           "http://172.16.1.10:4000/apis/v1",
 		CentralAddr:          []string{"http://124.156.115.14:8500"},
 	}

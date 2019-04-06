@@ -83,6 +83,7 @@ const (
 	SwarmAccessPassword          = "SWARM_ACCESS_PASSWORD"
 	SwarmAutoDefaultPath         = "SWARM_AUTO_DEFAULTPATH"
 	SwarmGlobalstoreAPI          = "SWARM_GLOBALSTORE_API"
+	ChunkDbPath					 = "CHUNK_DB_PATH"
 	GethEnvDataDir               = "GETH_DATADIR"
 )
 

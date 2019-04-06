@@ -181,4 +181,10 @@ var (
 		Usage:  "URL of the Global Store API provider (only for testing)",
 		EnvVar: SwarmGlobalstoreAPI,
 	}
+
+	/*ChunkDbPathFlag = cli.StringFlag{
+		Name:   "chunkPath",
+		Usage:  "Path to store chunks separately",
+		EnvVar: ChunkDbPath,
+	}*/
 )
