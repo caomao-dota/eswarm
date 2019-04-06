@@ -124,12 +124,18 @@ func (s *GlobalStore) Put(addr common.Address, key []byte, data []byte) error {
 	}
 	defer unlock()
 
+
 	batch := new(leveldb.Batch)
+	in_data, aerr:= s.db[bucket].Get(indexDataKey(key),nil)
+	if aerr != nil {
+		fmt.Println("data:",in_data)
+		batch.Put(indexDataKey(key), data)
+	}
 	batch.Put(indexForHashesPerNode(addr, key), nil)
 	batch.Put(indexForNodesWithHash(key, addr), nil)
 	batch.Put(indexForNodes(addr), nil)
 	batch.Put(indexForHashes(key), nil)
-	batch.Put(indexDataKey(key), data)
+
 	return s.db[bucket].Write(batch, nil)
 }
 

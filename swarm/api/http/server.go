@@ -892,6 +892,8 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 						http.ServeContent(w, r, "", time.Now(), reader)
 						if time.Now().Sub(startServ) < 10*time.Second {
 							s.m3u8.sizelost = 0
+						}else{
+							s.m3u8.sizelost++
 						}
 						return
 					}
