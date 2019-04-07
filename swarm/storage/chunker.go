@@ -537,60 +537,68 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 
 	}()
 
-	req := cctx.Value("request").(*rawHttp.Request)
-	url := cctx.Value("url").(string)
+	requestInfo := cctx.Value("request")
+	if requestInfo != nil && !reflect.ValueOf(requestInfo).IsNil() {
+		req := requestInfo.(*rawHttp.Request)
+		url := cctx.Value("url").(string)
 
-	buffer, OK := r.ts_buffer.Get(url)
-	needRetrieve := !OK
-	//检查是否需要
-	if OK {
-		result := buffer.(*DataCache)
-		if result.start > off || //不在缓冲之内
-			(!result.end && (off+int64(len(b)) > (result.start + util.MaxLen))) {
-			needRetrieve = true
+		buffer, OK := r.ts_buffer.Get(url)
+		needRetrieve := !OK
+		//检查是否需要
+		if OK {
+			result := buffer.(*DataCache)
+			if result.start > off || //不在缓冲之内
+				(!result.end && (off+int64(len(b)) > (result.start + util.MaxLen))) {
+				needRetrieve = true
 
-		}
-	}
-	var cacheBuffer []byte
-	startOffset := int64(0)
-	if needRetrieve {
-		httpClient := cctx.Value("reporter")
-		if httpClient != nil && !reflect.ValueOf(httpClient).IsNil() {
-			hash := cctx.Value("hash")
-			var hashValue common.Hash
-			if hash != nil && reflect.ValueOf(hash).IsValid() {
-				hashValue = hash.(common.Hash)
-			} else {
-				hashValue = common.Hash{0}
 			}
-			//	fmt.Printf("Read hash from central node: %v len:%v from: %v\r\n",url,len(b),off)
-			dataBuf, end := httpClient.(*util.HttpReader).GetChunkFromCentral(url, off, hashValue[:], req)
-			if dataBuf != nil {
-				r.ts_buffer.Add(url, &DataCache{start: off, value: dataBuf, end: end})
-				cacheBuffer = dataBuf
-
+		}
+		var cacheBuffer []byte
+		startOffset := int64(0)
+		if needRetrieve {
+			httpClient := cctx.Value("reporter")
+			if httpClient != nil && !reflect.ValueOf(httpClient).IsNil() {
+				hash := cctx.Value("hash")
+				var hashValue common.Hash
+				if hash != nil && reflect.ValueOf(hash).IsValid() {
+					hashValue = hash.(common.Hash)
+				} else {
+					hashValue = common.Hash{0}
+				}
+				//	fmt.Printf("Read hash from central node: %v len:%v from: %v\r\n",url,len(b),off)
+				dataBuf, end := httpClient.(*util.HttpReader).GetChunkFromCentral(url, off, hashValue[:], req)
+				if dataBuf != nil {
+					r.ts_buffer.Add(url, &DataCache{start: off, value: dataBuf, end: end})
+					cacheBuffer = dataBuf
+					err = nil
+				} else {
+					cacheBuffer = nil
+					err = errors.New("Read Central Found")
+				}
+				startOffset = 0
 			} else {
 				cacheBuffer = nil
-				err = errors.New("Read Central Found")
+				err = errors.New("No Central Found")
 			}
-			startOffset = 0
+
 		} else {
-			cacheBuffer = nil
-			err = errors.New("No Central Found")
+			cacheBuffer = buffer.(*DataCache).value
+			startOffset = off - buffer.(*DataCache).start
+			err = nil
 		}
 
-	} else {
-		cacheBuffer = buffer.(*DataCache).value
-		startOffset = off - buffer.(*DataCache).start
+		totalLen := len(cacheBuffer) - int(startOffset)
+		if totalLen > len(b) {
+			totalLen = len(b)
+		}
+		copy(b, cacheBuffer[startOffset:startOffset+int64(totalLen)])
+		read = totalLen
+		return
 	}
-
-	totalLen := len(cacheBuffer) - int(startOffset)
-	if totalLen > len(b) {
-		totalLen = len(b)
-	}
-	copy(b, cacheBuffer[startOffset:startOffset+int64(totalLen)])
-	read = totalLen
+	read = 0
+	err = errors.New("Data Chunk not Found")
 	return
+
 
 }
 
