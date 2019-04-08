@@ -567,7 +567,7 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 				}
 				//	fmt.Printf("Read hash from central node: %v len:%v from: %v\r\n",url,len(b),off)
 				dataBuf, end := httpClient.(*util.HttpReader).GetChunkFromCentral(url, off, hashValue[:], req)
-				if dataBuf != nil {
+				if dataBuf != nil && len(dataBuf) > 0{
 					r.ts_buffer.Add(url, &DataCache{start: off, value: dataBuf, end: end})
 					cacheBuffer = dataBuf
 					err = nil
@@ -590,6 +590,8 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 		totalLen := len(cacheBuffer) - int(startOffset)
 		if totalLen > len(b) {
 			totalLen = len(b)
+		}else if(totalLen < 0){
+			totalLen = 0
 		}
 		copy(b, cacheBuffer[startOffset:startOffset+int64(totalLen)])
 		read = totalLen
