@@ -95,33 +95,39 @@ type ActivatePost struct {
 }
 
 type RespData struct {
-	ExpireTime int
+	ExpireTime int64
 }
 
-func PostToServer(urlstr string, timeout time.Duration, data *ActivatePost) int {
+func PostToServer(urlstr string, timeout time.Duration, data *ActivatePost) (int64, error) {
+
+	client := &http.Client{
+		Timeout: timeout * time.Second,
+	}
 
 	postdata := make(url.Values)
 	postdata.Set("appId", data.Appid)
 	postdata.Set("account", data.Account)
 	postdata.Set("credential", data.Credential)
-	resp, err := http.PostForm(urlstr, postdata)
+	resp, err := client.PostForm(urlstr, postdata)
 	if err != nil {
-		return 0
+		return 0, err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return 0
-	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return 0
+		return 0, err
 	}
+
 	respData := RespData{}
 	err = json.Unmarshal(body, &respData)
 	if err != nil {
-		return 0
+		return 0, err
 	}
-	return respData.ExpireTime
+	if resp.StatusCode != 200 {
+		return 0, fmt.Errorf("resp.Body: %v", respData)
+	}
+
+	return respData.ExpireTime, nil
 }
 
 /*
@@ -374,9 +380,9 @@ func PathExists(path string) (bool, error) {
 	return false, err
 }
 
-func Activate(path string, appId string, credential string, addr string, newAccount bool, password string) int {
+func Activate(path string, appId string, credential string, addr string, newAccount bool, password string) (int64, error) {
 	if path == "" {
-		return 0
+		return 0, errors.New("Must input path ...")
 	}
 
 	if addr == "" {
@@ -390,19 +396,19 @@ func Activate(path string, appId string, credential string, addr string, newAcco
 	keystorepath := path + "/keystore/"
 	exist, err := PathExists(keystorepath)
 	if err != nil {
-		return 0
+		return 0, err
 	}
 	if !exist {
 		err = os.Mkdir(path+"/keystore", os.ModePerm)
 		if err != nil {
-			return 0
+			return 0, err
 		}
 	}
 
 	bzzAccount := ""
 	fileinfo, err := ioutil.ReadDir(keystorepath)
 	if err != nil {
-		return 0
+		return 0, err
 	}
 	for _, file := range fileinfo {
 		if !file.IsDir() {
@@ -410,10 +416,11 @@ func Activate(path string, appId string, credential string, addr string, newAcco
 			if newAccount == false {
 				bzzAccount = file.Name()
 				bzzAccount = bzzAccount[len(bzzAccount)-40:]
+				bzzAccount = "0x" + bzzAccount
 			} else { //重新生成一个keystore
 				err := os.Remove(keystorepath + file.Name())
 				if err != nil {
-					return 0
+					return 0, err
 				}
 			}
 
@@ -424,7 +431,7 @@ func Activate(path string, appId string, credential string, addr string, newAcco
 	if bzzAccount == "" {
 		account, err := CreateKeyStore(keystorepath, password, StandardScryptN, StandardScryptP)
 		if err != nil {
-			return 0
+			return 0, err
 		}
 		bzzAccount = account
 	}
@@ -494,8 +501,11 @@ func Activate(path string, appId string, credential string, addr string, newAcco
 	*/
 
 	activatePost := &ActivatePost{appId, credential, bzzAccount}
-	ti := PostToServer(addr, time.Second, activatePost)
-	return ti
+	ti, err := PostToServer(addr, 5, activatePost)
+	if err != nil {
+		return 0, err
+	}
+	return ti, err
 }
 
 func Clean(path string, all bool) error {
