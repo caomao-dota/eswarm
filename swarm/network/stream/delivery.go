@@ -173,7 +173,7 @@ func (d *Delivery) GetReceivedChunkInfo() map[common.Address]int64{
 
 //收到了某个节点来的查询数据的请求
 func (d *Delivery) handleRetrieveRequestMsg(ctx context.Context, sp *Peer, req *RetrieveRequestMsg) error {
-	log.Info("received request", "peer", sp.ID(), "hash", req.Addr)
+//	log.Info("received request", "peer", sp.ID(), "hash", req.Addr)
 	handleRetrieveRequestMsgCount.Inc(1)
 
 	//记录

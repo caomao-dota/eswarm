@@ -37,6 +37,7 @@ func createHTTPClient() *http.Client {
 type HttpReader struct {
 	httpClient *http.Client
 	unreported ReportData
+	totalLen   int64
 	reportMu   sync.Mutex
 	account    [20]byte
 	reportUrl string 
@@ -48,11 +49,15 @@ func CreateHttpReader( )(*HttpReader){
 	return &HttpReader{
 		httpClient:client(),
 		unreported:make(ReportData),
+		totalLen:0,
 	}
 }
 func (hr *HttpReader)SetCdnReporter ( account, serverUrl string){
 	hr.account = common.HexToAddress(account)
 	hr.reportUrl = serverUrl +"/cdn"
+}
+func (hr *HttpReader)GetDataLenFromCenter ( ) int64{
+	return hr.totalLen
 }
 //从中心化服务端取数据，最多取1024*1024*8 （8M字节数据）
 const MaxLen  = 8*1024*1024
@@ -211,6 +216,7 @@ type ReportFmt struct{
 func (r *HttpReader) doReport(url string, hash []byte, dataLen int64) {
 	r.reportMu.Lock()
 	r.unreported[time.Now()] = dataLen
+	r.totalLen += dataLen
 	r.reportMu.Unlock()
 	go func(){
 		r.reportMu.Lock()

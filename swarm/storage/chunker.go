@@ -405,12 +405,16 @@ type LazyChunkReader struct {
 	hashSize  int64 // inherit from chunker
 	depth     int
 	getter    Getter
-
+	sizeCache *lru.Cache
 	ts_buffer *lru.Cache
 }
 
-func (tc *TreeChunker) Join(ctx context.Context) *LazyChunkReader {
-	bf, _ := lru.New(20)
+func (tc *TreeChunker)  Join(ctx context.Context) *LazyChunkReader {
+	bf, _ := lru.New(50)
+	sizeCache,err := lru.New(1000)
+	if(err != nil){
+		fmt.Println("Error of create lru cache,reaseon",err.Error())
+	}
 	return &LazyChunkReader{
 		addr:      tc.addr,
 		chunkSize: tc.chunkSize,
@@ -419,7 +423,7 @@ func (tc *TreeChunker) Join(ctx context.Context) *LazyChunkReader {
 		depth:     tc.depth,
 		getter:    tc.getter,
 		ctx:       tc.ctx,
-
+		sizeCache: sizeCache,
 		ts_buffer: bf,
 	}
 }
@@ -427,6 +431,11 @@ func (tc *TreeChunker) Join(ctx context.Context) *LazyChunkReader {
 func (r *LazyChunkReader) Context() context.Context {
 	return r.ctx
 }
+type int64str struct {
+	value int32
+	hvalue int32
+}
+
 
 // Size is meant to be called on the LazySectionReader
 func (r *LazyChunkReader) Size(ctx context.Context, quitC chan bool) (n int64, err error) {
@@ -439,8 +448,13 @@ func (r *LazyChunkReader) Size(ctx context.Context, quitC chan bool) (n int64, e
 		ctx,
 		"lcr.size")
 	defer sp.Finish()
+		sizeValue,ok := r.sizeCache.Get(r.addr.Hex())
+		if ok {
+			//value := sizeValue.(int64str)
+			return sizeValue.(int64),nil
+		}
 
-	log.Debug("lazychunkreader.size", "addr", r.addr)
+	//log.Debug("lazychunkreader.size", "addr", r.addr)
 	if r.chunkData == nil {
 		startTime := time.Now()
 		chunkData, err := r.getter.Get(cctx, Reference(r.addr))
@@ -454,7 +468,8 @@ func (r *LazyChunkReader) Size(ctx context.Context, quitC chan bool) (n int64, e
 
 	s := r.chunkData.Size()
 	log.Debug("lazychunkreader.size", "key", r.addr, "size", s)
-
+	//val := int64str{int32(s),int32(s>>32)}
+	r.sizeCache.Add(r.addr.Hex(),int64(s))
 	return int64(s), nil
 }
 

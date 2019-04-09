@@ -1019,6 +1019,7 @@ type receiptInfo struct {
 }
 
 type receiptResult struct {
+	DataFromCentral int64
 	Chunks []datacount
 	Receipts []receiptInfo
 }
@@ -1031,6 +1032,7 @@ func (s *Server) HandleGetReceived(w http.ResponseWriter, r *http.Request) {
 	}else {
 		w.Header().Set("Content-Type", "application/json")
 		ret := receiptResult{
+			s.httpClient.GetDataLenFromCenter()/4096,
 			make([]datacount,0),
 			make([]receiptInfo,0),
 		}
