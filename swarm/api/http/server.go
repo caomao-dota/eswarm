@@ -854,6 +854,7 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 
 			s.entries.Add(path, hash)
 			actUri, err := api.Parse("m3u8:/" + url)
+			//log.Info("read:","uri",actUri)
 			if err == nil {
 				//数据片断与哈希的对应关系应该已经存储在数据库里
 				newContext := context.WithValue(r.Context(), "url", string(path+act))
@@ -873,11 +874,11 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 
 				addr, err := s.api.ResolveURI(newContext, actUri, pass)
 				if err == nil {
-
+					//log.Info("addr resolved:","uri",actUri)
 					reader, isEncrypted := s.api.Retrieve(newContext, addr)
 
 					if _, err := reader.Size(newContext, nil); err == nil {
-
+					//	log.Info("size ok:","uri",actUri)
 						w.Header().Set("X-Decrypted", fmt.Sprintf("%v", isEncrypted))
 
 						if isM3u8 {
@@ -890,6 +891,7 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 						//}
 						startServ := time.Now()
 						http.ServeContent(w, r, "", time.Now(), reader)
+					//	log.Info("served ok:","uri",actUri,"serve time:",time.Now().Sub(startServ))
 						if time.Now().Sub(startServ) < 10*time.Second {
 							s.m3u8.sizelost = 0
 						}else{
@@ -900,7 +902,7 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			s.m3u8.sizelost++
-
+			//log.Info("Get from central node:","uri",actUri)
 			s.httpClient.GetDataFromCentralServer(path+act, r, w, common.Hex2Bytes(string(hash)), respondError)
 			return
 

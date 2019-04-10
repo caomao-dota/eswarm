@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	DefaultSize   = 4096
+	DefaultSize   = 4096*64
 	MaxPO         = 16
 	AddressLength = 32
 )

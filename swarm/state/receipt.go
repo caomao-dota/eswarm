@@ -551,6 +551,10 @@ func (rs *ReceiptStore) doAutoSubmit() error {
 	err = util.SendDataToServer(rs.server, timeout, result)
 	rs.hmu.Lock()
 	defer rs.hmu.Unlock()
+	len := len(rs.receiptsLogs)
+	if len > 100 {
+		rs.receiptsLogs = rs.receiptsLogs[len-100:]
+	}
 	if err == nil { //提交成功，本地删除
 		rs.receiptsLogs = append(rs.receiptsLogs,receipts)
 		rs.saveReceipts(RPREF, Receipts{})
