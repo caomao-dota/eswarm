@@ -47,8 +47,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
-
 )
 import _ "net/http/pprof"
 
@@ -194,6 +194,16 @@ func NewServer(api *api.API, corsString string) *Server {
 			defaultMiddlewares...,
 		),
 	})
+	mux.Handle("/duration:/", methodHandler{
+		"POST": Adapt(
+			http.HandlerFunc(server.HandleDuration),
+			defaultMiddlewares...,
+		),
+		"GET": Adapt(
+			http.HandlerFunc(server.HandleDuration),
+			defaultMiddlewares...,
+		),
+	})
 	mux.Handle("/", methodHandler{
 		"GET": Adapt(
 			http.HandlerFunc(server.HandleRootPaths),
@@ -207,6 +217,7 @@ func NewServer(api *api.API, corsString string) *Server {
 	}()
 	server.entries, _ = lru.New(10000)
 	server.httpClient = util.CreateHttpReader()
+	server.cachedDuration = 0
 	return server
 }
 
@@ -233,6 +244,8 @@ type Server struct {
 	httpClient *util.HttpReader
 	//	db *leveldb.DB
 	m3u8 M3U8Opt
+	cachedDuration  int32  //当前缓冲的数据值，以ms为单位
+
 }
 
 func (s *Server) CreateCdnReporter(bzzAccount, reportURL string) {
@@ -863,6 +876,17 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 
 				newContext = context.WithValue(newContext, "reporter", s.httpClient)
 				newContext = context.WithValue(newContext, "hash", common.HexToHash(string(hash)))
+				var timeout int32
+				duration := atomic.LoadInt32(&s.cachedDuration)
+				if duration <= 5000 {
+					timeout = 5000
+				} else if duration >= 30000 {
+					timeout = 20000
+				} else {
+					timeout =  duration/2 + 5000
+				}
+				newContext, _ = context.WithTimeout(newContext, time.Duration(int64(timeout) * int64(time.Millisecond)))
+				/*
 				if s.m3u8.sizelost > 0 && s.m3u8.sizelost <= 10 {
 					newContext, _ = context.WithTimeout(newContext, 5*time.Second)
 				} else if s.m3u8.sizelost > 10 {
@@ -871,7 +895,7 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 				} else {
 					newContext, _ = context.WithTimeout(newContext, 20*time.Second)
 				}
-
+				*/
 				addr, err := s.api.ResolveURI(newContext, actUri, pass)
 				if err == nil {
 					//log.Info("addr resolved:","uri",actUri)
@@ -1034,7 +1058,7 @@ func (s *Server) HandleGetReceived(w http.ResponseWriter, r *http.Request) {
 	}else {
 		w.Header().Set("Content-Type", "application/json")
 		ret := receiptResult{
-			s.httpClient.GetDataLenFromCenter()/4096,
+			s.httpClient.GetDataLenFromCenter()/(4096*64),
 			make([]datacount,0),
 			make([]receiptInfo,0),
 		}
@@ -1152,7 +1176,30 @@ func (s *Server) HandleGetFile(w http.ResponseWriter, r *http.Request) {
 
 	http.ServeContent(w, r, fileName, time.Now(), newBufferedReadSeeker(reader, getFileBufferSize))
 }
+// HandleGetFile handles a GET request to bzz://<manifest>/<path> and responds
+// with the content of the file at <path> from the given <manifest>
+func (s *Server) HandleDuration(w http.ResponseWriter, r *http.Request) {
+	ruid := GetRUID(r.Context())
+	log.Debug("handle.post.raw", "ruid", ruid)
 
+	postRawCount.Inc(1)
+
+	//toEncrypt := false
+
+
+	durationBuf,err := ioutil.ReadAll(r.Body)
+	if err == nil {
+		value ,err := strconv.Atoi(string(durationBuf))
+		if err == nil {
+			atomic.StoreInt32(&s.cachedDuration,int32(value))
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+	}
+
+	respondError(w, r, fmt.Sprintf("error in resolve duration: %s",  err), http.StatusBadRequest)
+
+}
 // The size of buffer used for bufio.Reader on LazyChunkReader passed to
 // http.ServeContent in HandleGetFile.
 // Warning: This value influences the number of chunk requests and chunker join goroutines

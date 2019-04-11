@@ -267,7 +267,7 @@ func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *Ch
 			if err == storage.ErrChunkInvalid {
 				// we removed this log because it spams the logs
 				// TODO: Enable this log line
-				// log.Warn("invalid chunk delivered", "peer", sp.ID(), "chunk", req.Addr, )
+				 log.Warn("invalid chunk delivered", "peer", sp.ID(), "chunk", req.Addr, )
 				req.peer.Drop(err)
 			}
 		}
