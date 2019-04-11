@@ -48,10 +48,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
 )
 import _ "net/http/pprof"
-
 
 var (
 	postRawCount    = metrics.NewRegisteredCounter("api.http.post.raw.count", nil)
@@ -878,7 +876,7 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 					reader, isEncrypted := s.api.Retrieve(newContext, addr)
 
 					if _, err := reader.Size(newContext, nil); err == nil {
-					//	log.Info("size ok:","uri",actUri)
+						//	log.Info("size ok:","uri",actUri)
 						w.Header().Set("X-Decrypted", fmt.Sprintf("%v", isEncrypted))
 
 						if isM3u8 {
@@ -891,10 +889,10 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 						//}
 						startServ := time.Now()
 						http.ServeContent(w, r, "", time.Now(), reader)
-					//	log.Info("served ok:","uri",actUri,"serve time:",time.Now().Sub(startServ))
+						//	log.Info("served ok:","uri",actUri,"serve time:",time.Now().Sub(startServ))
 						if time.Now().Sub(startServ) < 10*time.Second {
 							s.m3u8.sizelost = 0
-						}else{
+						} else {
 							s.m3u8.sizelost++
 						}
 						return
@@ -1008,43 +1006,46 @@ func (s *Server) HandleGetList(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(&list)
 }
+
 type datacount struct {
 	Address common.Address
 	Count   int32
 }
+
 // map[[20]byte]ReceiptItems -->map[time.Time]ReceiptItem
 type receiptInfo struct {
 	Address common.Address
 	Time    time.Time
-	Amount uint32
-	Sign   []byte
+	Amount  uint32
+	Sign    []byte
 }
 
 type receiptResult struct {
 	DataFromCentral int64
-	Chunks []datacount
-	Receipts []receiptInfo
+	Chunks          []datacount
+	Receipts        []receiptInfo
 }
+
 // HandleGetFile handles a GET request to bzz://<manifest>/<path> and responds
 // with the content of the file at <path> from the given <manifest>
 func (s *Server) HandleGetReceived(w http.ResponseWriter, r *http.Request) {
-	result,err := s.api.GetReadCount(r.Context())
-	if err != nil{
-		respondError(w,r,err.Error(),http.StatusInternalServerError)
-	}else {
+	result, err := s.api.GetReadCount(r.Context())
+	if err != nil {
+		respondError(w, r, err.Error(), http.StatusInternalServerError)
+	} else {
 		w.Header().Set("Content-Type", "application/json")
 		ret := receiptResult{
-			s.httpClient.GetDataLenFromCenter()/4096,
-			make([]datacount,0),
-			make([]receiptInfo,0),
+			s.httpClient.GetDataLenFromCenter() / (4096 * 64),
+			make([]datacount, 0),
+			make([]receiptInfo, 0),
 		}
-		for addr,count := range result.ReceivedChunks {
-			ret.Chunks = append(ret.Chunks,datacount{addr,int32(count)})
+		for addr, count := range result.ReceivedChunks {
+			ret.Chunks = append(ret.Chunks, datacount{addr, int32(count)})
 		}
-		for _,receipt := range result.Receipts {
-			for addr,items := range receipt {
-				for _time,item := range items {
-					ret.Receipts = append(ret.Receipts,receiptInfo{common.Address(addr),_time,item.Amount,item.Sign})
+		for _, receipt := range result.Receipts {
+			for addr, items := range receipt {
+				for _time, item := range items {
+					ret.Receipts = append(ret.Receipts, receiptInfo{common.Address(addr), _time, item.Amount, item.Sign})
 				}
 			}
 		}
@@ -1052,6 +1053,7 @@ func (s *Server) HandleGetReceived(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(&ret)
 	}
 }
+
 // HandleGetFile handles a GET request to bzz://<manifest>/<path> and responds
 // with the content of the file at <path> from the given <manifest>
 func (s *Server) HandleGetFile(w http.ResponseWriter, r *http.Request) {
