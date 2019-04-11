@@ -886,9 +886,11 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 				} else {
 					timeout =  duration/2 + 5000
 				}
+
+				log.Info("set timeout:","ms",int64(timeout))
 				newContext, _ = context.WithTimeout(newContext, time.Duration(int64(timeout) * int64(time.Millisecond)))
-				/*
-				if s.m3u8.sizelost > 0 && s.m3u8.sizelost <= 10 {
+
+				/*if s.m3u8.sizelost > 0 && s.m3u8.sizelost <= 10 {
 					newContext, _ = context.WithTimeout(newContext, 5*time.Second)
 				} else if s.m3u8.sizelost > 10 {
 					s.m3u8.sizelost = 0
@@ -896,7 +898,7 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 				} else {
 					newContext, _ = context.WithTimeout(newContext, 20*time.Second)
 				}
-				*/
+*/
 				addr, err := s.api.ResolveURI(newContext, actUri, pass)
 				if err == nil {
 					//log.Info("addr resolved:","uri",actUri)
@@ -914,20 +916,20 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 						//if typ := r.URL.Query().Get("content_type"); typ != "" {
 
 						//}
-						startServ := time.Now()
+						//startServ := time.Now()
 						http.ServeContent(w, r, "", time.Now(), reader)
 					//	log.Info("served ok:","uri",actUri,"serve time:",time.Now().Sub(startServ))
-						if time.Now().Sub(startServ) < 10*time.Second {
+						/*if time.Now().Sub(startServ) < 10*time.Second {
 							s.m3u8.sizelost = 0
 						}else{
 							s.m3u8.sizelost++
-						}
+						}*/
 						return
 					}
 				}
 			}
-			s.m3u8.sizelost++
-			//log.Info("Get from central node:","uri",actUri)
+			//s.m3u8.sizelost++
+			log.Debug("Get from central node:","uri",actUri)
 			s.httpClient.GetDataFromCentralServer(path+act, r, w, common.Hex2Bytes(string(hash)), respondError)
 			return
 
