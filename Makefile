@@ -21,6 +21,11 @@ swarm:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/swarm\" to launch swarm."
 
+store:
+	build/env.sh go run build/ci.go install ./cmd/swarm/global-store
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/global-store\" to launch global-store."
+
 all:
 	build/env.sh go run build/ci.go install
 
