@@ -47,9 +47,12 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
+
 )
 import _ "net/http/pprof"
+
 
 var (
 	postRawCount    = metrics.NewRegisteredCounter("api.http.post.raw.count", nil)
@@ -192,6 +195,16 @@ func NewServer(api *api.API, corsString string) *Server {
 			defaultMiddlewares...,
 		),
 	})
+	mux.Handle("/duration:/", methodHandler{
+		"POST": Adapt(
+			http.HandlerFunc(server.HandleDuration),
+			defaultMiddlewares...,
+		),
+		"GET": Adapt(
+			http.HandlerFunc(server.HandleDuration),
+			defaultMiddlewares...,
+		),
+	})
 	mux.Handle("/", methodHandler{
 		"GET": Adapt(
 			http.HandlerFunc(server.HandleRootPaths),
@@ -205,6 +218,7 @@ func NewServer(api *api.API, corsString string) *Server {
 	}()
 	server.entries, _ = lru.New(10000)
 	server.httpClient = util.CreateHttpReader()
+	server.cachedDuration = 0
 	return server
 }
 
@@ -231,6 +245,8 @@ type Server struct {
 	httpClient *util.HttpReader
 	//	db *leveldb.DB
 	m3u8 M3U8Opt
+	cachedDuration  int32  //当前缓冲的数据值，以ms为单位
+
 }
 
 func (s *Server) CreateCdnReporter(bzzAccount, reportURL string) {
@@ -861,7 +877,20 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 
 				newContext = context.WithValue(newContext, "reporter", s.httpClient)
 				newContext = context.WithValue(newContext, "hash", common.HexToHash(string(hash)))
-				if s.m3u8.sizelost > 0 && s.m3u8.sizelost <= 10 {
+				var timeout int32
+				duration := atomic.LoadInt32(&s.cachedDuration)
+				if duration <= 5000 {
+					timeout = 5000
+				} else if duration >= 30000 {
+					timeout = 20000
+				} else {
+					timeout =  duration/2 + 5000
+				}
+
+				log.Info("set timeout:","ms",int64(timeout))
+				newContext, _ = context.WithTimeout(newContext, time.Duration(int64(timeout) * int64(time.Millisecond)))
+
+				/*if s.m3u8.sizelost > 0 && s.m3u8.sizelost <= 10 {
 					newContext, _ = context.WithTimeout(newContext, 5*time.Second)
 				} else if s.m3u8.sizelost > 10 {
 					s.m3u8.sizelost = 0
@@ -869,14 +898,14 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 				} else {
 					newContext, _ = context.WithTimeout(newContext, 20*time.Second)
 				}
-
+*/
 				addr, err := s.api.ResolveURI(newContext, actUri, pass)
 				if err == nil {
 					//log.Info("addr resolved:","uri",actUri)
 					reader, isEncrypted := s.api.Retrieve(newContext, addr)
 
 					if _, err := reader.Size(newContext, nil); err == nil {
-						//	log.Info("size ok:","uri",actUri)
+					//	log.Info("size ok:","uri",actUri)
 						w.Header().Set("X-Decrypted", fmt.Sprintf("%v", isEncrypted))
 
 						if isM3u8 {
@@ -887,20 +916,20 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 						//if typ := r.URL.Query().Get("content_type"); typ != "" {
 
 						//}
-						startServ := time.Now()
+						//startServ := time.Now()
 						http.ServeContent(w, r, "", time.Now(), reader)
-						//	log.Info("served ok:","uri",actUri,"serve time:",time.Now().Sub(startServ))
-						if time.Now().Sub(startServ) < 10*time.Second {
+					//	log.Info("served ok:","uri",actUri,"serve time:",time.Now().Sub(startServ))
+						/*if time.Now().Sub(startServ) < 10*time.Second {
 							s.m3u8.sizelost = 0
-						} else {
+						}else{
 							s.m3u8.sizelost++
-						}
+						}*/
 						return
 					}
 				}
 			}
-			s.m3u8.sizelost++
-			//log.Info("Get from central node:","uri",actUri)
+			//s.m3u8.sizelost++
+			log.Debug("Get from central node:","uri",actUri)
 			s.httpClient.GetDataFromCentralServer(path+act, r, w, common.Hex2Bytes(string(hash)), respondError)
 			return
 
@@ -1006,46 +1035,43 @@ func (s *Server) HandleGetList(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(&list)
 }
-
 type datacount struct {
 	Address common.Address
 	Count   int32
 }
-
 // map[[20]byte]ReceiptItems -->map[time.Time]ReceiptItem
 type receiptInfo struct {
 	Address common.Address
 	Time    time.Time
-	Amount  uint32
-	Sign    []byte
+	Amount uint32
+	Sign   []byte
 }
 
 type receiptResult struct {
 	DataFromCentral int64
-	Chunks          []datacount
-	Receipts        []receiptInfo
+	Chunks []datacount
+	Receipts []receiptInfo
 }
-
 // HandleGetFile handles a GET request to bzz://<manifest>/<path> and responds
 // with the content of the file at <path> from the given <manifest>
 func (s *Server) HandleGetReceived(w http.ResponseWriter, r *http.Request) {
-	result, err := s.api.GetReadCount(r.Context())
-	if err != nil {
-		respondError(w, r, err.Error(), http.StatusInternalServerError)
-	} else {
+	result,err := s.api.GetReadCount(r.Context())
+	if err != nil{
+		respondError(w,r,err.Error(),http.StatusInternalServerError)
+	}else {
 		w.Header().Set("Content-Type", "application/json")
 		ret := receiptResult{
-			s.httpClient.GetDataLenFromCenter() / (4096 * 64),
-			make([]datacount, 0),
-			make([]receiptInfo, 0),
+			s.httpClient.GetDataLenFromCenter()/(4096*64),
+			make([]datacount,0),
+			make([]receiptInfo,0),
 		}
-		for addr, count := range result.ReceivedChunks {
-			ret.Chunks = append(ret.Chunks, datacount{addr, int32(count)})
+		for addr,count := range result.ReceivedChunks {
+			ret.Chunks = append(ret.Chunks,datacount{addr,int32(count)})
 		}
-		for _, receipt := range result.Receipts {
-			for addr, items := range receipt {
-				for _time, item := range items {
-					ret.Receipts = append(ret.Receipts, receiptInfo{common.Address(addr), _time, item.Amount, item.Sign})
+		for _,receipt := range result.Receipts {
+			for addr,items := range receipt {
+				for _time,item := range items {
+					ret.Receipts = append(ret.Receipts,receiptInfo{common.Address(addr),_time,item.Amount,item.Sign})
 				}
 			}
 		}
@@ -1053,7 +1079,6 @@ func (s *Server) HandleGetReceived(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(&ret)
 	}
 }
-
 // HandleGetFile handles a GET request to bzz://<manifest>/<path> and responds
 // with the content of the file at <path> from the given <manifest>
 func (s *Server) HandleGetFile(w http.ResponseWriter, r *http.Request) {
@@ -1154,7 +1179,30 @@ func (s *Server) HandleGetFile(w http.ResponseWriter, r *http.Request) {
 
 	http.ServeContent(w, r, fileName, time.Now(), newBufferedReadSeeker(reader, getFileBufferSize))
 }
+// HandleGetFile handles a GET request to bzz://<manifest>/<path> and responds
+// with the content of the file at <path> from the given <manifest>
+func (s *Server) HandleDuration(w http.ResponseWriter, r *http.Request) {
+	ruid := GetRUID(r.Context())
+	log.Debug("handle.post.raw", "ruid", ruid)
 
+	postRawCount.Inc(1)
+
+	//toEncrypt := false
+
+
+	durationBuf,err := ioutil.ReadAll(r.Body)
+	if err == nil {
+		value ,err := strconv.Atoi(string(durationBuf))
+		if err == nil {
+			atomic.StoreInt32(&s.cachedDuration,int32(value))
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+	}
+
+	respondError(w, r, fmt.Sprintf("error in resolve duration: %s",  err), http.StatusBadRequest)
+
+}
 // The size of buffer used for bufio.Reader on LazyChunkReader passed to
 // http.ServeContent in HandleGetFile.
 // Warning: This value influences the number of chunk requests and chunker join goroutines
