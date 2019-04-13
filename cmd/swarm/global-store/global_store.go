@@ -61,7 +61,7 @@ func startWS(ctx *cli.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	origins := ctx.StringSlice("origins")
+	origins := ctx.StringSlice("origin")
 	log.Info("websocket", "address", listener.Addr().String(), "origins", origins)
 
 	return http.Serve(listener, server.WebsocketHandler(origins))
