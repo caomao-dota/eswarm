@@ -71,7 +71,11 @@ type ID string
 const IDv4 = ID("v4") // the default identity scheme
 
 func (v ID) ENRKey() string { return "id" }
+// ID is the "id" key, which holds the name of the identity scheme.
+type NodeType uint8
 
+
+func (v NodeType) ENRKey() string { return "nt" }
 // IP is the "ip" key, which holds the IP address of the node.
 type IP net.IP
 

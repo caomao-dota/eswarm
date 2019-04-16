@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/plotozhu/MDCMainnet/p2p/enr"
 	"net"
 	"sync"
 	"time"
@@ -66,8 +67,7 @@ type BzzConfig struct {
 	UnderlayAddr []byte // node's underlay address
 	HiveParams   *HiveParams
 	NetworkID    uint64
-	LightNode    bool
-	BootnodeMode bool
+	NodeType	 uint8
 	BzzAccount   [20]byte
 }
 
@@ -75,7 +75,7 @@ type BzzConfig struct {
 type Bzz struct {
 	*Hive
 	NetworkID    uint64
-	LightNode    bool
+	NodeType     uint8
 	localAddr    *BzzAddr
 	mtx          sync.Mutex
 	handshakes   map[enode.ID]*HandshakeMsg
@@ -90,10 +90,11 @@ type Bzz struct {
 // * overlay driver
 // * peer store
 func NewBzz(config *BzzConfig, kad *Kademlia, store state.Store, streamerSpec *protocols.Spec, streamerRun func(*BzzPeer) error) *Bzz {
+
 	bzz := &Bzz{
 		Hive:         NewHive(config.HiveParams, kad, store),
 		NetworkID:    config.NetworkID,
-		LightNode:    config.LightNode,
+		NodeType:     uint8(config.NodeType),
 		localAddr:    &BzzAddr{config.OverlayAddr, config.UnderlayAddr},
 		handshakes:   make(map[enode.ID]*HandshakeMsg),
 		streamerRun:  streamerRun,
@@ -101,7 +102,7 @@ func NewBzz(config *BzzConfig, kad *Kademlia, store state.Store, streamerSpec *p
 		bzzAccount:   config.BzzAccount,
 	}
 
-	if config.BootnodeMode {
+	if enode.GetSyncingOptions(enode.NodeTypeOption(config.NodeType)) == uint8(enode.SyncingDisabled) && enode.GetRetrievalOptions(enode.NodeTypeOption(config.NodeType)) == uint8(enode.RetrievalDisabled) {
 		bzz.streamerRun = nil
 		bzz.streamerSpec = nil
 	}
@@ -128,6 +129,7 @@ func (b *Bzz) NodeInfo() interface{} {
 // * handshake/hive
 // * discovery
 func (b *Bzz) Protocols() []p2p.Protocol {
+
 	protocol := []p2p.Protocol{
 		{
 			Name:     BzzSpec.Name,
@@ -135,6 +137,7 @@ func (b *Bzz) Protocols() []p2p.Protocol {
 			Length:   BzzSpec.Length(),
 			Run:      b.runBzz,
 			NodeInfo: b.NodeInfo,
+
 		},
 		{
 			Name:     DiscoverySpec.Name,
@@ -195,7 +198,6 @@ func (b *Bzz) RunProtocol(spec *protocols.Spec, run func(*BzzPeer) error) func(*
 			Peer:       protocols.NewPeer(p, rw, spec),
 			BzzAddr:    handshake.peerAddr,
 			lastActive: time.Now(),
-			LightNode:  handshake.LightNode,
 		}
 
 		log.Debug("peer created", "addr", handshake.peerAddr.String())
@@ -218,9 +220,11 @@ func (b *Bzz) performHandshake(p *protocols.Peer, handshake *HandshakeMsg) error
 		return err
 	}
 	handshake.peerAddr = rsh.(*HandshakeMsg).Addr
-	handshake.LightNode = rsh.(*HandshakeMsg).LightNode
+	handshake.NodeType = rsh.(*HandshakeMsg).NodeType
 	handshake.Account = rsh.(*HandshakeMsg).Account
 	p.SetAccount(handshake.Account)
+	p.Node().SetNodeType(enr.NodeType(handshake.NodeType))
+	fmt.Println("peer type:",p.Node().NodeType())
 	return nil
 }
 
@@ -233,6 +237,7 @@ func (b *Bzz) runBzz(p *p2p.Peer, rw p2p.MsgReadWriter) error {
 	}
 	close(handshake.init)
 	defer b.removeHandshake(p.ID())
+
 	peer := protocols.NewPeer(p, rw, BzzSpec)
 	err := b.performHandshake(peer, handshake)
 	if err != nil {
@@ -245,6 +250,8 @@ func (b *Bzz) runBzz(p *p2p.Peer, rw p2p.MsgReadWriter) error {
 	if err != nil {
 		return err
 	}
+
+
 	msg.Discard()
 	return errors.New("received multiple handshakes")
 }
@@ -255,7 +262,6 @@ type BzzPeer struct {
 	*protocols.Peer           // represents the connection for online peers
 	*BzzAddr                  // remote address -> implements Addr interface = protocols.Peer
 	lastActive      time.Time // time is updated whenever mutexes are releasing
-	LightNode       bool
 }
 
 func NewBzzPeer(p *protocols.Peer) *BzzPeer {
@@ -281,9 +287,8 @@ type HandshakeMsg struct {
 	Version   uint64
 	NetworkID uint64
 	Addr      *BzzAddr
-	LightNode bool
 	Account   [20]byte
-
+	NodeType  uint8
 	// peerAddr is the address received in the peer handshake
 	peerAddr *BzzAddr
 
@@ -294,7 +299,7 @@ type HandshakeMsg struct {
 
 // String pretty prints the handshake
 func (bh *HandshakeMsg) String() string {
-	return fmt.Sprintf("Handshake: Version: %v, NetworkID: %v, Addr: %v, LightNode: %v, peerAddr: %v", bh.Version, bh.NetworkID, bh.Addr, bh.LightNode, bh.peerAddr)
+	return fmt.Sprintf("Handshake: Version: %v, NetworkID: %v, Addr: %v, nodeType: %v, peerAddr: %v", bh.Version, bh.NetworkID, bh.Addr,bh.NodeType, bh.peerAddr)
 }
 
 // Perform initiates the handshake and validates the remote handshake message
@@ -306,9 +311,7 @@ func (b *Bzz) checkHandshake(hs interface{}) error {
 	if rhs.Version != uint64(BzzSpec.Version) {
 		return fmt.Errorf("version mismatch %d (!= %d)", rhs.Version, BzzSpec.Version)
 	}
-	if rhs.LightNode == true && b.LightNode == true{
-		return fmt.Errorf("light node reject connecting from light node", rhs.Account,b.bzzAccount)
-	}
+
 	return nil
 }
 
@@ -330,7 +333,7 @@ func (b *Bzz) GetOrCreateHandshake(peerID enode.ID) (*HandshakeMsg, bool) {
 			Version:   uint64(BzzSpec.Version),
 			NetworkID: b.NetworkID,
 			Addr:      b.localAddr,
-			LightNode: b.LightNode,
+			NodeType : b.NodeType,
 			init:      make(chan bool, 1),
 			done:      make(chan struct{}),
 			Account:   b.bzzAccount,
@@ -390,7 +393,7 @@ func RandomAddr() *BzzAddr {
 	if err != nil {
 		panic("unable to generate key")
 	}
-	node := enode.NewV4(&key.PublicKey, net.IP{127, 0, 0, 1}, 30303, 30303)
+	node := enode.NewV4(&key.PublicKey, net.IP{127, 0, 0, 1}, 30303, 30303,0)
 	return NewAddr(node)
 }
 

@@ -65,8 +65,7 @@ type Config struct {
 	SyncingSkipCheck     bool
 	DeliverySkipCheck    bool
 	MaxStreamPeerServers int
-	LightNodeEnabled     bool
-	BootnodeMode         bool
+	//LightNodeEnabled     boolBootnodeMode         bool
 	SyncUpdateDelay      time.Duration
 	SwapAPI              string
 	Cors                 string
@@ -76,6 +75,8 @@ type Config struct {
 	privateKey           *ecdsa.PrivateKey
 	ServerAddr           string
 	CentralAddr          []string
+	BootnodeRetriveAddr  string   //获取bootnode的地址
+	NodeType             uint
 }
 
 //create a default config with all parameters to set to defaults

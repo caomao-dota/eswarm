@@ -47,7 +47,9 @@ func NewPeer(p *BzzPeer, kad *Kademlia) *Peer {
 	d.seen(p.BzzAddr)
 	return d
 }
-
+func (d *Peer) NodeType() uint8 {
+	return uint8(d.Peer.Node().NodeType())
+}
 // HandleMsg is the message handler that delegates incoming messages
 func (d *Peer) HandleMsg(ctx context.Context, msg interface{}) error {
 	switch msg := msg.(type) {

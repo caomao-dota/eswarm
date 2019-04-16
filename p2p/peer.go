@@ -62,7 +62,7 @@ type protoHandshake struct {
 	Caps       []Cap
 	ListenPort uint64
 	ID         []byte // secp256k1 public key
-
+	NodeType   uint8
 	// Ignore additional fields (for forward compatibility).
 	Rest []rlp.RawValue `rlp:"tail"`
 }

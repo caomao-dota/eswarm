@@ -47,30 +47,6 @@ const (
 	HashSize         = 32
 )
 
-// Enumerate options for syncing and retrieval
-type SyncingOption int
-type RetrievalOption int
-
-// Syncing options
-const (
-	// Syncing disabled
-	SyncingDisabled SyncingOption = iota
-	// Register the client and the server but not subscribe
-	SyncingRegisterOnly
-	// Both client and server funcs are registered, subscribe sent automatically
-	SyncingAutoSubscribe
-)
-
-const (
-	// Retrieval disabled. Used mostly for tests to isolate syncing features (i.e. syncing only)
-	RetrievalDisabled RetrievalOption = iota
-	// Only the client side of the retrieve request is registered.
-	// (light nodes do not serve retrieve requests)
-	// once the client is registered, subscription to retrieve request stream is always sent
-	RetrievalClientOnly
-	// Both client and server funcs are registered, subscribe sent automatically
-	RetrievalEnabled
-)
 
 // subscriptionFunc is used to determine what to do in order to perform subscriptions
 // usually we would start to really subscribe to nodes, but for tests other functionality may be needed
@@ -90,7 +66,8 @@ type Registry struct {
 	peers          map[enode.ID]*Peer
 	delivery       *Delivery
 	intervalsStore state.Store
-	autoRetrieval  bool // automatically subscribe to retrieve request stream
+	NodeType       uint8
+	//autoRetrieval  bool // automatically subscribe to retrieve request stream
 	maxPeerServers int
 	spec           *protocols.Spec   //this protocol's spec
 	balance        protocols.Balance //implements protocols.Balance, for accounting
@@ -101,8 +78,7 @@ type Registry struct {
 // RegistryOptions holds optional values for NewRegistry constructor.
 type RegistryOptions struct {
 	SkipCheck       bool
-	Syncing         SyncingOption   // Defines syncing behavior
-	Retrieval       RetrievalOption // Defines retrieval behavior
+	NodeType        uint8
 	SyncUpdateDelay time.Duration
 	MaxPeerServers  int // The limit of servers for each peer in registry
 }
@@ -115,8 +91,7 @@ func NewRegistry(localID enode.ID, delivery *Delivery, syncChunkStore storage.Sy
 	if options.SyncUpdateDelay <= 0 {
 		options.SyncUpdateDelay = 15 * time.Second
 	}
-	// check if retrieval has been disabled
-	retrieval := options.Retrieval != RetrievalDisabled
+
 
 	quit := make(chan struct{})
 
@@ -128,7 +103,7 @@ func NewRegistry(localID enode.ID, delivery *Delivery, syncChunkStore storage.Sy
 		peers:          make(map[enode.ID]*Peer),
 		delivery:       delivery,
 		intervalsStore: intervalsStore,
-		autoRetrieval:  retrieval,
+		NodeType: 		options.NodeType,
 		maxPeerServers: options.MaxPeerServers,
 		balance:        balance,
 		quit:           quit,
@@ -139,8 +114,9 @@ func NewRegistry(localID enode.ID, delivery *Delivery, syncChunkStore storage.Sy
 	streamer.api = NewAPI(streamer)
 	delivery.getPeer = streamer.getPeer
 
+	retrivalState := enode.GetRetrievalOptions(enode.NodeTypeOption( options.NodeType ) )
 	// if retrieval is enabled, register the server func, so that retrieve requests will be served (non-light nodes only)
-	if options.Retrieval == RetrievalEnabled {
+	if retrivalState == uint8(enode.RetrievalEnabled) {
 		streamer.RegisterServerFunc(swarmChunkServerStreamName, func(_ *Peer, _ string, live bool) (Server, error) {
 			if !live {
 				return nil, errors.New("only live retrieval requests supported")
@@ -150,21 +126,21 @@ func NewRegistry(localID enode.ID, delivery *Delivery, syncChunkStore storage.Sy
 	}
 
 	// if retrieval is not disabled, register the client func (both light nodes and normal nodes can issue retrieve requests)
-	if options.Retrieval != RetrievalDisabled {
+	if retrivalState != uint8( enode.RetrievalDisabled ){
 		streamer.RegisterClientFunc(swarmChunkServerStreamName, func(p *Peer, t string, live bool) (Client, error) {
 			return NewSwarmSyncerClient(p, syncChunkStore, NewStream(swarmChunkServerStreamName, t, live))
 		})
 	}
-
+	syncing := enode.GetSyncingOptions(enode.NodeTypeOption( options.NodeType ))
 	//同步是stream上的一个服务，这里注册了一个客户端和一个服务端
 	// If syncing is not disabled, the syncing functions are registered (both client and server)
-	if options.Syncing != SyncingDisabled {
+	if syncing != uint8 (enode.SyncingDisabled ) {
 		RegisterSwarmSyncerServer(streamer, syncChunkStore)
 		RegisterSwarmSyncerClient(streamer, syncChunkStore)
 	}
 
 	// if syncing is set to automatically subscribe to the syncing stream, start the subscription process
-	if options.Syncing == SyncingAutoSubscribe {
+	if syncing == uint8(enode.SyncingAutoSubscribe) {
 		// latestIntC function ensures that
 		//   - receiving from the in chan is not blocked by processing inside the for loop
 		// 	 - the latest int value is delivered to the loop after the processing is done
@@ -334,7 +310,7 @@ func (r *Registry) RequestSubscription(peerId enode.ID, s Stream, h *Range, prio
 	if _, err := peer.getServer(s); err != nil {
 		if e, ok := err.(*notFoundError); ok && e.t == "server" {
 			// request subscription only if the server for this stream is not created
-			log.Debug("RequestSubscription ", "peer", peerId, "stream", s, "history", h)
+			log.Info("RequestSubscription ", "peer", peerId, "stream", s, "history", h)
 			return peer.Send(context.TODO(), &RequestSubscriptionMsg{
 				Stream:   s,
 				History:  h,
@@ -481,15 +457,21 @@ func (r *Registry) Run(p *network.BzzPeer) error {
 	defer close(sp.quit)
 	defer sp.close()
 
-	if r.autoRetrieval && !p.LightNode {
+	//是否需要注册Request_Retrieval
+	if  enode.GetRetrievalOptions(enode.NodeTypeOption(p.Node().NodeType())) == uint8(enode.RetrievalEnabled) {
 		err := r.Subscribe(p.ID(), NewStream(swarmChunkServerStreamName, "", true), nil, Top)
 		if err != nil {
 			return err
 		}
-		//Aegon 注册同步流
+
+
+
+	}
+
+	//Aegon 注册同步流
+	if enode.GetSyncingOptions(enode.NodeTypeOption(p.Node().NodeType())) == uint8(enode.SyncingAutoSubscribe) {
 		peers := make(map[enode.ID]*Peer)
 		peers[sp.ID()]=sp
-
 		r.updateSyncing(peers)
 	}
 
@@ -508,7 +490,7 @@ func (r *Registry) updateSyncing(peers map[enode.ID]*Peer) {
 	// that are not needed anymore
 	subs := make(map[enode.ID]map[Stream]struct{})
 	r.peersMu.RLock()
-	if( peers == nil ) {
+	if peers == nil  {
 		peers = r.peers
 	}
 	for id, peer := range r.peers {
@@ -577,8 +559,17 @@ func (r *Registry) requestPeerSubscriptions(kad *network.Kademlia, subs map[enod
 		if !p.HasCap("stream") {
 			return true
 		}
-		//如果bucket中有轻节点，就跳过，这个是保护措施，其实bucket中不应该有轻节
+	/*	//如果bucket中有轻节点，就跳过，这个是保护措施，其实bucket中不应该有轻节
 		if p.LightNode {
+			return true
+		}
+
+		//只会和全节点发出同步请求
+		if p.Node().NodeType() != enode.NodeTypeFull {
+			return true
+		}
+	*/
+		if( enode.GetRetrievalOptions(enode.NodeTypeOption(p.NodeType())) != uint8(enode.RetrievalEnabled) || enode.GetSyncingOptions(enode.NodeTypeOption(p.NodeType())) == uint8(enode.SyncingDisabled)){
 			return true
 		}
 		//if the peer's bin is shallower than the kademlia depth,

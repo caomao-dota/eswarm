@@ -76,6 +76,7 @@ type (
 
 		Version    uint
 		From, To   rpcEndpoint
+		NodeType  uint8
 		Expiration uint64
 		// Ignore additional fields (for forward compatibility).
 		Rest []rlp.RawValue `rlp:"tail"`
@@ -87,7 +88,7 @@ type (
 		// of the ping packet, which provides a way to discover the
 		// the external address (after NAT).
 		To rpcEndpoint
-
+		NodeType  uint8
 		ReplyTok   []byte // This contains the hash of the ping packet.
 		Expiration uint64 // Absolute timestamp at which the packet becomes invalid.
 		// Ignore additional fields (for forward compatibility).
@@ -115,6 +116,7 @@ type (
 		UDP uint16 // for discovery protocol
 		TCP uint16 // for RLPx protocol
 		ID  encPubkey
+		LN  uint8
 	}
 
 	rpcEndpoint struct {
@@ -148,7 +150,7 @@ func (t *udp) nodeFromRPC(sender *net.UDPAddr, rn rpcNode) (*node, error) {
 	if err != nil {
 		return nil, err
 	}
-	n := wrapNode(enode.NewV4(key, rn.IP, int(rn.TCP), int(rn.UDP)))
+	n := wrapNode(enode.NewV4(key, rn.IP, int(rn.TCP), int(rn.UDP), rn.LN))
 	err = n.ValidateComplete()
 	return n, err
 }
@@ -159,7 +161,7 @@ func nodeToRPC(n *node) rpcNode {
 	if err := n.Load((*enode.Secp256k1)(&key)); err == nil {
 		ekey = encodePubkey(&key)
 	}
-	return rpcNode{ID: ekey, IP: n.IP(), UDP: uint16(n.UDP()), TCP: uint16(n.TCP())}
+	return rpcNode{ID: ekey, IP: n.IP(), UDP: uint16(n.UDP()), TCP: uint16(n.TCP()),LN: uint8(n.NodeType()) }
 }
 
 // packet is implemented by all protocol messages.
@@ -313,6 +315,7 @@ func (t *udp) sendPing(toid enode.ID, toaddr *net.UDPAddr, callback func()) <-ch
 		Version:    4,
 		From:       t.ourEndpoint(),
 		To:         makeEndpoint(toaddr, 0), // TODO: maybe use known TCP port from DB
+		NodeType:   t.localNode.NodeType(),
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
 	}
 	packet, hash, err := encodePacket(t.priv, pingPacket, req)
@@ -652,26 +655,32 @@ func (req *ping) preverify(t *udp, from *net.UDPAddr, fromID enode.ID, fromKey e
 }
 
 func (req *ping) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) {
-	// Reply.
-	t.send(from, fromID, pongPacket, &pong{
-		To:         makeEndpoint(from, req.From.TCP),
-		ReplyTok:   mac,
-		Expiration: uint64(time.Now().Add(expiration).Unix()),
-	})
 
-	// Ping back if our last pong on file is too far in the past.
-	n := wrapNode(enode.NewV4(req.senderKey, from.IP, int(req.From.TCP), from.Port))
-	if time.Since(t.db.LastPongReceived(n.ID(), from.IP)) > bondExpiration {
-		t.sendPing(fromID, from, func() {
-			t.tab.addVerifiedNode(n)
+	// only full node will  Reply ping message
+
+//	if t.localNode.NodeType() == enode.NodeTypeFull {
+		t.send(from, fromID, pongPacket, &pong{
+			To:         makeEndpoint(from, req.From.TCP),
+			NodeType: t.localNode.NodeType(),
+			ReplyTok:   mac,
+			Expiration: uint64(time.Now().Add(expiration).Unix()),
 		})
-	} else {
-		t.tab.addVerifiedNode(n)
-	}
 
-	// Update node database and endpoint predictor.
-	t.db.UpdateLastPingReceived(n.ID(), from.IP, time.Now())
-	t.localNode.UDPEndpointStatement(from, &net.UDPAddr{IP: req.To.IP, Port: int(req.To.UDP)})
+		// Ping back if our last pong on file is too far in the past.
+		n := wrapNode(enode.NewV4(req.senderKey, from.IP, int(req.From.TCP), from.Port,req.NodeType))
+		if time.Since(t.db.LastPongReceived(n.ID(), from.IP)) > bondExpiration {
+			t.sendPing(fromID, from, func() {
+				t.tab.addVerifiedNode(n)
+			})
+		} else {
+			t.tab.addVerifiedNode(n)
+		}
+
+		// Update node database and endpoint predictor.
+		t.db.UpdateLastPingReceived(n.ID(), from.IP, time.Now())
+		t.localNode.UDPEndpointStatement(from, &net.UDPAddr{IP: req.To.IP, Port: int(req.To.UDP)})
+//	}
+
 }
 
 func (req *ping) name() string { return "PING/v4" }

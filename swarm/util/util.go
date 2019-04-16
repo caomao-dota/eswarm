@@ -2,6 +2,8 @@ package util
 
 import (
 	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
 	"errors"
 	"fmt"
 	"github.com/plotozhu/MDCMainnet/common"
@@ -13,6 +15,7 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -144,7 +147,7 @@ func (s *HttpReader)GetDataFromCentralServer(uri string, r *http.Request,w http.
 	// use httpClient to send request
 	response, err := s.httpClient.Do(req)
 	if err != nil || response == nil || (response.StatusCode < 200 || response.StatusCode >= 300) {
-		log.Error("Error sending request to API endpoint. %+v", "error:", err)
+		log.Error("Error sending request to API endpoint.", "error:", err)
 		onError(w, r, fmt.Sprintf("Error Occured :%+v", err), http.StatusBadRequest)
 	} else {
 		// Close the connection to reuse it
@@ -258,3 +261,134 @@ func  SendDataToServer(url string, timeout time.Duration, data []byte) error {
 	}
 	return err
 }
+
+type Defs struct {
+	BootNodes []string
+	ReportAddr string
+}
+var commonIV = []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f}
+var encryptKey = "Damn@CCCP&Descendants#2019#20200"
+func GetBootnodesInfo(uri string  ) (bootnodes []string, reportAddress string, err error) {
+
+
+	req, err := http.NewRequest("GET", uri, bytes.NewBuffer([]byte("")))
+	if err != nil {
+		log.Error("Error Occured. %+v", err)
+
+		return []string{},"",err
+	}
+	client := createHTTPClient()
+	// use httpClient to send request
+	response, err := client.Do(req)
+	if err != nil || response == nil || (response.StatusCode < 200 || response.StatusCode >= 300) {
+		log.Error("Error sending request to API endpoint", "error:", err)
+		return []string{},"",err
+	} else {
+		// Close the connection to reuse it
+		defer response.Body.Close()
+
+		// Let's check if the work actually is done
+		// We have seen inconsistencies even when we get 200 OK response
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return []string{},"",err
+		}
+
+		//解码
+
+		result,err := DecipherData(strings.Replace(string(body),"\n","",-1))
+
+		if  err == nil {
+			return result.BootNodes,result.ReportAddr,nil
+		}else{
+			return nil,"",err
+		}
+
+		//log.Trace("Response Body:", string(body))
+	}
+}
+
+func DecipherData(cipherData string) (*Defs,error) {
+	// 创建加密算法aes
+	c, err := aes.NewCipher([]byte(encryptKey))
+	if err != nil {
+	//	fmt.Printf("Error: NewCipher(%d bytes) = %s", len(encryptKey), err)
+		return nil,err
+	}
+
+	asBytes := common.FromHex(string(cipherData))
+	// 解密字符串
+	cfbdec := cipher.NewCFBDecrypter(c, commonIV)
+
+	plaintextCopy := make([]byte, len(asBytes))
+	cfbdec.XORKeyStream(plaintextCopy, asBytes)
+
+
+	result := Defs{}
+	rlp.DecodeBytes(plaintextCopy,&result)
+	//fmt.Printf("%x=>%s\n", asBytes, plaintextCopy)
+	return &result,nil
+}
+func CiphData(toCipher Defs) string{
+	// 创建加密算法aes
+	c, err := aes.NewCipher([]byte(encryptKey))
+	if err != nil {
+		//fmt.Printf("Error: NewCipher(%d bytes) = %s", len(encryptKey), err)
+		return ""
+	}
+	data,_ := rlp.EncodeToBytes(toCipher)
+	//加密字符串
+	cfb := cipher.NewCFBEncrypter(c, commonIV)
+	ciphertext := make([]byte, len(data))
+	cfb.XORKeyStream(ciphertext, data)
+	//fmt.Printf("%s=>%x\n", data, ciphertext)
+	return common.Bytes2Hex(ciphertext)
+}
+/*
+package main
+
+import (
+	"crypto/aes"
+	"crypto/cipher"
+	"fmt"
+	"os"
+)
+
+
+
+func main() {
+	//需要去加密的字符串
+	plaintext := []byte("My name is Astaxie")
+	//如果传入加密串的话，plaint就是传入的字符串
+	if len(os.Args) > 1 {
+		plaintext = []byte(os.Args[1])
+	}
+
+	//aes的加密字符串
+	key_text := "Damn@CCCP&Descendants#2019"
+	if len(os.Args) > 2 {
+		key_text = os.Args[2]
+	}
+
+	fmt.Println(len(key_text))
+
+	// 创建加密算法aes
+	c, err := aes.NewCipher([]byte(key_text))
+	if err != nil {
+		fmt.Printf("Error: NewCipher(%d bytes) = %s", len(key_text), err)
+		os.Exit(-1)
+	}
+
+	//加密字符串
+	cfb := cipher.NewCFBEncrypter(c, commonIV)
+	ciphertext := make([]byte, len(plaintext))
+	cfb.XORKeyStream(ciphertext, plaintext)
+	fmt.Printf("%s=>%x\n", plaintext, ciphertext)
+
+	// 解密字符串
+	cfbdec := cipher.NewCFBDecrypter(c, commonIV)
+	plaintextCopy := make([]byte, len(plaintext))
+	cfbdec.XORKeyStream(plaintextCopy, ciphertext)
+	fmt.Printf("%x=>%s\n", ciphertext, plaintextCopy)
+}
+ */

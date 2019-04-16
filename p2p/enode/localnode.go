@@ -36,6 +36,8 @@ const (
 	iptrackMinStatements = 10
 	iptrackWindow        = 5 * time.Minute
 	iptrackContactWindow = 10 * time.Minute
+
+
 )
 
 // LocalNode produces the signed node record of a local node, i.e. a node run in the
@@ -50,6 +52,7 @@ type LocalNode struct {
 	// everything below is protected by a lock
 	mu          sync.Mutex
 	seq         uint64
+	nodetype    uint8
 	entries     map[string]enr.Entry
 	udpTrack    *netutil.IPTracker // predicts external UDP endpoint
 	staticIP    net.IP
@@ -58,11 +61,12 @@ type LocalNode struct {
 }
 
 // NewLocalNode creates a local node.
-func NewLocalNode(db *DB, key *ecdsa.PrivateKey) *LocalNode {
+func NewLocalNode(db *DB, key *ecdsa.PrivateKey, nodeType uint8) *LocalNode {
 	ln := &LocalNode{
 		id:       PubkeyToIDV4(&key.PublicKey),
 		db:       db,
 		key:      key,
+		nodetype: nodeType,
 		udpTrack: netutil.NewIPTracker(iptrackWindow, iptrackContactWindow, iptrackMinStatements),
 		entries:  make(map[string]enr.Entry),
 	}
@@ -75,7 +79,9 @@ func NewLocalNode(db *DB, key *ecdsa.PrivateKey) *LocalNode {
 func (ln *LocalNode) Database() *DB {
 	return ln.db
 }
-
+func (ln *LocalNode) NodeType() uint8 {
+	return ln.nodetype
+}
 // Node returns the current version of the local node record.
 func (ln *LocalNode) Node() *Node {
 	n := ln.cur.Load().(*Node)

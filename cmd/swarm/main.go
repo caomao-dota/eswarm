@@ -20,6 +20,9 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
+
+	"github.com/plotozhu/MDCMainnet/swarm/util"
+
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -48,7 +51,7 @@ import (
 	"github.com/plotozhu/MDCMainnet/swarm/tracing"
 	sv "github.com/plotozhu/MDCMainnet/swarm/version"
 
-	cli "gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1"
 )
 
 const clientIdentifier = "swarm"
@@ -170,6 +173,7 @@ func init() {
 		utils.IPCDisabledFlag,
 		utils.IPCPathFlag,
 		utils.PasswordFileFlag,
+
 		// bzzd-specific flags
 		CorsStringFlag,
 		EnsAPIFlag,
@@ -179,7 +183,7 @@ func init() {
 		SwarmSyncDisabledFlag,
 		SwarmSyncUpdateDelay,
 		SwarmMaxStreamPeerServersFlag,
-		SwarmLightNodeEnabled,
+
 		SwarmDeliverySkipCheckFlag,
 		SwarmListenAddrFlag,
 		SwarmPortFlag,
@@ -194,7 +198,9 @@ func init() {
 		SwarmUpFromStdinFlag,
 		SwarmUploadMimeType,
 		// bootnode mode
-		SwarmBootnodeModeFlag,
+
+		SwarmNodeTypeFlag,
+		SwarmBootnodesAddrFlag,
 		// storage flags
 		SwarmStorePath,
 		SwarmStoreCapacity,
@@ -281,14 +287,19 @@ func bzzd(ctx *cli.Context) error {
 	if _, err := os.Stat(bzzconfig.Path); err == nil {
 		cfg.DataDir = bzzconfig.Path
 	}
-
+	cfg.NodeType = uint8(bzzconfig.NodeType)
 	//optionally set the bootnodes before configuring the node
-	setSwarmBootstrapNodes(ctx, &cfg)
+	setSwarmBootstrapNodes(ctx, bzzconfig,&cfg)
 	//setup the ethereum node
 	utils.SetNodeConfig(ctx, &cfg)
 
+
+
+
+
 	//disable dynamic dialing from p2p/discovery
 	cfg.P2P.NoDial = true
+
 
 	stack, err := node.New(&cfg)
 	if err != nil {
@@ -455,14 +466,26 @@ func addDefaultHelpSubcommands(commands []cli.Command) {
 	}
 }
 
-func setSwarmBootstrapNodes(ctx *cli.Context, cfg *node.Config) {
+func setSwarmBootstrapNodes(ctx *cli.Context, bzzCfg  *bzzapi.Config, cfg *node.Config) {
 	if ctx.GlobalIsSet(utils.BootnodesFlag.Name) || ctx.GlobalIsSet(utils.BootnodesV4Flag.Name) {
 		return
 	}
 
 	cfg.P2P.BootstrapNodes = []*enode.Node{}
+	bootnodeAddrs := ctx.GlobalString(SwarmBootnodesAddrFlag.Name)
 
-	for _, url := range SwarmBootnodes {
+
+	bootnodes := append([]string{},SwarmBootnodes...)
+	if bootnodeAddrs != "" {
+		nodes,reportUrl,err := util.GetBootnodesInfo(bootnodeAddrs)
+		if err == nil {
+			if len(nodes) != 0 {
+				bootnodes = append(bootnodes,nodes...)
+			}
+		}
+		bzzCfg.ServerAddr = reportUrl
+	}
+	for _, url := range bootnodes {
 		node, err := enode.ParseV4(url)
 		if err != nil {
 			log.Error("Bootstrap URL invalid", "enode", url, "err", err)
@@ -470,4 +493,6 @@ func setSwarmBootstrapNodes(ctx *cli.Context, cfg *node.Config) {
 		cfg.P2P.BootstrapNodes = append(cfg.P2P.BootstrapNodes, node)
 	}
 
+
 }
+

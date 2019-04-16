@@ -24,11 +24,51 @@ import (
 	"math/bits"
 	"math/rand"
 	"net"
+
 	"strings"
 
 	"github.com/plotozhu/MDCMainnet/p2p/enr"
 )
+type NodeTypeOption uint8
+const (
+	NodeTypeFull      NodeTypeOption = 0x24
+	NodeTypeLight     = 0x11
+	NodeTypeLightServer = 0x21
+	NodeTypeStorage    = 0x22
+	NodeTypeBoot     =  0x05
+)
 
+
+func GetRetrievalOptions(nodeType NodeTypeOption) uint8 {
+	return uint8( (nodeType >> 3)&0x07 )
+}
+
+func GetSyncingOptions(nodeType NodeTypeOption) uint8 {
+	return uint8 ((nodeType )&0x07)
+}
+// Enumerate options for syncing and retrieval
+type SyncingOption uint8
+type RetrievalOption uint8
+// Syncing options
+const (
+	// Syncing disabled
+	SyncingDisabled SyncingOption = 1
+	// Register the client and the server but not subscribe
+	SyncingRegisterOnly = 2
+	// Both client and server funcs are registered, subscribe sent automatically
+	SyncingAutoSubscribe =  4
+)
+
+const (
+	// Retrieval disabled. Used mostly for tests to isolate syncing features (i.e. syncing only)
+	RetrievalDisabled RetrievalOption = 1
+	// Only the client side of the retrieve request is registered.
+	// (light nodes do not serve retrieve requests)
+	// once the client is registered, subscription to retrieve request stream is always sent
+	RetrievalClientOnly = 2
+	// Both client and server funcs are registered, subscribe sent automatically
+	RetrievalEnabled = 4
+)
 // Node represents a host on the network.
 type Node struct {
 	r  enr.Record
@@ -74,7 +114,21 @@ func (n *Node) IP() net.IP {
 	n.Load((*enr.IP)(&ip))
 	return ip
 }
+// IP returns the IP address of the node.
+func (n *Node) NodeType() enr.NodeType {
+	ln := uint8(0)
+	n.Load((*enr.NodeType)(&ln))
 
+	return enr.NodeType(ln)
+}
+
+// IP returns the IP address of the node.
+func (n *Node) SetNodeType(nodeType enr.NodeType)  {
+
+	 n.r.Set((enr.NodeType)(nodeType))
+
+
+}
 // UDP returns the UDP port of the node.
 func (n *Node) UDP() int {
 	var port enr.UDP

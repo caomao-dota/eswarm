@@ -69,6 +69,7 @@ type Config struct {
 	// connected. It must be greater than zero.
 	MaxPeers int
 
+	NodeType uint8
 	// MaxPendingPeers is the maximum number of peers that can be pending in the
 	// handshake phase, counted separately for inbound and outbound connections.
 	// Zero defaults to preset values.
@@ -356,7 +357,7 @@ func (srv *Server) Self() *enode.Node {
 	srv.lock.Unlock()
 
 	if ln == nil {
-		return enode.NewV4(&srv.PrivateKey.PublicKey, net.ParseIP("0.0.0.0"), 0, 0)
+		return enode.NewV4(&srv.PrivateKey.PublicKey, net.ParseIP("0.0.0.0"), 0, 0, 0)
 	}
 	return ln.Node()
 }
@@ -465,7 +466,7 @@ func (srv *Server) Start() (err error) {
 func (srv *Server) setupLocalNode() error {
 	// Create the devp2p handshake.
 	pubkey := crypto.FromECDSAPub(&srv.PrivateKey.PublicKey)
-	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name, ID: pubkey[1:]}
+	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name, ID: pubkey[1:],NodeType:srv.NodeType}
 	for _, p := range srv.Protocols {
 		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
 	}
@@ -477,7 +478,7 @@ func (srv *Server) setupLocalNode() error {
 		return err
 	}
 	srv.nodedb = db
-	srv.localnode = enode.NewLocalNode(db, srv.PrivateKey)
+	srv.localnode = enode.NewLocalNode(db, srv.PrivateKey,srv.Config.NodeType)
 	srv.localnode.SetFallbackIP(net.IP{127, 0, 0, 1})
 	srv.localnode.Set(capsByNameAndVersion(srv.ourHandshake.Caps))
 	// TODO: check conflicts
@@ -485,6 +486,7 @@ func (srv *Server) setupLocalNode() error {
 		for _, e := range p.Attributes {
 			srv.localnode.Set(e)
 		}
+		srv.localnode.Set(enr.NodeType(srv.localnode.NodeType()))
 	}
 	switch srv.NAT.(type) {
 	case nil:
@@ -663,7 +665,10 @@ running:
 			// ephemeral static peer list. Add it to the dialer,
 			// it will keep the node connected.
 			srv.log.Trace("Adding static node", "node", n)
-			dialstate.addStatic(n)
+			if(n.ID() != srv.localnode.ID()){
+				dialstate.addStatic(n)
+			}
+
 		case n := <-srv.removestatic:
 			// This channel is used by RemovePeer to send a
 			// disconnect request to a peer and begin the
@@ -958,7 +963,7 @@ func nodeFromConn(pubkey *ecdsa.PublicKey, conn net.Conn) *enode.Node {
 		ip = tcp.IP
 		port = tcp.Port
 	}
-	return enode.NewV4(pubkey, ip, port, port)
+	return enode.NewV4(pubkey, ip, port, port,0)
 }
 
 func truncateName(s string) string {

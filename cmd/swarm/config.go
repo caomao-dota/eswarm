@@ -69,7 +69,7 @@ const (
 	SwarmEnvSyncDisable          = "SWARM_SYNC_DISABLE"
 	SwarmEnvSyncUpdateDelay      = "SWARM_ENV_SYNC_UPDATE_DELAY"
 	SwarmEnvMaxStreamPeerServers = "SWARM_ENV_MAX_STREAM_PEER_SERVERS"
-	SwarmEnvLightNodeEnable      = "SWARM_LIGHT_NODE_ENABLE"
+	SwarmEnvNodeType		     = "SWARM_NODE_TYPE"
 	SwarmEnvDeliverySkipCheck    = "SWARM_DELIVERY_SKIP_CHECK"
 	SwarmEnvENSAPI               = "SWARM_ENS_API"
 	SwarmEnvENSAddr              = "SWARM_ENS_ADDR"
@@ -79,7 +79,7 @@ const (
 	SwarmEnvStorePath            = "SWARM_STORE_PATH"
 	SwarmEnvStoreCapacity        = "SWARM_STORE_CAPACITY"
 	SwarmEnvStoreCacheCapacity   = "SWARM_STORE_CACHE_CAPACITY"
-	SwarmEnvBootnodeMode         = "SWARM_BOOTNODE_MODE"
+	//SwarmEnvBootnodeMode         = "SWARM_BOOTNODE_MODE"
 	SwarmAccessPassword          = "SWARM_ACCESS_PASSWORD"
 	SwarmAutoDefaultPath         = "SWARM_AUTO_DEFAULTPATH"
 	SwarmGlobalstoreAPI          = "SWARM_GLOBALSTORE_API"
@@ -136,6 +136,8 @@ func initSwarmNode(config *bzzapi.Config, stack *node.Node, ctx *cli.Context) {
 	log.Debug("Starting Swarm with the following parameters:")
 	//after having created the config, print it to screen
 	log.Debug(printConfig(config))
+
+
 }
 
 //configFileOverride overrides the current config with the config file, if a config file has been provided
@@ -218,9 +220,6 @@ func cmdLineOverride(currentConfig *bzzapi.Config, ctx *cli.Context) *bzzapi.Con
 	// any value including 0 is acceptable
 	currentConfig.MaxStreamPeerServers = ctx.GlobalInt(SwarmMaxStreamPeerServersFlag.Name)
 
-	if ctx.GlobalIsSet(SwarmLightNodeEnabled.Name) {
-		currentConfig.LightNodeEnabled = true
-	}
 
 	if ctx.GlobalIsSet(SwarmDeliverySkipCheckFlag.Name) {
 		currentConfig.DeliverySkipCheck = true
@@ -260,14 +259,19 @@ func cmdLineOverride(currentConfig *bzzapi.Config, ctx *cli.Context) *bzzapi.Con
 		currentConfig.LocalStoreParams.CacheCapacity = storeCacheCapacity
 	}
 
-	if ctx.GlobalIsSet(SwarmBootnodeModeFlag.Name) {
-		currentConfig.BootnodeMode = ctx.GlobalBool(SwarmBootnodeModeFlag.Name)
+	if ctx.GlobalIsSet(SwarmNodeTypeFlag.Name) {
+		currentConfig.NodeType = ctx.GlobalUint(SwarmNodeTypeFlag.Name)
 	}
 
 	if ctx.GlobalIsSet(SwarmGlobalStoreAPIFlag.Name) {
 		currentConfig.GlobalStoreAPI = ctx.GlobalString(SwarmGlobalStoreAPIFlag.Name)
 	}
-
+	if ctx.GlobalIsSet(SwarmBootnodesAddrFlag.Name) {
+		currentConfig.BootnodeRetriveAddr = ctx.GlobalString(SwarmBootnodesAddrFlag.Name)
+	}
+	if ctx.GlobalIsSet(SwarmBootnodesAddrFlag.Name) {
+		currentConfig.BootnodeRetriveAddr = ctx.GlobalString(SwarmBootnodesAddrFlag.Name)
+	}
 	return currentConfig
 
 }
@@ -345,12 +349,12 @@ func envVarsOverride(currentConfig *bzzapi.Config) (config *bzzapi.Config) {
 		currentConfig.MaxStreamPeerServers = m
 	}
 
-	if lne := os.Getenv(SwarmEnvLightNodeEnable); lne != "" {
-		lightnode, err := strconv.ParseBool(lne)
+	if lne := os.Getenv(SwarmEnvNodeType); lne != "" {
+		nodetype, err := strconv.ParseUint(lne,10,16)
 		if err != nil {
-			utils.Fatalf("invalid environment variable %s: %v", SwarmEnvLightNodeEnable, err)
+			utils.Fatalf("invalid environment variable %s: %v", SwarmEnvNodeType, err)
 		}
-		currentConfig.LightNodeEnabled = lightnode
+		currentConfig.NodeType = uint(nodetype)
 	}
 
 	if swapapi := os.Getenv(SwarmEnvSwapAPI); swapapi != "" {
@@ -373,13 +377,6 @@ func envVarsOverride(currentConfig *bzzapi.Config) (config *bzzapi.Config) {
 		currentConfig.Cors = cors
 	}
 
-	if bm := os.Getenv(SwarmEnvBootnodeMode); bm != "" {
-		bootnodeMode, err := strconv.ParseBool(bm)
-		if err != nil {
-			utils.Fatalf("invalid environment variable %s: %v", SwarmEnvBootnodeMode, err)
-		}
-		currentConfig.BootnodeMode = bootnodeMode
-	}
 
 	if api := os.Getenv(SwarmGlobalstoreAPI); api != "" {
 		currentConfig.GlobalStoreAPI = api

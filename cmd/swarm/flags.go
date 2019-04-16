@@ -71,11 +71,11 @@ var (
 		EnvVar: SwarmEnvMaxStreamPeerServers,
 		Value:  10000, // A very large default value is possible as stream servers have very small memory footprint
 	}
-	SwarmLightNodeEnabled = cli.BoolFlag{
+	/*SwarmLightNodeEnabled = cli.BoolFlag{
 		Name:   "lightnode",
 		Usage:  "Enable Swarm LightNode (default false)",
 		EnvVar: SwarmEnvLightNodeEnable,
-	}
+	}*/
 	SwarmDeliverySkipCheckFlag = cli.BoolFlag{
 		Name:   "delivery-skip-check",
 		Usage:  "Skip chunk delivery check (default false)",
@@ -156,9 +156,11 @@ var (
 		Name:  "compressed",
 		Usage: "Prints encryption keys in compressed form",
 	}
-	SwarmBootnodeModeFlag = cli.BoolFlag{
-		Name:  "bootnode-mode",
-		Usage: "Run Swarm in Bootnode mode",
+	SwarmNodeTypeFlag = cli.UintFlag{
+		Name:  "nodetype",
+		Usage: "change node type",
+		EnvVar: SwarmEnvNodeType,
+		Value: 1,
 	}
 	SwarmFeedNameFlag = cli.StringFlag{
 		Name:  "name",
@@ -181,7 +183,11 @@ var (
 		Usage:  "URL of the Global Store API provider (only for testing)",
 		EnvVar: SwarmGlobalstoreAPI,
 	}
-
+	SwarmBootnodesAddrFlag = cli.StringFlag{
+		Name:  "bootnodes.url",
+		Usage: "external bootnodes download addr",
+		Value: "https://raw.githubusercontent.com/wiki/CSDCFund/csdc/nodeslist.txt",
+	}
 	/*ChunkDbPathFlag = cli.StringFlag{
 		Name:   "chunkPath",
 		Usage:  "Path to store chunks separately",

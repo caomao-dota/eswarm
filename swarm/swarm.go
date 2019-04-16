@@ -121,12 +121,14 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 
 	config.HiveParams.Discovery = true
 
+	nodeType := config.NodeType
+
+
 	bzzconfig := &network.BzzConfig{
 		NetworkID:    config.NetworkID,
 		OverlayAddr:  common.FromHex(config.BzzKey),
 		HiveParams:   config.HiveParams,
-		LightNode:    config.LightNodeEnabled,
-		BootnodeMode: config.BootnodeMode,
+		NodeType:	  uint8(nodeType),
 		BzzAccount: common.HexToAddress(config.BzzAccount),
 	}
 
@@ -193,26 +195,14 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 		return nil, err
 	}
 
-	//流的处理
-	syncing := stream.SyncingAutoSubscribe
-	//是否同步（存储数据）
-	if !config.SyncEnabled || config.LightNodeEnabled {
-		syncing = stream.SyncingDisabled
-	}
-
-	//数据获取方式，是否只作为客户端（client only downstream)还是都有（client/server downstream and upstream)
-	retrieval := stream.RetrievalEnabled
-	if config.LightNodeEnabled {
-		retrieval = stream.RetrievalClientOnly
-	}
-
 	registryOptions := &stream.RegistryOptions{
 		SkipCheck:       config.DeliverySkipCheck,
-		Syncing:         syncing,
-		Retrieval:       retrieval,
+		NodeType:        bzzconfig.NodeType,
 		SyncUpdateDelay: config.SyncUpdateDelay,
 		MaxPeerServers:  config.MaxStreamPeerServers,
 	}
+
+
 	//正式创建一个流服务（流化器）
 	//nodeId 节点地址 Deliver 管理hash的对象  netStore网络存储系统
 	//stateStore 存储状态的系统
@@ -506,7 +496,7 @@ func (s *Swarm) Stop() error {
 
 // Protocols implements the node.Service interface
 func (s *Swarm) Protocols() (protos []p2p.Protocol) {
-	if s.config.BootnodeMode {
+	if enode.GetRetrievalOptions(enode.NodeTypeOption(s.config.NodeType)) != uint8(enode.RetrievalEnabled) {
 		protos = append(protos, s.bzz.Protocols()...)
 	} else {
 		protos = append(protos, s.bzz.Protocols()...)

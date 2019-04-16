@@ -19,6 +19,7 @@ package network
 import (
 	"bytes"
 	"fmt"
+	"github.com/plotozhu/MDCMainnet/p2p/enode"
 	"math/rand"
 	"strings"
 	"sync"
@@ -301,7 +302,7 @@ func (k *Kademlia) On(p *Peer) (uint8, bool) {
 	defer k.lock.Unlock()
 	var ins bool
 	 changed  := false
-	if !p.BzzPeer.LightNode {
+	if p.NodeType() != enode.NodeTypeLight {
 		k.conns, _, _, _ = pot.Swap(k.conns, p, Pof, func(v pot.Val) pot.Val {
 			// if not found live
 			if v == nil {
@@ -313,7 +314,7 @@ func (k *Kademlia) On(p *Peer) (uint8, bool) {
 			return v
 		})
 
-		if ins && !p.BzzPeer.LightNode {
+		if ins && p.NodeType() != enode.NodeTypeLight {
 			a := newEntry(p.BzzAddr)
 			a.conn = p
 			// insert new online peer into addrs
@@ -424,7 +425,7 @@ func (k *Kademlia) Off(p *Peer) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	var del bool
-	if !p.BzzPeer.LightNode {
+	if p.NodeType() != enode.NodeTypeLight {
 		k.addrs, _, _, _ = pot.Swap(k.addrs, p, Pof, func(v pot.Val) pot.Val {
 			// v cannot be nil, must check otherwise we overwrite entry
 			if v == nil {

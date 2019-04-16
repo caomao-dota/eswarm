@@ -286,7 +286,6 @@ func TestRequestFromPeers(t *testing.T) {
 	protocolsPeer := protocols.NewPeer(p2p.NewPeer(dummyPeerID, "dummy", nil), nil, nil)
 	peer := network.NewPeer(&network.BzzPeer{
 		BzzAddr:   network.RandomAddr(),
-		LightNode: false,
 		Peer:      protocolsPeer,
 	}, to)
 	to.On(peer)
@@ -327,7 +326,6 @@ func TestRequestFromPeersWithLightNode(t *testing.T) {
 	// setting up a lightnode
 	peer := network.NewPeer(&network.BzzPeer{
 		BzzAddr:   network.RandomAddr(),
-		LightNode: true,
 		Peer:      protocolsPeer,
 	}, to)
 	to.On(peer)
