@@ -328,6 +328,12 @@ func (srv *Server) RemovePeer(node *enode.Node) {
 	}
 }
 
+func (srv *Server) GetKnownNodesSorted() []*enode.Node {
+	return srv.ntab.GetKnownNodesSorted()
+}
+func (srv *Server) SetNotificationChan(channel chan struct {}){
+	srv.ntab.OnNodeChanged(channel)
+}
 // AddTrustedPeer adds the given node to a reserved whitelist which allows the
 // node to always connect, even if the slot are full.
 func (srv *Server) AddTrustedPeer(node *enode.Node) {
@@ -665,7 +671,7 @@ running:
 			// ephemeral static peer list. Add it to the dialer,
 			// it will keep the node connected.
 			srv.log.Trace("Adding static node", "node", n)
-			if(n.ID() != srv.localnode.ID()){
+			if n.ID() != srv.localnode.ID(){
 				dialstate.addStatic(n)
 			}
 
@@ -723,6 +729,7 @@ running:
 				break running
 			}
 		case c := <-srv.addpeer:
+			srv.ntab.AddNewNode(c.node)
 			// At this point the connection is past the protocol handshake.
 			// Its capabilities are known and the remote identity is verified.
 			err := srv.protoHandshakeChecks(peers, inboundCount, c)
@@ -795,10 +802,20 @@ func (srv *Server) protoHandshakeChecks(peers map[enode.ID]*Peer, inboundCount i
 }
 
 func (srv *Server) encHandshakeChecks(peers map[enode.ID]*Peer, inboundCount int, c *conn) error {
+	lightPeerCnt := 0;
+	fullPeerCnt := 0
+	for _,peer := range peers {
+		if enode.IsLightNode(enode.NodeTypeOption(peer.Node().NodeType())) {
+			lightPeerCnt++
+		}else {
+				fullPeerCnt++
+		}
+	}
+	isLightNode := enode.IsLightNode(enode.NodeTypeOption(c.node.NodeType()))
 	switch {
-	case !c.is(trustedConn|staticDialedConn) && len(peers) >= srv.MaxPeers :
+	case !c.is(trustedConn|staticDialedConn) && (fullPeerCnt >= srv.MaxPeers && !isLightNode) || (lightPeerCnt >= srv.MaxPeers && isLightNode):
 		return DiscTooManyPeers
-	case !c.is(trustedConn) && c.is(inboundConn) && inboundCount >= srv.maxInboundConns():
+	case !c.is(trustedConn) && c.is(inboundConn) && (!isLightNode && inboundCount >= srv.maxInboundConns()):
 		return DiscTooManyPeers
 	case peers[c.node.ID()] != nil:
 		return DiscAlreadyConnected

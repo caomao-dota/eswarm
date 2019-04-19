@@ -34,6 +34,7 @@ import (
 type node struct {
 	enode.Node
 	addedAt        time.Time // time when the node was added to the table
+	latency         int64		 //ping/pong delay ,by the unit of millium-second
 	livenessChecks uint      // how often liveness was checked
 }
 
@@ -99,7 +100,9 @@ func unwrapNodes(ns []*node) []*enode.Node {
 func (n *node) addr() *net.UDPAddr {
 	return &net.UDPAddr{IP: n.IP(), Port: n.UDP()}
 }
-
+func (n *node) Latency() int64 {
+	return n.latency
+}
 func (n *node) String() string {
 	return n.Node.String()
 }

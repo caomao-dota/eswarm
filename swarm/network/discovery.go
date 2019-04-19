@@ -75,6 +75,7 @@ func NotifyDepth(depth uint8, kad *Kademlia) {
 }
 
 // NotifyPeer informs all peers about a newly added node
+//将新连接的Peer,通知到目前KAD桶中的所有Peer
 func NotifyPeer(p *BzzAddr, k *Kademlia) {
 	f := func(val *Peer, po int) bool {
 		val.NotifyPeer(p, uint8(po))
@@ -87,9 +88,10 @@ func NotifyPeer(p *BzzAddr, k *Kademlia) {
 // the peer's PO is within the recipients advertised depth
 // OR the peer is closer to the recipient than self
 // unless already notified during the connection session
+// 新节点地址A报告给连接点B
 func (d *Peer) NotifyPeer(a *BzzAddr, po uint8) {
 	// immediately return
-	if (po < d.getDepth() && pot.ProxCmp(d.kad.BaseAddr(), d, a) != 1) || d.seen(a) {
+	if (po < d.getDepth() && pot.ProxCmp(d.kad.BaseAddr(), d, a) != 1) || d.seen(a)  {
 		return
 	}
 	resp := &peersMsg{

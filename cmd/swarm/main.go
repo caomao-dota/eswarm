@@ -325,13 +325,14 @@ func bzzd(ctx *cli.Context) error {
 	}()
 
 	// add swarm bootnodes, because swarm doesn't use p2p package's discovery discv5
-	go func() {
+	// By Aegon, discovery will use bootnode to find neighborhood
+	/*go func() {
 		s := stack.Server()
 
 		for _, n := range cfg.P2P.BootstrapNodes {
-			s.AddPeer(n)
+			s.AddBootnode(n)
 		}
-	}()
+	}()*/
 
 	stack.Wait()
 	return nil

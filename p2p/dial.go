@@ -89,6 +89,11 @@ type discoverTable interface {
 	Resolve(*enode.Node) *enode.Node
 	LookupRandom() []*enode.Node
 	ReadRandomNodes([]*enode.Node) int
+	//by Aegon, interpret with Hive
+	GetKnownNodesSorted()[]*enode.Node
+	AddNewNode(node *enode.Node)
+	AddBootnode(node *enode.Node)
+	OnNodeChanged(chan struct{})
 }
 
 // the dial history remembers recent dials.

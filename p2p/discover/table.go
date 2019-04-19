@@ -56,7 +56,7 @@ const (
 	tableIPLimit, tableSubnet   = 10, 24
 
 	maxFindnodeFailures = 5 // Nodes exceeding this limit are dropped
-	refreshInterval     = 30 * time.Minute
+	refreshInterval     = 30 * time.Second //* time.Minute
 	revalidateInterval  = 10 * time.Second
 	copyNodesInterval   = 30 * time.Second
 	seedMinTableTime    = 5 * time.Minute
@@ -79,7 +79,7 @@ type Table struct {
 	closeOnce sync.Once
 	closeReq  chan struct{}
 	closed    chan struct{}
-
+	notifyChannel    chan struct{}
 	nodeAddedHook func(*node) // for testing
 }
 
@@ -215,6 +215,51 @@ func (tab *Table) isInitDone() bool {
 	}
 }
 
+
+type SortableNode []*node
+
+func (c SortableNode) Len() int {
+	return len(c)
+}
+func (c SortableNode) Swap(i, j int) {
+	c[i], c[j] = c[j], c[i]
+}
+func (c SortableNode) Less(i, j int) bool {
+	return c[i].latency < c[j].latency
+}
+func (tab *Table)AddNewNode(node *enode.Node){
+	tab.addVerifiedNode(wrapNode(node))
+}
+//按延时从小到大的顺序排好
+func (tab *Table) GetKnownNodesSorted() []*enode.Node{
+	tab.mutex.Lock()
+	defer tab.mutex.Unlock()
+	ret := make(SortableNode,0)
+	for _,bucket := range tab.buckets {
+		bucketRet := make(SortableNode,0)
+		for _,node := range bucket.entries {
+			if !enode.IsLightNode(enode.NodeTypeOption(node.NodeType())) && !enode.IsBootNode(enode.NodeTypeOption(node.NodeType()) ) {
+				bucketRet = append(bucketRet,node)
+			}
+
+		}
+		sort.Sort(bucketRet)
+		for i,sortedNode := range bucketRet {
+			if i <= 5 || sortedNode.latency < int64(100*time.Millisecond) {
+				ret = append(ret,sortedNode)
+			}
+		}
+	}
+	result := make([]*enode.Node,len(ret))
+	for i,node := range ret {
+		result[i] = unwrapNode(node)
+	}
+	return result
+}
+func (tab *Table) OnNodeChanged(nodeChanged chan struct{}){
+	//tab.nodeCnhanged
+	tab.notifyChannel = nodeChanged
+}
 // Resolve searches for a specific node with the given ID.
 // It returns nil if the node could not be found.
 func (tab *Table) Resolve(n *enode.Node) *enode.Node {
@@ -280,7 +325,8 @@ func (tab *Table) lookup(targetKey encPubkey, refreshIfEmpty bool) []*node {
 		// ask the alpha closest nodes that we haven't asked yet
 		for i := 0; i < len(result.entries) && pendingQueries < alpha; i++ {
 			n := result.entries[i]
-			if !asked[n.ID()] {
+
+			if !asked[n.ID()] && !enode.IsLightNode(enode.NodeTypeOption(n.NodeType()) ) {
 				asked[n.ID()] = true
 				pendingQueries++
 				go tab.findnode(n, targetKey, reply)
@@ -331,6 +377,9 @@ func (tab *Table) findnode(n *node, targetKey encPubkey, reply chan<- []*node) {
 		tab.addSeenNode(n)
 	}
 	reply <- r
+	if(tab.notifyChannel != nil) {
+		tab.notifyChannel <- struct{}{}
+	}
 }
 
 func (tab *Table) refresh() <-chan struct{} {
@@ -438,9 +487,11 @@ func (tab *Table) doRefresh(done chan struct{}) {
 
 func (tab *Table) loadSeedNodes() {
 	seeds := wrapNodes(tab.db.QuerySeeds(seedCount, seedMaxAge))
+
 	seeds = append(seeds, tab.nursery...)
 	for i := range seeds {
 		seed := seeds[i]
+		seed.latency =tab.db.GetNodeLatency(seed.ID(),seed.IP())
 		age := log.Lazy{Fn: func() interface{} { return time.Since(tab.db.LastPongReceived(seed.ID(), seed.IP())) }}
 		log.Trace("Found seed node in database", "id", seed.ID(), "addr", seed.addr(), "age", age)
 		tab.addSeenNode(seed)
@@ -550,7 +601,9 @@ func (tab *Table) bucket(id enode.ID) *bucket {
 	}
 	return tab.buckets[d-bucketMinDistance-1]
 }
-
+func (tab *Table) AddBootnode(n *enode.Node) {
+	tab.setFallbackNodes([]*enode.Node{n})
+}
 // addSeenNode adds a node which may or may not be live to the end of a bucket. If the
 // bucket has space available, adding the node succeeds immediately. Otherwise, the node is
 // added to the replacements list.

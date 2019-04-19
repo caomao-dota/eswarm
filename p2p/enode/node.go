@@ -39,12 +39,24 @@ const (
 )
 
 
-func GetRetrievalOptions(nodeType NodeTypeOption) uint8 {
-	return uint8( (nodeType >> 3)&0x07 )
+func GetRetrievalOptions(nodeType NodeTypeOption) RetrievalOption {
+	return RetrievalOption( (nodeType >> 3)&0x07 )
 }
 
-func GetSyncingOptions(nodeType NodeTypeOption) uint8 {
-	return uint8 ((nodeType )&0x07)
+func GetSyncingOptions(nodeType NodeTypeOption) SyncingOption {
+	return SyncingOption ((nodeType )&0x07)
+}
+
+func IsLightNode(nodeType NodeTypeOption) bool {
+	return GetRetrievalOptions(nodeType) == RetrievalClientOnly  && GetSyncingOptions(nodeType) == SyncingDisabled
+}
+
+func IsBootNode(nodeType NodeTypeOption) bool {
+	return GetRetrievalOptions(nodeType) == RetrievalDisabled  && GetSyncingOptions(nodeType) == SyncingDisabled
+}
+
+func IsFullNode(nodeType NodeTypeOption) bool {
+	return GetRetrievalOptions(nodeType) == RetrievalEnabled  && GetSyncingOptions(nodeType) == SyncingAutoSubscribe
 }
 // Enumerate options for syncing and retrieval
 type SyncingOption uint8
@@ -54,9 +66,9 @@ const (
 	// Syncing disabled
 	SyncingDisabled SyncingOption = 1
 	// Register the client and the server but not subscribe
-	SyncingRegisterOnly = 2
+	SyncingRegisterOnly SyncingOption= 2
 	// Both client and server funcs are registered, subscribe sent automatically
-	SyncingAutoSubscribe =  4
+	SyncingAutoSubscribe SyncingOption=  4
 )
 
 const (
@@ -65,9 +77,9 @@ const (
 	// Only the client side of the retrieve request is registered.
 	// (light nodes do not serve retrieve requests)
 	// once the client is registered, subscription to retrieve request stream is always sent
-	RetrievalClientOnly = 2
+	RetrievalClientOnly RetrievalOption= 2
 	// Both client and server funcs are registered, subscribe sent automatically
-	RetrievalEnabled = 4
+	RetrievalEnabled RetrievalOption= 4
 )
 // Node represents a host on the network.
 type Node struct {

@@ -22,6 +22,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/golang-lru"
 	"net"
 	"sync"
 	"time"
@@ -47,7 +48,7 @@ var (
 
 // Timeouts
 const (
-	respTimeout    = 500 * time.Millisecond
+	respTimeout    = 1000 * time.Millisecond
 	expiration     = 20 * time.Second
 	bondExpiration = 24 * time.Hour
 
@@ -59,6 +60,8 @@ const (
 	// Packets larger than this size will be cut at the end and treated
 	// as invalid because their hash won't match.
 	maxPacketSize = 1280
+
+	LatencyCacheSize = 128
 )
 
 // RPC packet types
@@ -194,6 +197,7 @@ type udp struct {
 	addReplyMatcher chan *replyMatcher
 	gotreply        chan reply
 	closing         chan struct{}
+	latencyCache    *lru.Cache
 }
 
 // pending represents a pending reply.
@@ -214,6 +218,7 @@ type replyMatcher struct {
 	// time when the request must complete
 	deadline time.Time
 
+	sentTime time.Time
 	// callback is called when a matching reply arrives. If it returns matched == true, the
 	// reply was acceptable. The second return value indicates whether the callback should
 	// be removed from the pending reply queue. If it returns false, the reply is considered
@@ -275,6 +280,7 @@ func newUDP(c conn, ln *enode.LocalNode, cfg Config) (*Table, *udp, error) {
 		gotreply:        make(chan reply),
 		addReplyMatcher: make(chan *replyMatcher),
 	}
+	udp.latencyCache,_ = lru.New(LatencyCacheSize)
 	tab, err := newTable(udp, ln.Database(), cfg.Bootnodes)
 	if err != nil {
 		return nil, nil, err
@@ -305,12 +311,16 @@ func (t *udp) ourEndpoint() rpcEndpoint {
 
 // ping sends a ping message to the given node and waits for a reply.
 func (t *udp) ping(toid enode.ID, toaddr *net.UDPAddr) error {
-	return <-t.sendPing(toid, toaddr, nil)
+	return <-t.sendPing(toid, toaddr, func(latency int64){
+		t.latencyCache.Add(toid,latency)
+		t.db.UpdateNodeLatency(toid,toaddr.IP,latency)
+	})
 }
 
 // sendPing sends a ping message to the given node and invokes the callback
 // when the reply arrives.
-func (t *udp) sendPing(toid enode.ID, toaddr *net.UDPAddr, callback func()) <-chan error {
+func (t *udp) sendPing(toid enode.ID, toaddr *net.UDPAddr, callback func(int64)) <-chan error {
+	fmt.Println("Send ping:1")
 	req := &ping{
 		Version:    4,
 		From:       t.ourEndpoint(),
@@ -326,10 +336,12 @@ func (t *udp) sendPing(toid enode.ID, toaddr *net.UDPAddr, callback func()) <-ch
 	}
 	// Add a matcher for the reply to the pending reply queue. Pongs are matched if they
 	// reference the ping we're about to send.
+	sendTime := time.Now()
 	errc := t.pending(toid, toaddr.IP, pongPacket, func(p interface{}) (matched bool, requestDone bool) {
 		matched = bytes.Equal(p.(*pong).ReplyTok, hash)
 		if matched && callback != nil {
-			callback()
+			latency := time.Since(sendTime)
+			callback(int64(latency))
 		}
 		return matched, matched
 	})
@@ -450,6 +462,7 @@ func (t *udp) loop() {
 
 		case p := <-t.addReplyMatcher:
 			p.deadline = time.Now().Add(respTimeout)
+			p.sentTime = time.Now()
 			plist.PushBack(p)
 
 		case r := <-t.gotreply:
@@ -536,7 +549,7 @@ func (t *udp) send(toaddr *net.UDPAddr, toid enode.ID, ptype byte, req packet) (
 
 func (t *udp) write(toaddr *net.UDPAddr, toid enode.ID, what string, packet []byte) error {
 	_, err := t.conn.WriteToUDP(packet, toaddr)
-	log.Trace(">> "+what, "id", toid, "addr", toaddr, "err", err)
+	log.Info(">> "+what, "id", toid, "addr", toaddr, "err", err)
 	return err
 }
 
@@ -601,7 +614,7 @@ func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 	if err == nil {
 		err = packet.preverify(t, from, fromID, fromKey)
 	}
-	log.Trace("<< "+packet.name(), "id", fromID, "addr", from, "err", err)
+	log.Info("<< "+packet.name(), "id", fromID, "addr", from, "err", err)
 	if err == nil {
 		packet.handle(t, from, fromID, hash)
 	}
@@ -669,10 +682,16 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) 
 		// Ping back if our last pong on file is too far in the past.
 		n := wrapNode(enode.NewV4(req.senderKey, from.IP, int(req.From.TCP), from.Port,req.NodeType))
 		if time.Since(t.db.LastPongReceived(n.ID(), from.IP)) > bondExpiration {
-			t.sendPing(fromID, from, func() {
+			t.sendPing(fromID, from, func(latency int64) {
+				n.latency = latency
 				t.tab.addVerifiedNode(n)
 			})
 		} else {
+			latency,ok := t.latencyCache.Get(n.ID())
+			if(ok){
+				n.latency = latency.(int64)
+			}
+
 			t.tab.addVerifiedNode(n)
 		}
 

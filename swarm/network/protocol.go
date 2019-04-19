@@ -91,6 +91,7 @@ type Bzz struct {
 // * peer store
 func NewBzz(config *BzzConfig, kad *Kademlia, store state.Store, streamerSpec *protocols.Spec, streamerRun func(*BzzPeer) error) *Bzz {
 
+
 	bzz := &Bzz{
 		Hive:         NewHive(config.HiveParams, kad, store),
 		NetworkID:    config.NetworkID,
@@ -102,7 +103,7 @@ func NewBzz(config *BzzConfig, kad *Kademlia, store state.Store, streamerSpec *p
 		bzzAccount:   config.BzzAccount,
 	}
 
-	if enode.GetSyncingOptions(enode.NodeTypeOption(config.NodeType)) == uint8(enode.SyncingDisabled) && enode.GetRetrievalOptions(enode.NodeTypeOption(config.NodeType)) == uint8(enode.RetrievalDisabled) {
+	if enode.GetSyncingOptions(enode.NodeTypeOption(config.NodeType)) == (enode.SyncingDisabled) && enode.GetRetrievalOptions(enode.NodeTypeOption(config.NodeType)) == (enode.RetrievalDisabled) {
 		bzz.streamerRun = nil
 		bzz.streamerSpec = nil
 	}
@@ -130,6 +131,9 @@ func (b *Bzz) NodeInfo() interface{} {
 // * discovery
 func (b *Bzz) Protocols() []p2p.Protocol {
 
+	if enode.GetSyncingOptions(enode.NodeTypeOption(b.NodeType)) == (enode.SyncingDisabled) && enode.GetRetrievalOptions(enode.NodeTypeOption(b.NodeType)) == (enode.RetrievalDisabled) {
+		return []p2p.Protocol{}
+	}
 	protocol := []p2p.Protocol{
 		{
 			Name:     BzzSpec.Name,

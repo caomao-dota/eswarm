@@ -48,6 +48,7 @@ const (
 	dbNodePing      = "lastping"
 	dbNodePong      = "lastpong"
 	dbNodeSeq       = "seq"
+	dbLatency     = "latency"
 
 	// Local information is keyed by ID only, the full key is "local:<ID>:seq".
 	// Use localItemKey to create those keys.
@@ -127,6 +128,7 @@ func newPersistentDB(path string) (*DB, error) {
 }
 
 // nodeKey returns the database key for a node record.
+//key-->n:{id}:v4
 func nodeKey(id ID) []byte {
 	key := append([]byte(dbNodePrefix), id[:]...)
 	key = append(key, ':')
@@ -348,11 +350,13 @@ func (db *DB) expireNodes() {
 // LastPingReceived retrieves the time of the last ping packet received from
 // a remote node.
 func (db *DB) LastPingReceived(id ID, ip net.IP) time.Time {
+	fmt.Println("8")
 	return time.Unix(db.fetchInt64(nodeItemKey(id, ip, dbNodePing)), 0)
 }
 
 // UpdateLastPingReceived updates the last time we tried contacting a remote node.
 func (db *DB) UpdateLastPingReceived(id ID, ip net.IP, instance time.Time) error {
+	fmt.Println("7")
 	return db.storeInt64(nodeItemKey(id, ip, dbNodePing), instance.Unix())
 }
 
@@ -360,31 +364,44 @@ func (db *DB) UpdateLastPingReceived(id ID, ip net.IP, instance time.Time) error
 func (db *DB) LastPongReceived(id ID, ip net.IP) time.Time {
 	// Launch expirer
 	db.ensureExpirer()
+	//fmt.Println("6")
 	return time.Unix(db.fetchInt64(nodeItemKey(id, ip, dbNodePong)), 0)
 }
 
 // UpdateLastPongReceived updates the last pong time of a node.
 func (db *DB) UpdateLastPongReceived(id ID, ip net.IP, instance time.Time) error {
+	fmt.Println("5")
 	return db.storeInt64(nodeItemKey(id, ip, dbNodePong), instance.Unix())
 }
-
+// UpdateLastPongReceived updates the last pong time of a node.
+func (db *DB) UpdateNodeLatency(id ID, ip net.IP, instance int64) error {
+	return db.storeInt64(nodeItemKey(id, ip, dbLatency), int64(instance))
+}
+// UpdateLastPongReceived updates the last pong time of a node.
+func (db *DB) GetNodeLatency(id ID, ip net.IP) int64 {
+	return db.fetchInt64(nodeItemKey(id, ip, dbLatency))
+}
 // FindFails retrieves the number of findnode failures since bonding.
 func (db *DB) FindFails(id ID, ip net.IP) int {
+	fmt.Println("4")
 	return int(db.fetchInt64(nodeItemKey(id, ip, dbNodeFindFails)))
 }
 
 // UpdateFindFails updates the number of findnode failures since bonding.
 func (db *DB) UpdateFindFails(id ID, ip net.IP, fails int) error {
+	fmt.Println("3")
 	return db.storeInt64(nodeItemKey(id, ip, dbNodeFindFails), int64(fails))
 }
 
 // LocalSeq retrieves the local record sequence counter.
 func (db *DB) localSeq(id ID) uint64 {
+	fmt.Println("2")
 	return db.fetchUint64(localItemKey(id, dbLocalSeq))
 }
 
 // storeLocalSeq stores the local record sequence counter.
 func (db *DB) storeLocalSeq(id ID, n uint64) {
+	fmt.Println("1")
 	db.storeUint64(localItemKey(id, dbLocalSeq), n)
 }
 

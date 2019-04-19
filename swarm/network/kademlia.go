@@ -106,7 +106,7 @@ func NewKademlia(addr []byte, params *KadParams) *Kademlia {
 		KadParams: params,
 		addrs:     pot.NewPot(nil, 0),
 		conns:     pot.NewPot(nil, 0),
-		lconns:     pot.NewPot(nil, 0),
+		lconns:    pot.NewPot(nil, 0),
 	}
 }
 

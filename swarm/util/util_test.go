@@ -7,7 +7,7 @@ import (
 
 func TestCipher(t *testing.T) {
 
-	rawData := Defs{ []string{"enode://db0aa64d8bac5d95a112f344a9092d60e6fb8a6e5165af1a0752db27ed5465d3b459896ac92bc15ab981fc96b19f6103f906199858990afa4ced7ab9dc7829fe@127.0.0.1:30342?nt=5"},"http://172.16.1.10:4000/apis/v2"}
+	rawData := Defs{ []string{"enode://4e0d8885182bc9a2f23b3525ae0e0daa86068057b4ff7e51dbb4a18696512219c6a62717af7e2d905bd3553662ee1f93caff1942eacc3ebaddfb0e7b5ca475bd@127.0.0.1:30342?nt=9"},"http://172.16.1.10:4000/apis/v2"}
 
 	result := CiphData(rawData)
 
