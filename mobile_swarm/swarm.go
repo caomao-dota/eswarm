@@ -193,16 +193,16 @@ func PathExists(path string) (bool, error) {
 	return false, err
 }
 
-func Activate(path string, appId string, credential string, addr string, newAccount bool, password string) (int64, error) {
+func Activate(path string, appId string, credential string, addr string, newAccount bool, password string, arg int) (int64, error) {
 
 	if path == "" {
 		return 0, errors.New("Must input path ...")
 	}
 
-	//清除bzz缓存
-	err := Clean(path, 1)
+	//清除缓存
+	err := Clean(path, arg)
 	if err != nil {
-		return 0, errors.New("Clean bzz cache fail ...")
+		return 0, errors.New("Clean cache fail ...")
 	}
 
 	if addr == "" {
@@ -350,15 +350,10 @@ func NewSwarmNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 	if config.MaxPeers == 0 {
 		config.MaxPeers = defaultNodeConfig.MaxPeers
 	}
-	/*
-		if config.BootstrapNodes == nil || config.BootstrapNodes.Size() == 0 {
-			config.BootstrapNodes = defaultNodeConfig.BootstrapNodes
-		}
-	*/
 
 	// Create the empty networking stack
 	nodeConf := &node.Config{
-		Name: "SwarmMobile",
+		Name: clientIdentifier,
 		//Version:     params.VersionWithMeta,
 		DataDir: datadir,
 		//IPCPath:     "bzzd.ipc",
@@ -380,8 +375,8 @@ func NewSwarmNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 	bzzconfig := bzzapi.NewConfig()
 	bzzconfig.Path = datadir
 	bzzconfig.LightNodeEnabled = true
-	bzzconfig.LocalStoreParams.DbCapacity = 500000  //2G
-	bzzconfig.LocalStoreParams.CacheCapacity = 5000 //20M
+	bzzconfig.LocalStoreParams.DbCapacity = 20000  //5G
+	bzzconfig.LocalStoreParams.CacheCapacity = 100 //25M
 	key, err := getSwarmKey(rawStack, config.SwarmAccount, config.SwarmAccountPassword)
 	if err != nil {
 		return nil, fmt.Errorf("no key")
@@ -414,12 +409,6 @@ func (n *Node) Stop() error {
 	return n.node.Stop()
 }
 
-/*
-func (n *Node) Wait() {
-	n.node.Wait()
-}
-*/
-
 func (n *Node) AddPeer(peer *Enodev4) {
 	n.node.Server().AddPeer(peer.node)
 }
@@ -438,20 +427,6 @@ func (n *Node) AddBootnode(enodeStr string) error {
 	return nil
 }
 
-/*
-func (n *Node) GetBootnodes(bootnodes *Bootnodes) *Enodesv4 {
-	enodes := NewEnodesEmptyv4()
-	for _, url := range bootnodes.Enodes {
-		node, err := NewEnodev4(url)
-		if err != nil {
-			fmt.Println("Bootstrap URL invalid", "enode", url, "err", err)
-		} else {
-			enodes.Append(node)
-		}
-	}
-	return enodes
-}
-*/
 // GetNodeInfo gathers and returns a collection of metadata known about the host.
 func (n *Node) GetNodeInfo() *NodeInfo {
 	return &NodeInfo{n.node.Server().NodeInfo()}

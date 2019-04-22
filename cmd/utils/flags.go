@@ -1025,6 +1025,7 @@ func MakePasswordList(ctx *cli.Context) []string {
 	}
 	text, err := ioutil.ReadFile(path)
 	if err != nil {
+		return []string{path}
 		Fatalf("Failed to read password file: %v", err)
 	}
 	lines := strings.Split(string(text), "\n")
