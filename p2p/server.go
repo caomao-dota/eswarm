@@ -729,7 +729,7 @@ running:
 				break running
 			}
 		case c := <-srv.addpeer:
-			srv.ntab.AddNewNode(c.node)
+			srv.ntab.AddConnectedNode(c.node)
 			// At this point the connection is past the protocol handshake.
 			// Its capabilities are known and the remote identity is verified.
 			err := srv.protoHandshakeChecks(peers, inboundCount, c)
@@ -758,6 +758,7 @@ running:
 				break running
 			}
 		case pd := <-srv.delpeer:
+
 			// A peer disconnected.
 			d := common.PrettyDuration(mclock.Now() - pd.created)
 			pd.log.Debug("Removing p2p peer", "duration", d, "peers", len(peers)-1, "req", pd.requested, "err", pd.err)
@@ -1029,7 +1030,7 @@ func (srv *Server) runPeer(p *Peer) {
 		Peer:  p.ID(),
 		Error: err.Error(),
 	})
-
+	srv.ntab.RemoveConnectedNode(p.Node())
 	// Note: run waits for existing peers to be sent on srv.delpeer
 	// before returning, so this send should not select on srv.quit.
 	srv.delpeer <- peerDrop{p, err, remoteRequested}

@@ -92,7 +92,9 @@ func (ln *LocalNode) Node() *Node {
 	ln.mu.Lock()
 	defer ln.mu.Unlock()
 	ln.sign()
-	return ln.cur.Load().(*Node)
+	node := ln.cur.Load().(*Node)
+	node.SetNodeType(enr.NodeType(ln.nodetype))
+	return node
 }
 
 // ID returns the local node ID.

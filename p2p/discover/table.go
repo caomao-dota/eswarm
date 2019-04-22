@@ -56,7 +56,7 @@ const (
 	tableIPLimit, tableSubnet   = 10, 24
 
 	maxFindnodeFailures = 5 // Nodes exceeding this limit are dropped
-	refreshInterval     = 30 * time.Second //* time.Minute
+	refreshInterval     = 10 * time.Second //30 * time.Minute
 	revalidateInterval  = 10 * time.Second
 	copyNodesInterval   = 30 * time.Second
 	seedMinTableTime    = 5 * time.Minute
@@ -96,6 +96,7 @@ type transport interface {
 // bucket contains nodes, ordered by their last activity. the entry
 // that was most recently active is the first element in entries.
 type bucket struct {
+	connects     []*node
 	entries      []*node // live entries, sorted by time of last contact
 	replacements []*node // recently seen nodes to be used if revalidation fails
 	ips          netutil.DistinctNetSet
@@ -122,7 +123,13 @@ func newTable(t transport, db *enode.DB, bootnodes []*enode.Node) (*Table, error
 	}
 	tab.seedRand()
 	tab.loadSeedNodes()
-
+	tab.nodeAddedHook = func(i *node) {
+		log.Debug("noded added:","id",i.ID(),"addr",i.IP(),"port",i.UDP())
+		if tab.notifyChannel != nil {
+			tab.notifyChannel <- struct{}{}
+		}
+		//log.Debug("noded OK:","id",i.ID(),"addr",i.IP(),"port",i.UDP())
+	}
 	go tab.loop()
 	return tab, nil
 }
@@ -227,14 +234,13 @@ func (c SortableNode) Swap(i, j int) {
 func (c SortableNode) Less(i, j int) bool {
 	return c[i].latency < c[j].latency
 }
-func (tab *Table)AddNewNode(node *enode.Node){
-	tab.addVerifiedNode(wrapNode(node))
-}
+
 //按延时从小到大的顺序排好
 func (tab *Table) GetKnownNodesSorted() []*enode.Node{
 	tab.mutex.Lock()
 	defer tab.mutex.Unlock()
 	ret := make(SortableNode,0)
+	//log.Debug("step 1")
 	for _,bucket := range tab.buckets {
 		bucketRet := make(SortableNode,0)
 		for _,node := range bucket.entries {
@@ -249,11 +255,14 @@ func (tab *Table) GetKnownNodesSorted() []*enode.Node{
 				ret = append(ret,sortedNode)
 			}
 		}
+
 	}
+	//log.Debug("step 2")
 	result := make([]*enode.Node,len(ret))
 	for i,node := range ret {
 		result[i] = unwrapNode(node)
 	}
+	//log.Debug("step 3")
 	return result
 }
 func (tab *Table) OnNodeChanged(nodeChanged chan struct{}){
@@ -289,6 +298,12 @@ func (tab *Table) LookupRandom() []*enode.Node {
 	return unwrapNodes(tab.lookup(target, true))
 }
 
+func (tab *Table)ProcessLive(nodeId enode.ID, isLive bool) {
+	tab.mutex.Lock()
+	defer tab.mutex.Unlock()
+	bucket :=tab.bucket(nodeId)
+	tab.execValidateNode(nodeId,bucket,isLive)
+}
 // lookup performs a network search for nodes close to the given target. It approaches the
 // target by querying nodes that are closer to it on each iteration. The given target does
 // not need to be an actual node identifier.
@@ -377,11 +392,25 @@ func (tab *Table) findnode(n *node, targetKey encPubkey, reply chan<- []*node) {
 		tab.addSeenNode(n)
 	}
 	reply <- r
-	if(tab.notifyChannel != nil) {
-		tab.notifyChannel <- struct{}{}
-	}
+
 }
 
+func (tab *Table) setupRefreshTime() time.Duration{
+	tab.mutex.Lock()
+	defer tab.mutex.Unlock()
+	knownCount := 0
+	for _,bucket := range tab.buckets {
+		knownCount += len(bucket.connects)
+		knownCount += len(bucket.entries)
+	}
+	if knownCount < 5 {
+		return 10 * time.Second
+	}else if  knownCount <= 100  {
+		return time.Duration(10 + 10*knownCount) * time.Second
+	}else {
+		return 30*time.Minute
+	}
+}
 func (tab *Table) refresh() <-chan struct{} {
 	done := make(chan struct{})
 	select {
@@ -396,16 +425,18 @@ func (tab *Table) refresh() <-chan struct{} {
 func (tab *Table) loop() {
 	var (
 		revalidate     = time.NewTimer(tab.nextRevalidateTime())
-		refresh        = time.NewTicker(refreshInterval)
+		refresh        = time.NewTimer(refreshInterval)
+		replace        = time.NewTicker(tab.nextRevalidateTime())
 		copyNodes      = time.NewTicker(copyNodesInterval)
 		refreshDone    = make(chan struct{})           // where doRefresh reports completion
 		revalidateDone chan struct{}                   // where doRevalidate reports completion
+		replaceDone    chan struct{}
 		waiting        = []chan struct{}{tab.initDone} // holds waiting callers while doRefresh runs
 	)
 	defer refresh.Stop()
 	defer revalidate.Stop()
 	defer copyNodes.Stop()
-
+	defer replace.Stop()
 	// Start initial refresh.
 	go tab.doRefresh(refreshDone)
 
@@ -429,12 +460,19 @@ loop:
 				close(ch)
 			}
 			waiting, refreshDone = nil, nil
+			refresh.Reset(tab.setupRefreshTime())
 		case <-revalidate.C:
 			revalidateDone = make(chan struct{})
 			go tab.doRevalidate(revalidateDone)
 		case <-revalidateDone:
 			revalidate.Reset(tab.nextRevalidateTime())
 			revalidateDone = nil
+		case <-replace.C:
+			replaceDone = make(chan struct{})
+			go tab.doReplacementCheck(replaceDone)
+		case <-replaceDone:
+			revalidate.Reset(tab.nextRevalidateTime())
+			replaceDone = nil
 		case <-copyNodes.C:
 			go tab.copyLiveNodes()
 		case <-tab.closeReq:
@@ -497,6 +535,96 @@ func (tab *Table) loadSeedNodes() {
 		tab.addSeenNode(seed)
 	}
 }
+func (tab *Table)execValidateNode(nodeId enode.ID,b *bucket,alive bool ){
+
+	//b := tab.buckets[bi]
+	var anode  *node
+	anode = nil
+	//state 0 not found /1 in  connects /2 in entries /3 in replacement
+	state := 0
+	for _,node := range b.connects {
+		if node.ID() == nodeId {
+			anode = node
+			state = 1
+			break;
+		}
+	}
+	if anode == nil { // 不在connected中
+		for _,node := range b.entries {
+			if node.ID() == nodeId {
+				anode = node
+				state = 2
+				break;
+			}
+		}
+		if anode == nil { //也不在enties里
+
+			for _,node := range b.replacements {
+				if node.ID() == nodeId {
+					anode = node
+					state = 3
+					break;
+				}
+			}
+
+		}
+	}
+
+	if alive {
+		if state == 2 || state == 3 {
+		 		//在entries中
+		 		if state == 2 {
+					//移动到entries的最前面
+					tab.bumpInBucket(b,anode)
+				}else {
+					b.entries = append([]*node{anode},b.entries...)
+				}
+
+				//保障，从replacements中删除
+				deleteNode(b.replacements,anode)
+
+		}	else if  state == 0 {
+				log.Error("Error node ping????","node ID",nodeId)
+
+
+		} else {
+
+		}
+	} else {
+
+		if state != 0 {
+			b.connects = deleteNode(b.connects,anode) //从connect中移除（假如有）
+			b.entries = deleteNode(b.entries,anode)//从entries中移除（假如有）
+			//保障删除
+			b.replacements = deleteNode(b.replacements,anode)//从replacement中移除（假如有）
+			//断开的连接移动到最后
+			b.replacements = append(b.replacements,anode)
+		} else {
+			log.Error("Error node ping????","node ID",nodeId)
+		}
+
+	}
+
+}
+
+// doRevalidate checks that the last node in a random bucket is still live
+// and replaces or deletes the node if it isn't.
+func (tab *Table) doReplacementCheck(done chan<- struct{}) {
+	defer func() { done <- struct{}{} }()
+
+	last, bi := tab.replaceNodeToCheck()
+	if last == nil {
+		// No non-empty bucket found.
+		return
+	}
+
+	// Ping the selected node and wait for a pong.
+	err := tab.net.ping(last.ID(), last.addr())
+
+	tab.mutex.Lock()
+	defer tab.mutex.Unlock()
+	tab.execValidateNode(last.ID(),tab.buckets[bi],err == nil )
+}
 
 // doRevalidate checks that the last node in a random bucket is still live
 // and replaces or deletes the node if it isn't.
@@ -514,21 +642,7 @@ func (tab *Table) doRevalidate(done chan<- struct{}) {
 
 	tab.mutex.Lock()
 	defer tab.mutex.Unlock()
-	b := tab.buckets[bi]
-	if err == nil {
-		// The node responded, move it to the front.
-		last.livenessChecks++
-		log.Debug("Revalidated node", "b", bi, "id", last.ID(), "checks", last.livenessChecks)
-		tab.bumpInBucket(b, last)
-		return
-	}
-	// No reply received, pick a replacement or delete the node if there aren't
-	// any replacements.
-	if r := tab.replace(b, last); r != nil {
-		log.Debug("Replaced dead node", "b", bi, "id", last.ID(), "ip", last.IP(), "checks", last.livenessChecks, "r", r.ID(), "rip", r.IP())
-	} else {
-		log.Debug("Removed dead node", "b", bi, "id", last.ID(), "ip", last.IP(), "checks", last.livenessChecks)
-	}
+	tab.execValidateNode(last.ID(),tab.buckets[bi],err == nil )
 }
 
 // nodeToRevalidate returns the last node in a random, non-empty bucket.
@@ -545,7 +659,20 @@ func (tab *Table) nodeToRevalidate() (n *node, bi int) {
 	}
 	return nil, 0
 }
+// nodeToRevalidate returns the last node in a random, non-empty bucket.
+func (tab *Table) replaceNodeToCheck() (n *node, bi int) {
+	tab.mutex.Lock()
+	defer tab.mutex.Unlock()
 
+	for _, bi = range tab.rand.Perm(len(tab.buckets)) {
+		b := tab.buckets[bi]
+		if len(b.entries) + len(b.connects) < bucketSize && len(b.replacements) > 0 {
+			last := b.replacements[0]
+			return last, bi
+		}
+	}
+	return nil, 0
+}
 func (tab *Table) nextRevalidateTime() time.Duration {
 	tab.mutex.Lock()
 	defer tab.mutex.Unlock()
@@ -562,7 +689,7 @@ func (tab *Table) copyLiveNodes() {
 	now := time.Now()
 	for _, b := range &tab.buckets {
 		for _, n := range b.entries {
-			if n.livenessChecks > 0 && now.Sub(n.addedAt) >= seedMinTableTime {
+			if n.isLiving && now.Sub(n.addedAt) >= seedMinTableTime {
 				tab.db.UpdateNode(unwrapNode(n))
 			}
 		}
@@ -578,7 +705,7 @@ func (tab *Table) closest(target enode.ID, nresults int) *nodesByDistance {
 	close := &nodesByDistance{target: target}
 	for _, b := range &tab.buckets {
 		for _, n := range b.entries {
-			if n.livenessChecks > 0 {
+			if n.isLiving  {
 				close.push(n, nresults)
 			}
 		}
@@ -621,9 +748,12 @@ func (tab *Table) addSeenNode(n *node) {
 		// Already in bucket, don't add.
 		return
 	}
-	if len(b.entries) >= bucketSize {
-		// Bucket full, maybe add as replacement.
-		tab.addReplacement(b, n)
+
+	if contains(b.connects,n.ID()) {
+		return
+	}
+
+	if contains(b.replacements,n.ID()){
 		return
 	}
 	if !tab.addIP(b, n.IP()) {
@@ -631,8 +761,8 @@ func (tab *Table) addSeenNode(n *node) {
 		return
 	}
 	// Add to end of bucket:
-	b.entries = append(b.entries, n)
-	b.replacements = deleteNode(b.replacements, n)
+	b.replacements = append(b.replacements, n)
+
 	n.addedAt = time.Now()
 	if tab.nodeAddedHook != nil {
 		tab.nodeAddedHook(n)
@@ -649,6 +779,7 @@ func (tab *Table) addSeenNode(n *node) {
 //
 // The caller must not hold tab.mutex.
 func (tab *Table) addVerifiedNode(n *node) {
+	n.isLiving = true
 	if !tab.isInitDone() {
 		return
 	}
@@ -659,6 +790,10 @@ func (tab *Table) addVerifiedNode(n *node) {
 	tab.mutex.Lock()
 	defer tab.mutex.Unlock()
 	b := tab.bucket(n.ID())
+
+	if contains(b.connects,n.ID()) {
+		return
+	}
 	if tab.bumpInBucket(b, n) {
 		// Already in bucket, moved to front.
 		return
@@ -680,7 +815,68 @@ func (tab *Table) addVerifiedNode(n *node) {
 		tab.nodeAddedHook(n)
 	}
 }
+func (tab *Table) AddConnectedNode(node *enode.Node) {
 
+	tab.mutex.Lock()
+	defer tab.mutex.Unlock()
+	if !tab.isInitDone() {
+		return
+	}
+	n := wrapNode(node)
+	if n.ID() == tab.self().ID() {
+		return
+	}
+
+
+	b := tab.bucket(n.ID())
+
+	if contains(b.connects,n.ID()) { //已经加入了，直接退出
+		return
+	}
+	if contains(b.entries,n.ID()){ //在备选队列中，从备选队列中删除
+		//remove from entries
+		b.entries = deleteNode(b.entries,n)
+	}
+
+	if contains(b.replacements,n.ID()) {  //在后备队列中，从后备队列中删除
+		b.replacements = deleteNode(b.replacements, n)
+	}
+
+	// Add to front of bucket.
+	b.connects, _ = pushNode(b.connects, n, len(b.connects)+1) //保证连接成功
+	n.addedAt = time.Now()
+	if tab.nodeAddedHook != nil {
+		tab.nodeAddedHook(n)
+	}
+}
+func (tab *Table) RemoveConnectedNode(node *enode.Node) {
+	tab.mutex.Lock()
+	defer tab.mutex.Unlock()
+	if !tab.isInitDone() {
+		return
+	}
+	n := wrapNode(node)
+	if n.ID() == tab.self().ID() {
+		return
+	}
+
+
+	b := tab.bucket(n.ID())
+
+	if contains(b.connects,n.ID()) { //已经加入了，直接退出
+		b.connects = deleteNode(b.connects,n)
+	} else if  contains(b.entries,n.ID()){ //在备选队列中，从备选队列中删除
+		//remove from entries
+		b.entries = deleteNode(b.entries,n)
+	} else if contains(b.replacements,n.ID()){
+		b.replacements = deleteNode(b.replacements,n)
+	}
+
+	//从网络中断开的，移动到最后
+	b.replacements = append(b.replacements,n)
+
+
+}
 // delete removes an entry from the node table. It is used to evacuate dead nodes.
 func (tab *Table) delete(node *node) {
 	tab.mutex.Lock()
@@ -733,20 +929,24 @@ func (tab *Table) addReplacement(b *bucket, n *node) {
 // last entry in the bucket. If 'last' isn't the last entry, it has either been replaced
 // with someone else or became active.
 func (tab *Table) replace(b *bucket, last *node) *node {
-	if len(b.entries) == 0 || b.entries[len(b.entries)-1].ID() != last.ID() {
-		// Entry has moved, don't replace it.
-		return nil
+	for index,node := range b.entries {
+		if node.ID() == last.ID(){
+			// Still the last entry.
+			if len(b.replacements) == 0 {
+				tab.deleteInBucket(b, last)
+				return nil
+			}
+			b.entries = append(b.entries[0:index],b.entries[index+1:]...)
+			r := b.replacements[tab.rand.Intn(len(b.replacements))]
+			r.isLiving = false //确保正确性，其实移动到replace的时候，已经做了
+			b.replacements = deleteNode(b.replacements, r)
+			b.entries = append(b.entries,r)
+			tab.removeIP(b, last.IP())
+			return r
+		}
 	}
-	// Still the last entry.
-	if len(b.replacements) == 0 {
-		tab.deleteInBucket(b, last)
-		return nil
-	}
-	r := b.replacements[tab.rand.Intn(len(b.replacements))]
-	b.replacements = deleteNode(b.replacements, r)
-	b.entries[len(b.entries)-1] = r
-	tab.removeIP(b, last.IP())
-	return r
+	return nil
+
 }
 
 // bumpInBucket moves the given node to the front of the bucket entry list
@@ -776,7 +976,9 @@ func (tab *Table) deleteInBucket(b *bucket, n *node) {
 	b.entries = deleteNode(b.entries, n)
 	tab.removeIP(b, n.IP())
 }
-
+/**
+	某个bucket里是否有对应的ID
+ */
 func contains(ns []*node, id enode.ID) bool {
 	for _, n := range ns {
 		if n.ID() == id {

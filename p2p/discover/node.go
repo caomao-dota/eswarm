@@ -35,7 +35,7 @@ type node struct {
 	enode.Node
 	addedAt        time.Time // time when the node was added to the table
 	latency         int64		 //ping/pong delay ,by the unit of millium-second
-	livenessChecks uint      // how often liveness was checked
+	isLiving	 bool      // how often liveness was checked
 }
 
 type encPubkey [64]byte

@@ -35,7 +35,7 @@ const (
 	NodeTypeLight     = 0x11
 	NodeTypeLightServer = 0x21
 	NodeTypeStorage    = 0x22
-	NodeTypeBoot     =  0x05
+	NodeTypeBoot     =  0x09
 )
 
 

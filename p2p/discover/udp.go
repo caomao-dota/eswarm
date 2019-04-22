@@ -198,6 +198,7 @@ type udp struct {
 	gotreply        chan reply
 	closing         chan struct{}
 	latencyCache    *lru.Cache
+	DoneFindWork      bool
 }
 
 // pending represents a pending reply.
@@ -279,6 +280,7 @@ func newUDP(c conn, ln *enode.LocalNode, cfg Config) (*Table, *udp, error) {
 		closing:         make(chan struct{}),
 		gotreply:        make(chan reply),
 		addReplyMatcher: make(chan *replyMatcher),
+		DoneFindWork:    false,
 	}
 	udp.latencyCache,_ = lru.New(LatencyCacheSize)
 	tab, err := newTable(udp, ln.Database(), cfg.Bootnodes)
@@ -311,16 +313,25 @@ func (t *udp) ourEndpoint() rpcEndpoint {
 
 // ping sends a ping message to the given node and waits for a reply.
 func (t *udp) ping(toid enode.ID, toaddr *net.UDPAddr) error {
-	return <-t.sendPing(toid, toaddr, func(latency int64){
-		t.latencyCache.Add(toid,latency)
-		t.db.UpdateNodeLatency(toid,toaddr.IP,latency)
-	})
+	sentTime := time.Now()
+	errc := <- t.sendPing(toid, toaddr,nil)
+	if(errc == nil){
+		go func(){
+			latency := time.Since(sentTime)
+		//	t.latencyCache.Add(toid,latency)
+			t.tab.ProcessLive(toid,true)
+			t.db.UpdateNodeLatency(toid,toaddr.IP,int64(latency))
+		}()
+	}else {
+		t.tab.ProcessLive(toid,false)
+	}
+	return errc
 }
 
 // sendPing sends a ping message to the given node and invokes the callback
 // when the reply arrives.
 func (t *udp) sendPing(toid enode.ID, toaddr *net.UDPAddr, callback func(int64)) <-chan error {
-	fmt.Println("Send ping:1")
+
 	req := &ping{
 		Version:    4,
 		From:       t.ourEndpoint(),
@@ -341,7 +352,7 @@ func (t *udp) sendPing(toid enode.ID, toaddr *net.UDPAddr, callback func(int64))
 		matched = bytes.Equal(p.(*pong).ReplyTok, hash)
 		if matched && callback != nil {
 			latency := time.Since(sendTime)
-			callback(int64(latency))
+			go callback(int64(latency))
 		}
 		return matched, matched
 	})
@@ -549,7 +560,7 @@ func (t *udp) send(toaddr *net.UDPAddr, toid enode.ID, ptype byte, req packet) (
 
 func (t *udp) write(toaddr *net.UDPAddr, toid enode.ID, what string, packet []byte) error {
 	_, err := t.conn.WriteToUDP(packet, toaddr)
-	log.Info(">> "+what, "id", toid, "addr", toaddr, "err", err)
+	log.Debug(">> "+what, "id", toid, "addr", toaddr, "err", err)
 	return err
 }
 
@@ -614,7 +625,7 @@ func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 	if err == nil {
 		err = packet.preverify(t, from, fromID, fromKey)
 	}
-	log.Info("<< "+packet.name(), "id", fromID, "addr", from, "err", err)
+	log.Debug("<< "+packet.name(), "id", fromID, "addr", from, "err", err)
 	if err == nil {
 		packet.handle(t, from, fromID, hash)
 	}
@@ -681,16 +692,16 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) 
 
 		// Ping back if our last pong on file is too far in the past.
 		n := wrapNode(enode.NewV4(req.senderKey, from.IP, int(req.From.TCP), from.Port,req.NodeType))
+		n.addedAt = time.Now()
 		if time.Since(t.db.LastPongReceived(n.ID(), from.IP)) > bondExpiration {
+
 			t.sendPing(fromID, from, func(latency int64) {
 				n.latency = latency
 				t.tab.addVerifiedNode(n)
 			})
 		} else {
-			latency,ok := t.latencyCache.Get(n.ID())
-			if(ok){
-				n.latency = latency.(int64)
-			}
+			//收到了ping,上一次的pong的时间没有超过bondExpiration（24小时），认为是有效的
+			n.latency = t.db.GetNodeLatency(n.ID(),from.IP)
 
 			t.tab.addVerifiedNode(n)
 		}
@@ -699,6 +710,11 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) 
 		t.db.UpdateLastPingReceived(n.ID(), from.IP, time.Now())
 		t.localNode.UDPEndpointStatement(from, &net.UDPAddr{IP: req.To.IP, Port: int(req.To.UDP)})
 //	}
+
+		if !t.DoneFindWork {
+			t.DoneFindWork = true
+			t.tab.LookupRandom()
+		}
 
 }
 

@@ -69,6 +69,7 @@ type Hive struct {
 	addNode      func(node *enode.Node)
 	// bookkeeping
 	lock   sync.Mutex
+	refreshLock sync.Mutex
 	peers  map[enode.ID]*BzzPeer
 
 	ticker *time.Ticker
@@ -99,13 +100,13 @@ func NewHive(params *HiveParams, kad *Kademlia, store state.Store) *Hive {
 func (h *Hive) Start(server *p2p.Server) error {
 	log.Info("Starting hive", "baseaddr", fmt.Sprintf("%x", h.BaseAddr()[:4]))
 	// if state store is specified, load peers to prepopulate the overlay address book
-	if h.Store != nil {
+	/*if h.Store != nil {
 		log.Info("Detected an existing store. trying to load peers")
 		if err := h.loadPeers(); err != nil {
 			log.Error(fmt.Sprintf("%08x hive encoutered an error trying to load peers", h.BaseAddr()[:4]))
 			return err
 		}
-	}
+	}*/
 	// assigns the p2p.Server#AddPeer function to connect to peers
 	h.addPeer = server.AddPeer
 	h.getKnowNodes = server.GetKnownNodesSorted
@@ -124,9 +125,12 @@ func (h *Hive)refresh(){
 	for  {
 		select {
 		case <-  h.refreshTicker.C:
-			h.doRefresh()
+			//log.Debug(" Refresh ticker ")
+				go h.doRefresh()
 			case <- h.newNodeDiscov:
-				h.doRefresh()
+				//log.Debug(" New Node notified")
+				go h.doRefresh()
+				//log.Debug(" New Node processed")
 			case <- h.quitC:
 			return
 
@@ -136,8 +140,12 @@ func (h *Hive)refresh(){
 }
 //refresh load peers and register to kad network
 func (h *Hive)doRefresh(){
+	//log.Debug("do Refresh")
+	h.refreshLock.Lock()
+	defer h.refreshLock.Unlock()
 	nodes := make([]*BzzAddr,0)
-	for _,node := range h.getKnowNodes() {
+	knownNodes := h.getKnowNodes()
+	for _,node := range  knownNodes{
 		nodes = append(nodes,NewAddr(node))
 	}
 	h.Register(nodes...)

@@ -103,7 +103,7 @@ func NewBzz(config *BzzConfig, kad *Kademlia, store state.Store, streamerSpec *p
 		bzzAccount:   config.BzzAccount,
 	}
 
-	if enode.GetSyncingOptions(enode.NodeTypeOption(config.NodeType)) == (enode.SyncingDisabled) && enode.GetRetrievalOptions(enode.NodeTypeOption(config.NodeType)) == (enode.RetrievalDisabled) {
+	if enode.IsBootNode(enode.NodeTypeOption(config.NodeType))  {
 		bzz.streamerRun = nil
 		bzz.streamerSpec = nil
 	}
@@ -131,7 +131,7 @@ func (b *Bzz) NodeInfo() interface{} {
 // * discovery
 func (b *Bzz) Protocols() []p2p.Protocol {
 
-	if enode.GetSyncingOptions(enode.NodeTypeOption(b.NodeType)) == (enode.SyncingDisabled) && enode.GetRetrievalOptions(enode.NodeTypeOption(b.NodeType)) == (enode.RetrievalDisabled) {
+	if enode.IsBootNode(enode.NodeTypeOption(b.NodeType))  {
 		return []p2p.Protocol{}
 	}
 	protocol := []p2p.Protocol{
