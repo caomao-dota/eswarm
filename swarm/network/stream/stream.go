@@ -310,7 +310,7 @@ func (r *Registry) RequestSubscription(peerId enode.ID, s Stream, h *Range, prio
 	if _, err := peer.getServer(s); err != nil {
 		if e, ok := err.(*notFoundError); ok && e.t == "server" {
 			// request subscription only if the server for this stream is not created
-			log.Info("RequestSubscription ", "peer", peerId, "stream", s, "history", h)
+			log.Trace("RequestSubscription", "peer", peerId, "stream", s, "history", h)
 			return peer.Send(context.TODO(), &RequestSubscriptionMsg{
 				Stream:   s,
 				History:  h,

@@ -113,7 +113,7 @@ func (h *Hive) Start(server *p2p.Server) error {
 	// ticker to keep the hive alive
 	h.ticker = time.NewTicker(h.KeepAliveInterval)
 	h.refreshTicker = time.NewTicker(h.RefreshPeers)
-	server.SetNotificationChan(h.newNodeDiscov)
+	//server.SetNotificationChan(h.newNodeDiscov)
 	// this loop is doing bootstrapping and maintains a healthy table
 	h.doRefresh()
 

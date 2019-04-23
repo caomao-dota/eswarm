@@ -769,7 +769,7 @@ running:
 		}
 	}
 
-	srv.log.Trace("P2P networking is spinning down")
+	log.Info("P2P networking is spinning down")
 
 	// Terminate discovery. If there is a running lookup it will terminate soon.
 	if srv.ntab != nil {

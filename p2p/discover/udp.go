@@ -312,20 +312,21 @@ func (t *udp) ourEndpoint() rpcEndpoint {
 }
 
 // ping sends a ping message to the given node and waits for a reply.
-func (t *udp) ping(toid enode.ID, toaddr *net.UDPAddr) error {
+func (t *udp) ping(toid enode.ID, toaddr *net.UDPAddr) (error,time.Duration) {
 	sentTime := time.Now()
 	errc := <- t.sendPing(toid, toaddr,nil)
-	if(errc == nil){
+	if errc == nil {
+		t.tab.ProcessLive(toid,time.Since(sentTime),true)
 		go func(){
-			latency := time.Since(sentTime)
+			//latency := time.Since(sentTime)
 		//	t.latencyCache.Add(toid,latency)
-			t.tab.ProcessLive(toid,true)
-			t.db.UpdateNodeLatency(toid,toaddr.IP,int64(latency))
+
+			t.db.UpdateNodeLatency(toid,toaddr.IP,int64(time.Since(sentTime)))
 		}()
 	}else {
-		t.tab.ProcessLive(toid,false)
+		t.tab.ProcessLive(toid,time.Since(sentTime),false)
 	}
-	return errc
+	return errc,time.Since(sentTime)
 }
 
 // sendPing sends a ping message to the given node and invokes the callback
@@ -402,10 +403,13 @@ func (t *udp) findnode(toid enode.ID, toaddr *net.UDPAddr, target encPubkey) ([]
 func (t *udp) pending(id enode.ID, ip net.IP, ptype byte, callback replyMatchFunc) <-chan error {
 	ch := make(chan error, 1)
 	p := &replyMatcher{from: id, ip: ip, ptype: ptype, callback: callback, errc: ch}
+	//log.Info(" Pend started:","nodeId",id, "ip",ip)
 	select {
 	case t.addReplyMatcher <- p:
+		//log.Info(" Pend procceeded:","nodeId",id, "ip",ip)
 		// loop will handle it
 	case <-t.closing:
+	//	log.Info(" Pend cancelled:","nodeId",id, "ip",ip)
 		ch <- errClosed
 	}
 	return ch

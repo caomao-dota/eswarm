@@ -208,7 +208,7 @@ func (m OfferedHashesMsg) String() string {
 func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg) error {
 	metrics.GetOrRegisterCounter("peer.handleofferedhashes", nil).Inc(1)
 
-	log.Info("Received offered batch","peer", p.ID(), "stream", req.Stream, "from", req.From, "to", req.To)
+	log.Trace("Received offered batch","peer", p.ID(), "stream", req.Stream, "from", req.From, "to", req.To)
 	var sp opentracing.Span
 	ctx, sp = spancontext.StartSpan(
 		ctx,
@@ -324,7 +324,7 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 			log.Debug("client.handleOfferedHashesMsg() context done", "ctx.Err()", ctx.Err())
 			return
 		}
-		log.Info("Sent wanted batch", "peer", p.ID(), "stream", msg.Stream, "from", msg.From, "to", msg.To)
+		log.Trace("Sent wanted batch", "peer", p.ID(), "stream", msg.Stream, "from", msg.From, "to", msg.To)
 		err := p.SendPriority(ctx, msg, c.priority)
 		if err != nil {
 			log.Warn("SendPriority error", "err", err)
@@ -352,7 +352,7 @@ func (m WantedHashesMsg) String() string {
 func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) error {
 	metrics.GetOrRegisterCounter("peer.handlewantedhashesmsg", nil).Inc(1)
 
-	log.Info("Received wanted batch", "peer", p.ID(), "stream", req.Stream, "from", req.From, "to", req.To)
+	log.Debug("Received wanted batch", "peer", p.ID(), "stream", req.Stream, "from", req.From, "to", req.To)
 	s, err := p.getServer(req.Stream)
 	if err != nil {
 		return err

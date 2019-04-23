@@ -81,6 +81,7 @@ type Table struct {
 	closed    chan struct{}
 	notifyChannel    chan struct{}
 	nodeAddedHook func(*node) // for testing
+
 }
 
 // transport is implemented by the UDP transport.
@@ -88,7 +89,7 @@ type Table struct {
 // sockets and without generating a private key.
 type transport interface {
 	self() *enode.Node
-	ping(enode.ID, *net.UDPAddr) error
+	ping(enode.ID, *net.UDPAddr) (error, time.Duration)
 	findnode(toid enode.ID, addr *net.UDPAddr, target encPubkey) ([]*node, error)
 	close()
 }
@@ -189,6 +190,8 @@ func (tab *Table) ReadRandomNodes(buf []*enode.Node) (n int) {
 
 // Close terminates the network listener and flushes the node database.
 func (tab *Table) Close() {
+
+//	log.Info("Close Kad Table")
 	tab.closeOnce.Do(func() {
 		if tab.net != nil {
 			tab.net.close()
@@ -262,7 +265,7 @@ func (tab *Table) GetKnownNodesSorted() []*enode.Node{
 	for i,node := range ret {
 		result[i] = unwrapNode(node)
 	}
-	//log.Debug("step 3")
+	log.Trace("Known nodes:","count",len(result))
 	return result
 }
 func (tab *Table) OnNodeChanged(nodeChanged chan struct{}){
@@ -298,11 +301,11 @@ func (tab *Table) LookupRandom() []*enode.Node {
 	return unwrapNodes(tab.lookup(target, true))
 }
 
-func (tab *Table)ProcessLive(nodeId enode.ID, isLive bool) {
+func (tab *Table)ProcessLive(nodeId enode.ID, tm time.Duration,isLive bool) {
 	tab.mutex.Lock()
 	defer tab.mutex.Unlock()
 	bucket :=tab.bucket(nodeId)
-	tab.execValidateNode(nodeId,bucket,isLive)
+	tab.execValidateNode(nodeId,bucket,tm,isLive)
 }
 // lookup performs a network search for nodes close to the given target. It approaches the
 // target by querying nodes that are closer to it on each iteration. The given target does
@@ -473,6 +476,7 @@ loop:
 		case <-replaceDone:
 			revalidate.Reset(tab.nextRevalidateTime())
 			replaceDone = nil
+
 		case <-copyNodes.C:
 			go tab.copyLiveNodes()
 		case <-tab.closeReq:
@@ -489,6 +493,14 @@ loop:
 	if revalidateDone != nil {
 		<-revalidateDone
 	}
+
+	if refreshDone != nil {
+		<-refreshDone
+	}
+	if replaceDone != nil {
+		<- replaceDone
+	}
+	//log.Info("Do tab finished")
 	close(tab.closed)
 }
 
@@ -531,11 +543,11 @@ func (tab *Table) loadSeedNodes() {
 		seed := seeds[i]
 		seed.latency =tab.db.GetNodeLatency(seed.ID(),seed.IP())
 		age := log.Lazy{Fn: func() interface{} { return time.Since(tab.db.LastPongReceived(seed.ID(), seed.IP())) }}
-		log.Trace("Found seed node in database", "id", seed.ID(), "addr", seed.addr(), "age", age)
+		log.Trace("Found seed node in database", "id", seed.ID(), "addr", seed.addr(), "age", age,"latency",seed.latency)
 		tab.addSeenNode(seed)
 	}
 }
-func (tab *Table)execValidateNode(nodeId enode.ID,b *bucket,alive bool ){
+func (tab *Table)execValidateNode(nodeId enode.ID,b *bucket,tm time.Duration,alive bool ){
 
 	//b := tab.buckets[bi]
 	var anode  *node
@@ -572,6 +584,8 @@ func (tab *Table)execValidateNode(nodeId enode.ID,b *bucket,alive bool ){
 
 	if alive {
 		if state == 2 || state == 3 {
+			anode.latency = int64(tm)
+			log.Info("Node updated","node ID",nodeId,"addr",anode.IP().String(),"port",anode.UDP(),"latency",anode.latency)
 		 		//在entries中
 		 		if state == 2 {
 					//移动到entries的最前面
@@ -612,18 +626,16 @@ func (tab *Table)execValidateNode(nodeId enode.ID,b *bucket,alive bool ){
 func (tab *Table) doReplacementCheck(done chan<- struct{}) {
 	defer func() { done <- struct{}{} }()
 
-	last, bi := tab.replaceNodeToCheck()
+	last, _ := tab.replaceNodeToCheck()
 	if last == nil {
 		// No non-empty bucket found.
 		return
 	}
 
 	// Ping the selected node and wait for a pong.
-	err := tab.net.ping(last.ID(), last.addr())
+	 tab.net.ping(last.ID(), last.addr())
 
-	tab.mutex.Lock()
-	defer tab.mutex.Unlock()
-	tab.execValidateNode(last.ID(),tab.buckets[bi],err == nil )
+
 }
 
 // doRevalidate checks that the last node in a random bucket is still live
@@ -631,18 +643,23 @@ func (tab *Table) doReplacementCheck(done chan<- struct{}) {
 func (tab *Table) doRevalidate(done chan<- struct{}) {
 	defer func() { done <- struct{}{} }()
 
-	last, bi := tab.nodeToRevalidate()
+	//all connected is set to seen now
+	for _,bucket := range tab.buckets {
+		for _,node := range bucket.connects {
+
+			tab.db.UpdateLastPongReceived(node.ID(), node.IP(), time.Now())
+		}
+	}
+	last, _ := tab.nodeToRevalidate()
 	if last == nil {
 		// No non-empty bucket found.
 		return
 	}
 
-	// Ping the selected node and wait for a pong.
-	err := tab.net.ping(last.ID(), last.addr())
+	// Ping the selected node and wait for a pong. it will use processLive来进行结果处理
+	tab.net.ping(last.ID(), last.addr())
 
-	tab.mutex.Lock()
-	defer tab.mutex.Unlock()
-	tab.execValidateNode(last.ID(),tab.buckets[bi],err == nil )
+
 }
 
 // nodeToRevalidate returns the last node in a random, non-empty bucket.
@@ -689,9 +706,12 @@ func (tab *Table) copyLiveNodes() {
 	now := time.Now()
 	for _, b := range &tab.buckets {
 		for _, n := range b.entries {
-			if n.isLiving && now.Sub(n.addedAt) >= seedMinTableTime {
+			if now.Sub(n.addedAt) >= seedMinTableTime {
 				tab.db.UpdateNode(unwrapNode(n))
 			}
+		}
+		for _, n := range b.connects {
+			tab.db.UpdateNode(unwrapNode(n))
 		}
 	}
 }
@@ -705,9 +725,7 @@ func (tab *Table) closest(target enode.ID, nresults int) *nodesByDistance {
 	close := &nodesByDistance{target: target}
 	for _, b := range &tab.buckets {
 		for _, n := range b.entries {
-			if n.isLiving  {
-				close.push(n, nresults)
-			}
+			close.push(n, nresults)
 		}
 	}
 	return close
@@ -744,6 +762,7 @@ func (tab *Table) addSeenNode(n *node) {
 	tab.mutex.Lock()
 	defer tab.mutex.Unlock()
 	b := tab.bucket(n.ID())
+
 	if contains(b.entries, n.ID()) {
 		// Already in bucket, don't add.
 		return
@@ -779,7 +798,7 @@ func (tab *Table) addSeenNode(n *node) {
 //
 // The caller must not hold tab.mutex.
 func (tab *Table) addVerifiedNode(n *node) {
-	n.isLiving = true
+
 	if !tab.isInitDone() {
 		return
 	}
@@ -789,6 +808,7 @@ func (tab *Table) addVerifiedNode(n *node) {
 
 	tab.mutex.Lock()
 	defer tab.mutex.Unlock()
+
 	b := tab.bucket(n.ID())
 
 	if contains(b.connects,n.ID()) {
@@ -815,65 +835,103 @@ func (tab *Table) addVerifiedNode(n *node) {
 		tab.nodeAddedHook(n)
 	}
 }
-func (tab *Table) AddConnectedNode(node *enode.Node) {
+func (tab *Table) AddConnectedNode(oneNode *enode.Node) {
 
 	tab.mutex.Lock()
 	defer tab.mutex.Unlock()
 	if !tab.isInitDone() {
 		return
 	}
-	n := wrapNode(node)
-	if n.ID() == tab.self().ID() {
+
+	if oneNode.ID() == tab.self().ID() {
 		return
 	}
 
 
-	b := tab.bucket(n.ID())
+	b := tab.bucket(oneNode.ID())
 
-	if contains(b.connects,n.ID()) { //已经加入了，直接退出
+	if contains(b.connects,oneNode.ID()) { //已经加入了，直接退出
 		return
 	}
-	if contains(b.entries,n.ID()){ //在备选队列中，从备选队列中删除
-		//remove from entries
-		b.entries = deleteNode(b.entries,n)
+	var n *node
+	for _,anode := range b.entries {
+		if anode.ID() == oneNode.ID() {
+			n = anode
+			b.entries = deleteNode(b.entries,n)
+			break;
+		}
+	}
+	if n == nil {
+		for _,anode := range b.replacements {
+			if anode.ID() == oneNode.ID() {
+				n = anode
+				b.replacements = deleteNode(b.replacements, n)
+				break;
+			}
+		}
 	}
 
-	if contains(b.replacements,n.ID()) {  //在后备队列中，从后备队列中删除
-		b.replacements = deleteNode(b.replacements, n)
+	if n == nil {
+		log.Info("unexpected node :","id",oneNode.ID(),"addr",oneNode.IP(),"TCP",oneNode.TCP(),"UDP",oneNode.UDP())
+	} else{
+
+		log.Info("connected node :","id",n.ID(),"addr",n.addr(),"TCP",n.TCP(),"UDP",n.UDP())
+		// Add to front of bucket.
+		b.connects, _ = pushNode(b.connects, n, len(b.connects)+1) //保证连接成功
+		n.addedAt = time.Now()
+		if tab.nodeAddedHook != nil {
+			tab.nodeAddedHook(n)
+		}
 	}
 
-	// Add to front of bucket.
-	b.connects, _ = pushNode(b.connects, n, len(b.connects)+1) //保证连接成功
-	n.addedAt = time.Now()
-	if tab.nodeAddedHook != nil {
-		tab.nodeAddedHook(n)
-	}
+
 }
-func (tab *Table) RemoveConnectedNode(node *enode.Node) {
+func (tab *Table) RemoveConnectedNode(oneNode *enode.Node) {
+	return
 	tab.mutex.Lock()
 	defer tab.mutex.Unlock()
 	if !tab.isInitDone() {
 		return
 	}
-	n := wrapNode(node)
-	if n.ID() == tab.self().ID() {
+
+	if oneNode.ID() == tab.self().ID() {
 		return
 	}
-
-
-	b := tab.bucket(n.ID())
-
-	if contains(b.connects,n.ID()) { //已经加入了，直接退出
-		b.connects = deleteNode(b.connects,n)
-	} else if  contains(b.entries,n.ID()){ //在备选队列中，从备选队列中删除
-		//remove from entries
-		b.entries = deleteNode(b.entries,n)
-	} else if contains(b.replacements,n.ID()){
-		b.replacements = deleteNode(b.replacements,n)
+	var n *node
+	b := tab.bucket(oneNode.ID())
+	//前面anode在rlpx的时候，已经进行了一次不对称加密，所以是无法模仿出其他节点进来，因此判定一次IP只是冗余判定
+	for _,anode := range b.connects {
+		if anode.ID() == oneNode.ID() && anode.IP().String() == oneNode.IP().String(){
+			n = anode
+			b.connects = deleteNode(b.connects,n)
+			break;
+		}
+	}
+	for _,anode := range b.entries {
+		if anode.ID() == oneNode.ID() && anode.IP().String() == oneNode.IP().String(){
+			n = anode
+			b.entries = deleteNode(b.entries,n)
+			break;
+		}
+	}
+	if n == nil {
+		for _,anode := range b.replacements {
+			if anode.ID() == oneNode.ID() && anode.IP().String() == oneNode.IP().String(){
+				n = anode
+				b.replacements = deleteNode(b.replacements, n)
+				break;
+			}
+		}
 	}
 
-	//从网络中断开的，移动到最后
-	b.replacements = append(b.replacements,n)
+	if n != nil {
+		//从网络中断开的，移动到最后
+		b.replacements = append(b.replacements,n)
+		log.Info("node deleted :","id",	n.ID(),"addr",oneNode.IP(),"TCP",n.TCP(),"UDP",n.UDP())
+	}else {
+		log.Info("unexpected node :","id",oneNode.ID(),"addr",oneNode.IP(),"TCP",oneNode.TCP(),"UDP",oneNode.UDP())
+	}
+
 
 
 }
@@ -938,7 +996,7 @@ func (tab *Table) replace(b *bucket, last *node) *node {
 			}
 			b.entries = append(b.entries[0:index],b.entries[index+1:]...)
 			r := b.replacements[tab.rand.Intn(len(b.replacements))]
-			r.isLiving = false //确保正确性，其实移动到replace的时候，已经做了
+
 			b.replacements = deleteNode(b.replacements, r)
 			b.entries = append(b.entries,r)
 			tab.removeIP(b, last.IP())
