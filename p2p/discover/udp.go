@@ -48,7 +48,7 @@ var (
 
 // Timeouts
 const (
-	respTimeout    = 1000 * time.Millisecond
+	respTimeout    = 3000 * time.Millisecond
 	expiration     = 20 * time.Second
 	bondExpiration = 24 * time.Hour
 
@@ -389,7 +389,7 @@ func (t *udp) findnode(toid enode.ID, toaddr *net.UDPAddr, target encPubkey) ([]
 			}
 			nodes = append(nodes, n)
 		}
-		return true, nreceived >= bucketSize
+		return true,  true /// 只要正常返回了，就是成功了nreceived >= bucketSize
 	})
 	t.send(toaddr, toid, findnodePacket, &findnode{
 		Target:     target,

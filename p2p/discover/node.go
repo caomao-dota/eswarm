@@ -34,6 +34,8 @@ import (
 type node struct {
 	enode.Node
 	addedAt        time.Time // time when the node was added to the table
+	testAt         time.Time
+	findAt         time.Time
 	latency         int64		 //ping/pong delay ,by the unit of millium-second
 }
 

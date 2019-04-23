@@ -344,9 +344,12 @@ func (tab *Table) lookup(targetKey encPubkey, refreshIfEmpty bool) []*node {
 		for i := 0; i < len(result.entries) && pendingQueries < alpha; i++ {
 			n := result.entries[i]
 
-			if !asked[n.ID()] && !enode.IsLightNode(enode.NodeTypeOption(n.NodeType()) ) {
+			if !asked[n.ID()] && !enode.IsLightNode(enode.NodeTypeOption(n.NodeType()) ) && time.Since(n.findAt)> time.Minute{
 				asked[n.ID()] = true
 				pendingQueries++
+				log.Info("Find node:","id",n.ID(),"lastFind:",n.findAt,"new time:",time.Now())
+				n.findAt = time.Now()
+
 				go tab.findnode(n, targetKey, reply)
 			}
 		}
@@ -381,10 +384,11 @@ func (tab *Table) findnode(n *node, targetKey encPubkey, reply chan<- []*node) {
 		fails++
 		tab.db.UpdateFindFails(n.ID(), n.IP(), fails)
 		log.Trace("Findnode failed", "id", n.ID(), "failcount", fails, "err", err)
-		if fails >= maxFindnodeFailures {
-			log.Trace("Too many findnode failures, dropping", "id", n.ID(), "failcount", fails)
+		//by Aegon findnode在返回达不到16个的时候，就认为是错的，然后几次错误后就把这个节点给
+		/*if fails >= maxFindnodeFailures {
+			log.Info("Too many findnode failures, dropping", "id", n.ID(), "failcount", fails)
 			tab.delete(n)
-		}
+		}*/
 	} else if fails > 0 {
 		tab.db.UpdateFindFails(n.ID(), n.IP(), fails-1)
 	}
@@ -407,7 +411,7 @@ func (tab *Table) setupRefreshTime() time.Duration{
 		knownCount += len(bucket.entries)
 	}
 	if knownCount < 5 {
-		return 10 * time.Second
+		return 2 * time.Second
 	}else if  knownCount <= 100  {
 		return time.Duration(10 + 10*knownCount) * time.Second
 	}else {
@@ -585,13 +589,17 @@ func (tab *Table)execValidateNode(nodeId enode.ID,b *bucket,tm time.Duration,ali
 	if alive {
 		if state == 2 || state == 3 {
 			anode.latency = int64(tm)
-			log.Info("Node updated","node ID",nodeId,"addr",anode.IP().String(),"port",anode.UDP(),"latency",anode.latency)
+			anode.testAt = time.Now()
+			log.Info("Node updated","node ID",nodeId,"addr",anode.IP().String(),"port",anode.UDP(),"latency",anode.latency,"findAt",anode.findAt,"state",state)
 		 		//在entries中
 		 		if state == 2 {
 					//移动到entries的最前面
 					tab.bumpInBucket(b,anode)
 				}else {
 					b.entries = append([]*node{anode},b.entries...)
+					if tab.nodeAddedHook !=  nil {
+						tab.nodeAddedHook(anode)
+					}
 				}
 
 				//保障，从replacements中删除
@@ -605,8 +613,10 @@ func (tab *Table)execValidateNode(nodeId enode.ID,b *bucket,tm time.Duration,ali
 
 		}
 	} else {
+		log.Info("Node failed","node ID",nodeId,"addr",anode.IP().String(),"port",anode.UDP(),"latency",anode.latency,"findAt",anode.findAt,"state",state)
 
 		if state != 0 {
+			anode.testAt = time.Now()
 			b.connects = deleteNode(b.connects,anode) //从connect中移除（假如有）
 			b.entries = deleteNode(b.entries,anode)//从entries中移除（假如有）
 			//保障删除
@@ -671,7 +681,11 @@ func (tab *Table) nodeToRevalidate() (n *node, bi int) {
 		b := tab.buckets[bi]
 		if len(b.entries) > 0 {
 			last := b.entries[len(b.entries)-1]
-			return last, bi
+			if time.Since(last.testAt) > 30 *time.Second {
+				return last, bi
+			}else{
+				return nil,0
+			}
 		}
 	}
 	return nil, 0
@@ -685,7 +699,12 @@ func (tab *Table) replaceNodeToCheck() (n *node, bi int) {
 		b := tab.buckets[bi]
 		if len(b.entries) + len(b.connects) < bucketSize && len(b.replacements) > 0 {
 			last := b.replacements[0]
-			return last, bi
+			if time.Since(last.testAt) > 30 *time.Second {
+				return last, bi
+			}else{
+				return nil,0
+			}
+
 		}
 	}
 	return nil, 0
@@ -724,6 +743,9 @@ func (tab *Table) closest(target enode.ID, nresults int) *nodesByDistance {
 	// this easier to implement efficiently.
 	close := &nodesByDistance{target: target}
 	for _, b := range &tab.buckets {
+		for _, n := range b.connects {
+			close.push(n, nresults)
+		}
 		for _, n := range b.entries {
 			close.push(n, nresults)
 		}
@@ -788,6 +810,30 @@ func (tab *Table) addSeenNode(n *node) {
 	}
 }
 
+func (tab *Table) getSaveNode(n *node) (result *node){
+	bucket := tab.bucket(n.ID())
+
+	for _,node := range bucket.connects {
+		if node.ID() == n.ID() {
+			result = node
+			return
+		}
+	}
+	for _,node := range bucket.entries {
+		if node.ID() == n.ID() {
+			result = node
+			return
+		}
+	}
+	for _,node := range bucket.replacements {
+		if node.ID() == n.ID() {
+			result = node
+			return
+		}
+	}
+	result = n
+	return
+}
 // addVerifiedNode adds a node whose existence has been verified recently to the front of a
 // bucket. If the node is already in the bucket, it is moved to the front. If the bucket
 // has no space, the node is added to the replacements list.
@@ -810,7 +856,7 @@ func (tab *Table) addVerifiedNode(n *node) {
 	defer tab.mutex.Unlock()
 
 	b := tab.bucket(n.ID())
-
+	n = tab.getSaveNode(n)
 	if contains(b.connects,n.ID()) {
 		return
 	}
@@ -853,27 +899,10 @@ func (tab *Table) AddConnectedNode(oneNode *enode.Node) {
 	if contains(b.connects,oneNode.ID()) { //已经加入了，直接退出
 		return
 	}
-	var n *node
-	for _,anode := range b.entries {
-		if anode.ID() == oneNode.ID() {
-			n = anode
-			b.entries = deleteNode(b.entries,n)
-			break;
-		}
-	}
-	if n == nil {
-		for _,anode := range b.replacements {
-			if anode.ID() == oneNode.ID() {
-				n = anode
-				b.replacements = deleteNode(b.replacements, n)
-				break;
-			}
-		}
-	}
+	n := tab.getSaveNode(wrapNode(oneNode))
 
-	if n == nil {
-		log.Info("unexpected node :","id",oneNode.ID(),"addr",oneNode.IP(),"TCP",oneNode.TCP(),"UDP",oneNode.UDP())
-	} else{
+	b.entries = deleteNode(b.entries,n)
+	b.replacements = deleteNode(b.replacements, n)
 
 		log.Info("connected node :","id",n.ID(),"addr",n.addr(),"TCP",n.TCP(),"UDP",n.UDP())
 		// Add to front of bucket.
@@ -882,12 +911,12 @@ func (tab *Table) AddConnectedNode(oneNode *enode.Node) {
 		if tab.nodeAddedHook != nil {
 			tab.nodeAddedHook(n)
 		}
-	}
+	//}
 
 
 }
 func (tab *Table) RemoveConnectedNode(oneNode *enode.Node) {
-	return
+
 	tab.mutex.Lock()
 	defer tab.mutex.Unlock()
 	if !tab.isInitDone() {
@@ -1021,6 +1050,7 @@ func (tab *Table) bumpInBucket(b *bucket, n *node) bool {
 					return false
 				}
 			}
+
 			// Move it to the front.
 			copy(b.entries[1:], b.entries[:i])
 			b.entries[0] = n

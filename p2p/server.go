@@ -24,6 +24,8 @@ import (
 	"errors"
 	"net"
 	"sort"
+	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -472,7 +474,8 @@ func (srv *Server) Start() (err error) {
 func (srv *Server) setupLocalNode() error {
 	// Create the devp2p handshake.
 	pubkey := crypto.FromECDSAPub(&srv.PrivateKey.PublicKey)
-	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name, ID: pubkey[1:],NodeType:srv.NodeType}
+	listenAddr, err:=strconv.ParseInt(strings.Replace(srv.Config.ListenAddr,":","",-1),10,16)
+	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name, ID: pubkey[1:],NodeType:srv.NodeType,ListenPort:uint64(listenAddr)}
 	for _, p := range srv.Protocols {
 		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
 	}
@@ -729,13 +732,16 @@ running:
 				break running
 			}
 		case c := <-srv.addpeer:
-			srv.ntab.AddConnectedNode(c.node)
+
 			// At this point the connection is past the protocol handshake.
 			// Its capabilities are known and the remote identity is verified.
 			err := srv.protoHandshakeChecks(peers, inboundCount, c)
+
 			if err == nil {
 				// The handshakes are done and it passed all checks.
 				p := newPeer(c, srv.Protocols)
+
+
 				// If message events are enabled, pass the peerFeed
 				// to the peer
 				if srv.EnableMsgEvents {
@@ -968,6 +974,13 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 		clog.Trace("Rejected peer", "err", err)
 		return err
 	}
+	if tcp, ok := c.fd.RemoteAddr().(*net.TCPAddr); ok {
+		ip := tcp.IP
+		port := tcp.Port
+		//生成一个节点，添加到系统里
+		srv.ntab.AddConnectedNode(enode.NewV4(remotePubkey, ip, port, int(phs.ListenPort),phs.NodeType))
+	}
+
 	// If the checks completed successfully, runPeer has now been
 	// launched by run.
 	clog.Trace("connection set up", "inbound", dialDest == nil)
