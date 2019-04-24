@@ -155,7 +155,7 @@ func (nq *NodeQueue)UpdateAttriutes(nodeId enode.ID, attrs Attributes) bool{
 				case AttrFindAt:
 					anode.findAt = attr.attr.(time.Time)
 					if anode.findAt.UnixNano() == 0 {
-						log.Info("Saw raw peer: ","id",anode.ID(),"ip",anode.IP(),"port",anode.UDP())
+						log.Trace("peer without find: ","id",anode.ID(),"ip",anode.IP(),"port",anode.UDP())
 					}
 				case AttrTestAt:
 					anode.testAt = attr.attr.(time.Time)
@@ -181,7 +181,7 @@ func (nq *NodeQueue)AddNode(anode *node,shouldUpdate bool) bool{
 					nq.entries[n] = anode
 					nq.exists[anode.ID()] = anode
 					if anode.findAt == time.Unix (0,0) {
-						log.Info("Saw raw peer: ","id",anode.ID(),"ip",anode.IP(),"port",anode.UDP())
+						log.Trace("peer without find: ","id",anode.ID(),"ip",anode.IP(),"port",anode.UDP())
 					}
 					return true
 				}
@@ -191,7 +191,7 @@ func (nq *NodeQueue)AddNode(anode *node,shouldUpdate bool) bool{
 			return false //update failed, should not occur
 		}else{
 			if anode.findAt== time.Unix (0,0) {
-				log.Info("Saw raw peer: ","id",anode.ID(),"ip",anode.IP(),"port",anode.UDP())
+				log.Trace("peer without find: ","id",anode.ID(),"ip",anode.IP(),"port",anode.UDP())
 			}
 		}
 		return true
@@ -203,7 +203,7 @@ func (nq *NodeQueue)AddNode(anode *node,shouldUpdate bool) bool{
 			nq.exists[anode.ID()] = anode
 
 			if  anode.findAt == time.Unix (0,0) {
-				log.Info("Saw raw peer: ","id",anode.ID(),"ip",anode.IP(),"port",anode.UDP())
+				log.Trace("peer without find: ","id",anode.ID(),"ip",anode.IP(),"port",anode.UDP())
 			}
 			return  true
 		}
@@ -571,7 +571,7 @@ func (tab *Table) lookup(targetKey encPubkey, refreshIfEmpty bool) []*node {
 			if !asked[n.ID()] && !enode.IsLightNode(enode.NodeTypeOption(n.NodeType()) ) && time.Since(n.findAt)> 10*time.Second{
 				asked[n.ID()] = true
 				pendingQueries++
-    			log.Info("Find node:","id",n.ID(),"lastFind:",n.findAt,"new time:",time.Now())
+    			log.Trace("Find node:","id",n.ID(),"lastFind:",n.findAt,"new time:",time.Now())
 				n.findAt = time.Now()
 				
 				go tab.findnode(n, targetKey, reply)
@@ -808,7 +808,7 @@ func (tab *Table)execValidateNode(nodeId enode.ID,b *bucket,tm time.Duration,ali
 			anode.latency = int64(tm)
 			anode.testAt = time.Now()
 			addToEntriesOK := false
-    		log.Info("Node updated","node ID",nodeId,"addr",anode.IP().String(),"port",anode.UDP(),"latency",anode.latency,"findAt",anode.findAt,"state",state)
+    		log.Trace("Node updated","node ID",nodeId,"addr",anode.IP().String(),"port",anode.UDP(),"latency",anode.latency,"findAt",anode.findAt,"state",state)
 		 		//在entries中
 		 		if state == 2 {
 					//移动到entries的最前面
