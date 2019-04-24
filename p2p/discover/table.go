@@ -121,6 +121,41 @@ type Attribute struct {
 	attr interface{}
 }
 type Attributes []*Attribute
+func (nq *NodeQueue)loadNodes(nodes []*node) {
+	nq.mutex.Lock()
+
+	nq.entries=make([]*node,0)
+	nq.exists=make(map[enode.ID]*node)
+	nq.mutex.Unlock()
+	for _,anode := range nodes {
+		nq.AddNode(anode,false)
+	}
+}
+
+func (nq *NodeQueue)getNodeByIndex(index int) *node{
+	nq.mutex.Lock()
+
+	nq.mutex.Unlock()
+	if len(nq.entries) > index {
+		return nq.entries[index]
+	}
+	return nil
+}
+
+func (nq *NodeQueue)hasDuplicated(nodeId enode.ID) bool {
+	nq.mutex.Lock()
+
+	defer nq.mutex.Unlock()
+
+	dup := 0
+	for _,node := range nq.entries {
+		if node.ID() == nodeId {
+			dup++
+		}
+	}
+	return dup > 1
+}
+
 func (nq *NodeQueue)ReplaceNode(anode *node, checkReplace func(nodeInEntries *node) bool) bool {
     //log.Info("1")
 	//defer func(){log.Info("1.1")}()
@@ -1226,7 +1261,14 @@ type nodesByDistance struct {
 	entries []*node
 	target  enode.ID
 }
-
+func (h *nodesByDistance)contains(nodeId enode.ID) bool {
+	for _,v := range h.entries {
+		if v.ID() == nodeId {
+			return true
+		}
+	}
+	return false
+}
 // push adds the given node to the list, keeping the total size below maxElems.
 func (h *nodesByDistance) push(n *node, maxElems int) {
 	ix := sort.Search(len(h.entries), func(i int) bool {

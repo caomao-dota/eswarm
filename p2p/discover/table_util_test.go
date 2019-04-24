@@ -22,6 +22,7 @@ import (
 	"math/rand"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/plotozhu/MDCMainnet/p2p/enode"
 	"github.com/plotozhu/MDCMainnet/p2p/enr"
@@ -76,8 +77,8 @@ func intIP(i int) net.IP {
 func fillBucket(tab *Table, n *node) (last *node) {
 	ld := enode.LogDist(tab.self().ID(), n.ID())
 	b := tab.bucket(n.ID())
-	for len(b.entries) < bucketSize {
-		b.entries = append(b.entries, nodeAtDistance(tab.self().ID(), ld, intIP(ld)))
+	for b.entries.Length() < bucketSize {
+		b.entries.AddNode(nodeAtDistance(tab.self().ID(), ld, intIP(ld)),false)
 	}
 	return b.entries[bucketSize-1]
 }
@@ -116,15 +117,15 @@ func (t *pingRecorder) findnode(toid enode.ID, toaddr *net.UDPAddr, target encPu
 	return nil, nil
 }
 
-func (t *pingRecorder) ping(toid enode.ID, toaddr *net.UDPAddr) error {
+func (t *pingRecorder) ping(toid enode.ID, toaddr *net.UDPAddr) (error, time.Duration) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
 	t.pinged[toid] = true
 	if t.dead[toid] {
-		return errTimeout
+		return errTimeout,100*time.Hour
 	} else {
-		return nil
+		return nil,10*time.Millisecond
 	}
 }
 
