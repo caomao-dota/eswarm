@@ -49,7 +49,7 @@ var (
 // Timeouts
 const (
 	respTimeout    = 3000 * time.Millisecond
-	expiration     = 20 * time.Second
+	expiration     = 600 * time.Second
 	bondExpiration = 24 * time.Hour
 
 	ntpFailureThreshold = 32               // Continuous timeouts after which to check NTP
@@ -801,5 +801,6 @@ func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []b
 func (req *neighbors) name() string { return "NEIGHBORS/v4" }
 
 func expired(ts uint64) bool {
+	log.Info("expire:","time",time.Unix(int64(ts), 0))
 	return time.Unix(int64(ts), 0).Before(time.Now())
 }
