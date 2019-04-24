@@ -75,7 +75,7 @@ func recoverNodeKey(hash, sig []byte) (key encPubkey, err error) {
 }
 
 func wrapNode(n *enode.Node) *node {
-	return &node{Node: *n}
+	return &node{Node: *n,latency:int64(60*time.Hour),findAt:time.Unix(0,0)}
 }
 
 func wrapNodes(ns []*enode.Node) []*node {
