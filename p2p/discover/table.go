@@ -827,8 +827,15 @@ func (tab *Table)execValidateNode(nodeId enode.ID,b *bucket,tm time.Duration,ali
 				if addToEntriesOK{
 					b.replacements.RemoveNode(anode.ID())
 				}else {
-					//TODO 节点在3中，测试通过了，但是entries队列满了，这个节点应该放在哪里？
-					//
+
+
+					if !b.replacements.AddNode(anode,true) {
+						// 节点在replacement中，测试通过了，但是entries队列满了，这个节点应该放在哪里？
+						//测试失败的，我们可以考虑移动替换一个测试没有通过的
+						b.replacements.ReplaceNode(anode,func(oldNode *node) bool{
+							return oldNode.latency >= int64(1*time.Hour)
+						})
+					}
 				}
 
 		}	else if  state == 0 {
