@@ -801,6 +801,6 @@ func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []b
 func (req *neighbors) name() string { return "NEIGHBORS/v4" }
 
 func expired(ts uint64) bool {
-	log.Info("expire:","time",time.Unix(int64(ts), 0))
+	log.Trace("expire:","time",time.Unix(int64(ts), 0))
 	return time.Unix(int64(ts), 0).Before(time.Now())
 }

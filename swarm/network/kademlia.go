@@ -52,7 +52,7 @@ node from the other.
 */
 
 var Pof = pot.DefaultPof(256)
-
+const MaxPoBin = 16
 // KadParams holds the config params for Kademlia
 type KadParams struct {
 	// adjustable parameters
@@ -79,6 +79,7 @@ func NewKadParams() *KadParams {
 		RetryExponent:     2,
 	}
 }
+type UDEF []byte
 
 // Kademlia is a table of live peers and a db of known peers (node records)
 type Kademlia struct {
@@ -92,6 +93,7 @@ type Kademlia struct {
 	nDepth     int      // stores the last neighbourhood depth
 	nDepthC    chan int // returned by DepthC function to signal neighbourhood depth change
 	addrCountC chan int // returned by AddrCountC function to signal peer count change
+	peers      map[string]bool
 }
 
 // NewKademlia creates a Kademlia table for base address addr
@@ -107,6 +109,7 @@ func NewKademlia(addr []byte, params *KadParams) *Kademlia {
 		addrs:     pot.NewPot(nil, 0),
 		conns:     pot.NewPot(nil, 0),
 		lconns:    pot.NewPot(nil, 0),
+		peers:     make(map[string]bool),
 	}
 }
 
@@ -116,6 +119,7 @@ type entry struct {
 	conn    *Peer
 	seenAt  time.Time
 	retries int
+	lastRetry time.Time
 }
 
 // newEntry creates a kademlia peer from a *Peer
@@ -185,8 +189,115 @@ func (k *Kademlia) Register(peers ...*BzzAddr) error {
 	return nil
 }
 
-// SuggestPeer returns an unconnected peer address as a peer suggestion for connection
 func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, changed bool) {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+
+	sizeOfBin := make([]int,MaxPoBin)
+	//first find connected count for each bin
+	k.conns.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
+		sizeOfBin[po] = size
+		return true
+	})
+
+	//找到最深的size >= 2的桶
+	saturationDepth = 0
+	connsOverSaturation := 0
+	for i := 0; i < MaxPoBin; i++{
+		if sizeOfBin[i] < k.MinBinSize  {
+			saturationDepth = i
+			break;
+		}
+	}
+	for i := saturationDepth; i< MaxPoBin; i++ {
+		connsOverSaturation += sizeOfBin[i]
+	}
+	//如果saturationDepth之上的所有节点不满足要求，那么降一格（降低后肯定满足要求了）
+	//假设桶如下 saturationDepth 应该是 3
+	//   0   1   2   3   4   5   6   7 .....
+	// | 2 | 3 | 4 | 0 | 1 | 1 | 0 | 0  ....
+
+	//假设桶如下 saturationDepth 应该是 2
+	//   0   1   2   3   4   5   6   7 .....
+	// | 2 | 3 | 4 | 0 | 1 | 0 | 0 | 0  ....
+
+	//假设桶如下 saturationDepth 应该是 1
+	//   0   1   2   3   4   5   6   7 .....
+	// | 2 | 0 | 4 | 0 | 1 | 0 | 0 | 0  ....
+
+	if connsOverSaturation < k.MinBinSize {
+		if saturationDepth > 0 {
+			saturationDepth --;
+		}
+	}
+	targetPO := 0
+	//寻找suggest peer
+	suggestedPeer = nil
+	if saturationDepth < MaxPoBin { //优先满足深度
+		//first find connected count for each bin
+		k.addrs.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
+			if po >= saturationDepth {
+				return f(func(val pot.Val) bool {
+					e := val.(*entry)
+					_,ok := k.peers[string(e.UAddr)]
+					if k.callable(e) && !ok{
+						e.lastRetry = time.Now()
+						targetPO = po
+						suggestedPeer = e.BzzAddr
+						return false
+					}
+					return true
+				})
+			}else{
+				return true
+			}
+		})
+	}else{
+		//从0桶开始填满
+		k.addrs.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
+			return f(func(val pot.Val) bool {
+				e := val.(*entry)
+				_,ok := k.peers[string(e.UAddr)]
+
+				if k.callable(e) && !ok {
+					e.lastRetry = time.Now()
+					targetPO = po
+					suggestedPeer = e.BzzAddr
+					return false
+				}
+				return true
+			})
+		})
+	}
+
+	if suggestedPeer != nil{
+		log.Info("Suggested peer:","uaddr",string(suggestedPeer.UAddr),"po",targetPO)
+	}else{
+		//没有节点用可了，把标识成不能查询的恢复起来
+		//从0桶开始填满
+		k.addrs.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
+			return f(func(val pot.Val) bool {
+				e := val.(*entry)
+				_,ok := k.peers[string(e.UAddr)]
+				if !ok {
+					e.lastRetry = time.Unix(0,0)
+					return true
+				}
+				return true
+			})
+		})
+	}
+
+	if uint8(saturationDepth) < k.depth {
+		k.depth = uint8(saturationDepth)
+		return suggestedPeer, saturationDepth, true
+	}
+	//在on的时候会改变depth，所以现在是不可能会变得saturationDepth > k.depth的
+	return suggestedPeer, 0, false
+}
+// SuggestPeer returns an unconnected peer address as a peer suggestion for connection
+// 这么简单的目标，写出这么复杂的逻辑.......,我还是改了吧
+func (k *Kademlia) __deprecatedSuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, changed bool) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	radius := neighbourhoodRadiusForPot(k.conns, k.NeighbourhoodSize, k.base)
@@ -244,6 +355,7 @@ func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, c
 	if len(saturation) == 0 {
 		return nil, 0, false
 	}
+	targetPO := 0
 	// find the first callable peer in the address book
 	// starting from the bins with smallest size proceeding from shallow to deep
 	// for each bin (up until neighbourhood radius) we find callable candidate peers
@@ -279,13 +391,33 @@ func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, c
 			// stop if found
 			f(func(val pot.Val) bool {
 				e := val.(*entry)
-				if k.callable(e) {
+				_,ok := k.peers[string(e.UAddr)]
+				if k.callable(e) && !ok {
+					targetPO = po
+					e.lastRetry = time.Unix(0,0)
 					suggestedPeer = e.BzzAddr
 					return false
 				}
 				return true
 			})
 			return cur < len(bins) && suggestedPeer == nil
+		})
+	}
+	if suggestedPeer != nil{
+		log.Info("Suggested peer:","oaddr",suggestedPeer.OAddr,"uaddr",string(suggestedPeer.UAddr),"po",targetPO)
+	}else{
+		//没有节点用可了，把标识成不能查询的恢复起来
+		//从0桶开始填满
+		k.addrs.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
+			return f(func(val pot.Val) bool {
+				e := val.(*entry)
+				_,ok := k.peers[string(e.UAddr)]
+				if !ok {
+					e.lastRetry = time.Unix(0,0)
+					return true
+				}
+				return true
+			})
 		})
 	}
 
@@ -302,6 +434,7 @@ func (k *Kademlia) On(p *Peer) (uint8, bool) {
 	defer k.lock.Unlock()
 	var ins bool
 	 changed  := false
+	 k.peers[string(p.UAddr)] = true
 	if p.NodeType() != enode.NodeTypeLight {
 		k.conns, _, _, _ = pot.Swap(k.conns, p, Pof, func(v pot.Val) pot.Val {
 			// if not found live
@@ -425,6 +558,7 @@ func (k *Kademlia) Off(p *Peer) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	var del bool
+	delete (k.peers,string(p.UAddr))
 	if p.NodeType() != enode.NodeTypeLight {
 		k.addrs, _, _, _ = pot.Swap(k.addrs, p, Pof, func(v pot.Val) pot.Val {
 			// v cannot be nil, must check otherwise we overwrite entry
@@ -591,6 +725,9 @@ func (k *Kademlia) callable(e *entry) bool {
 	if e.conn != nil || e.retries > k.MaxRetries {
 		return false
 	}
+	if time.Since(e.lastRetry) < 20*time.Minute  {
+		return false
+	}
 	// calculate the allowed number of retries based on time lapsed since last seen
 	timeAgo := int64(time.Since(e.seenAt))
 	div := int64(k.RetryExponent)
@@ -681,6 +818,8 @@ func (k *Kademlia) string() string {
 			rowlen++
 			return rowlen < 4
 		})
+		r := strings.Join(row, " ")
+		r = r + wsrow
 		peersrows[po] = strings.Join(row, " ")
 		return true
 	})
@@ -706,6 +845,9 @@ func (k *Kademlia) string() string {
 	for i := 0; i < k.MaxProxDisplay; i++ {
 		if i == depth {
 			rows = append(rows, fmt.Sprintf("============ DEPTH: %d ==========================================", i))
+		}
+		if uint8(i) == k.depth {
+			rows = append(rows, fmt.Sprintf("============ Saturation Depth: %d ==========================================", i))
 		}
 		left := liverows[i]
 		right := peersrows[i]

@@ -19,6 +19,7 @@ package network
 import (
 	"context"
 	"fmt"
+	"github.com/plotozhu/MDCMainnet/p2p/enode"
 	"sync"
 
 	"github.com/plotozhu/MDCMainnet/swarm/pot"
@@ -48,7 +49,11 @@ func NewPeer(p *BzzPeer, kad *Kademlia) *Peer {
 	return d
 }
 func (d *Peer) NodeType() uint8 {
-	return uint8(d.Peer.Node().NodeType())
+	if d.Peer != nil {
+		return uint8(d.Peer.Node().NodeType())
+	}
+	return uint8(enode.NodeTypeFull)
+
 }
 // HandleMsg is the message handler that delegates incoming messages
 func (d *Peer) HandleMsg(ctx context.Context, msg interface{}) error {

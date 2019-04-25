@@ -75,6 +75,7 @@ func (t *Pot) Size() int {
 // plus the value v, using the applicative add
 // the second return value is the proximity order of the inserted element
 // the third is boolean indicating if the item was found
+//把val添加到	t中，返回的第一个值是 包括val的值
 func Add(t *Pot, val Val, pof Pof) (*Pot, int, bool) {
 	return add(t, val, pof)
 }
@@ -209,6 +210,8 @@ func remove(t *Pot, val Val, pof Pof) (r *Pot, po int, found bool) {
 // if f(v) returns v' <> v then v' is inserted into the Pot
 // if (v) == v the Pot is not changed
 // it panics if Pof(f(v), k) show that v' and v are not key-equal
+//Swap 替换某个key对应的值， 通过函数f的返回值来确认需要执行的动作
+
 func Swap(t *Pot, k Val, pof Pof, f func(v Val) Val) (r *Pot, po int, found bool, change bool) {
 	var val Val
 	if t.pin == nil {

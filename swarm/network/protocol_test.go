@@ -109,7 +109,6 @@ func newBzz(addr *BzzAddr, lightNode bool) *Bzz {
 		UnderlayAddr: addr.Under(),
 		HiveParams:   NewHiveParams(),
 		NetworkID:    DefaultNetworkID,
-		LightNode:    lightNode,
 	}
 	kad := NewKademlia(addr.OAddr, NewKadParams())
 	bzz := NewBzz(config, kad, nil, nil, nil)
@@ -159,7 +158,7 @@ func correctBzzHandshake(addr *BzzAddr, lightNode bool) *HandshakeMsg {
 		Version:   TestProtocolVersion,
 		NetworkID: TestProtocolNetworkID,
 		Addr:      addr,
-		LightNode: lightNode,
+
 	}
 }
 
@@ -216,10 +215,10 @@ func TestBzzHandshakeSuccess(t *testing.T) {
 func TestBzzHandshakeLightNode(t *testing.T) {
 	var lightNodeTests = []struct {
 		name      string
-		lightNode bool
+		nodetype  uint8
 	}{
-		{"on", true},
-		{"off", false},
+		{"on", 0x24},
+		{"off", 0x11},
 	}
 
 	for _, test := range lightNodeTests {
@@ -232,7 +231,7 @@ func TestBzzHandshakeLightNode(t *testing.T) {
 
 			err := pt.testHandshake(
 				correctBzzHandshake(randomAddr, false),
-				&HandshakeMsg{Version: TestProtocolVersion, NetworkID: TestProtocolNetworkID, Addr: addr, LightNode: test.lightNode},
+				&HandshakeMsg{Version: TestProtocolVersion, NetworkID: TestProtocolNetworkID, Addr: addr, NodeType:0x24},
 			)
 
 			if err != nil {
@@ -242,8 +241,8 @@ func TestBzzHandshakeLightNode(t *testing.T) {
 			select {
 
 			case <-pt.bzz.handshakes[node.ID()].done:
-				if pt.bzz.handshakes[node.ID()].LightNode != test.lightNode {
-					t.Fatalf("peer LightNode flag is %v, should be %v", pt.bzz.handshakes[node.ID()].LightNode, test.lightNode)
+				if pt.bzz.handshakes[node.ID()].NodeType != test.nodetype {
+					t.Fatalf("peer LightNode flag is %v, should be %v", pt.bzz.handshakes[node.ID()].NodeType, test.nodetype)
 				}
 			case <-time.After(10 * time.Second):
 				t.Fatal("test timeout")

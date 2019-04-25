@@ -94,7 +94,7 @@ func (tk *testKademlia) Register(regs ...string) {
 // the depth should be set at the farthest of those empty bins
 //
 // TODO: Make test adapt to change in NeighbourhoodSize
-func TestNeighbourhoodDepth(t *testing.T) {
+func TestKADNeighbourhoodDepth(t *testing.T) {
 	baseAddressBytes := RandomAddr().OAddr
 	kad := NewKademlia(baseAddressBytes, NewKadParams())
 
@@ -171,7 +171,7 @@ func TestNeighbourhoodDepth(t *testing.T) {
 // TestHighMinBinSize tests that the saturation function also works
 // if MinBinSize is > 2, the connection count is < k.MinBinSize
 // and there are more peers available than connected
-func TestHighMinBinSize(t *testing.T) {
+func TestKADHighMinBinSize(t *testing.T) {
 	// a function to test for different MinBinSize values
 	testKad := func(minBinSize int) {
 		// create a test kademlia
@@ -210,7 +210,7 @@ func TestHighMinBinSize(t *testing.T) {
 
 // TestHealthStrict tests the simplest definition of health
 // Which means whether we are connected to all neighbors we know of
-func TestHealthStrict(t *testing.T) {
+func TestKADHealthStrict(t *testing.T) {
 
 	// base address is all zeros
 	// no peers
@@ -369,7 +369,7 @@ func binStr(a *BzzAddr) string {
 	return pot.ToBin(a.Address())[:8]
 }
 
-func TestSuggestPeerFindPeers(t *testing.T) {
+func TestKADSuggestPeerFindPeers(t *testing.T) {
 	tk := newTestKademlia(t, "00000000")
 	tk.On("00100000")
 	tk.checkSuggestPeer("<nil>", 0, false)
@@ -448,7 +448,7 @@ func TestSuggestPeerFindPeers(t *testing.T) {
 }
 
 // a node should stay in the address book if it's removed from the kademlia
-func TestOffEffectingAddressBookNormalNode(t *testing.T) {
+func TestKADOffEffectingAddressBookNormalNode(t *testing.T) {
 	tk := newTestKademlia(t, "00000000")
 	// peer added to kademlia
 	tk.On("01000000")
@@ -473,31 +473,29 @@ func TestOffEffectingAddressBookNormalNode(t *testing.T) {
 }
 
 // a light node should not be in the address book
-func TestOffEffectingAddressBookLightNode(t *testing.T) {
+func TestKADOffEffectingAddressBookLightNode(t *testing.T) {
 	tk := newTestKademlia(t, "00000000")
-	// light node peer added to kademlia
-	tk.Kademlia.On(tk.newTestKadPeer("01000000", true))
+
 	// peer should not be in the address book
 	if tk.addrs.Size() != 0 {
 		t.Fatal("known peer addresses should contain 0 entry")
 	}
+	// light node peer added to kademlia
+	tk.Kademlia.On(tk.newTestKadPeer("01000000", true))
 	// peer should be among live connections
 	if tk.conns.Size() != 1 {
 		t.Fatal("live peers should contain 1 entry")
 	}
 	// remove peer from kademlia
 	tk.Kademlia.Off(tk.newTestKadPeer("01000000", true))
-	// peer should not be in the address book
-	if tk.addrs.Size() != 0 {
-		t.Fatal("known peer addresses should contain 0 entry")
-	}
+
 	// peer should not be among live connections
 	if tk.conns.Size() != 0 {
 		t.Fatal("live peers should contain 0 entry")
 	}
 }
 
-func TestSuggestPeerRetries(t *testing.T) {
+func TestKADSuggestPeerRetries(t *testing.T) {
 	tk := newTestKademlia(t, "00000000")
 	tk.RetryInterval = int64(300 * time.Millisecond) // cycle
 	tk.MaxRetries = 50
@@ -535,13 +533,13 @@ func TestSuggestPeerRetries(t *testing.T) {
 	tk.checkSuggestPeer("<nil>", 0, false)
 }
 
-func TestKademliaHiveString(t *testing.T) {
+func TestKADKademliaHiveString(t *testing.T) {
 	tk := newTestKademlia(t, "00000000")
 	tk.On("01000000", "00100000")
 	tk.Register("10000000", "10000001")
 	tk.MaxProxDisplay = 8
 	h := tk.String()
-	expH := "\n=========================================================================\nMon Feb 27 12:10:28 UTC 2017 KΛÐΞMLIΛ hive: queen's address: 000000\npopulation: 2 (4), NeighbourhoodSize: 2, MinBinSize: 2, MaxBinSize: 4\n============ DEPTH: 0 ==========================================\n000  0                              |  2 8100 (0) 8000 (0)\n001  1 4000                         |  1 4000 (0)\n002  1 2000                         |  1 2000 (0)\n003  0                              |  0\n004  0                              |  0\n005  0                              |  0\n006  0                              |  0\n007  0                              |  0\n========================================================================="
+	expH := "\n=========================================================================\nMon Feb 27 12:10:28 UTC 2017 KΛÐΞMLIΛ hive: queen's address: 000000\npopulation: 2 (4), NeighbourhoodSize: 2, MinBinSize: 2, MaxBinSize: 4\n============ DEPTH: 0 ==========================================\n============ Suration Depth: 0 ==========================================\n000  0                              |  2 8100 (0) 8000 (0)\n001  1 4000                         |  1 4000 (0)\n002  1 2000                         |  1 2000 (0)\n003  0                              |  0\n004  0                              |  0\n005  0                              |  0\n006  0                              |  0\n007  0                              |  0\n========================================================================="
 	if expH[104:] != h[104:] {
 		t.Fatalf("incorrect hive output. expected %v, got %v", expH, h)
 	}
