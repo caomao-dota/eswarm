@@ -564,7 +564,7 @@ func (t *udp) send(toaddr *net.UDPAddr, toid enode.ID, ptype byte, req packet) (
 
 func (t *udp) write(toaddr *net.UDPAddr, toid enode.ID, what string, packet []byte) error {
 	_, err := t.conn.WriteToUDP(packet, toaddr)
-	log.Debug(">> "+what, "id", toid, "addr", toaddr, "err", err)
+	log.Trace(">> "+what, "id", toid, "addr", toaddr, "err", err)
 	return err
 }
 
@@ -629,7 +629,7 @@ func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 	if err == nil {
 		err = packet.preverify(t, from, fromID, fromKey)
 	}
-	log.Debug("<< "+packet.name(), "id", fromID, "addr", from, "err", err)
+	log.Trace("<< "+packet.name(), "id", fromID, "addr", from, "err", err)
 	if err == nil {
 		packet.handle(t, from, fromID, hash)
 	}

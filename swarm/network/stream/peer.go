@@ -192,7 +192,7 @@ func (p *Peer) SendOfferedHashes(s *server, f, t uint64) error {
 	}
 	// true only when quitting
 	if len(hashes) == 0 {
-		log.Trace("Send Offered batch finished", "peer", p.ID(), "stream", s.stream, "len", len(hashes), "from", from, "to", to)
+		log.Debug("Send Offered batch finished", "peer", p.ID(), "stream", s.stream, "len", len(hashes), "from", from, "to", to)
 		return nil
 	}
 	if proof == nil {
@@ -209,7 +209,7 @@ func (p *Peer) SendOfferedHashes(s *server, f, t uint64) error {
 		Stream:        s.stream,
 	}
 	//log.Trace
-	log.Trace("Send Offered batch", "peer", p.ID(), "stream", s.stream, "len", len(hashes), "from", from, "to", to)
+	log.Debug("Send Offered batch", "peer", p.ID(), "stream", s.stream, "len", len(hashes), "from", from, "to", to)
 	ctx = context.WithValue(ctx, "stream_send_tag", "send.offered.hashes")
 	return p.SendPriority(ctx, msg, s.priority)
 }

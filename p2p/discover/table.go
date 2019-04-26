@@ -602,8 +602,8 @@ func (tab *Table) lookup(targetKey encPubkey, refreshIfEmpty bool) []*node {
 		// ask the alpha closest nodes that we haven't asked yet
 		for i := 0; i < len(result.entries) && pendingQueries < alpha; i++ {
 			n := result.entries[i]
-
-			if !asked[n.ID()] && !enode.IsLightNode(enode.NodeTypeOption(n.NodeType()) ) && time.Since(n.findAt)> 10*time.Second{
+			nodeType := enode.NodeTypeOption(n.NodeType())
+			if !asked[n.ID()] && ( !enode.IsLightNode(nodeType) ) && time.Since(n.findAt)> 10*time.Second{
 				asked[n.ID()] = true
 				pendingQueries++
     			log.Trace("Find node:","id",n.ID(),"lastFind:",n.findAt,"new time:",time.Now())

@@ -48,13 +48,18 @@ func GetSyncingOptions(nodeType NodeTypeOption) SyncingOption {
 }
 
 func IsLightNode(nodeType NodeTypeOption) bool {
-	return GetRetrievalOptions(nodeType) != RetrievalEnabled  && GetSyncingOptions(nodeType) == SyncingDisabled
+	return GetRetrievalOptions(nodeType) == RetrievalClientOnly  && GetSyncingOptions(nodeType) == SyncingDisabled
 }
 
 func IsBootNode(nodeType NodeTypeOption) bool {
 	return GetRetrievalOptions(nodeType) == RetrievalDisabled  && GetSyncingOptions(nodeType) == SyncingDisabled
 }
-
+func IsLightServer(nodeType NodeTypeOption) bool {
+	return GetRetrievalOptions(nodeType) == RetrievalEnabled  && GetSyncingOptions(nodeType) == SyncingDisabled
+}
+func IsStorageNode(nodeType NodeTypeOption) bool {
+	return GetRetrievalOptions(nodeType) == RetrievalEnabled  && GetSyncingOptions(nodeType) == SyncingRegisterOnly
+}
 func IsFullNode(nodeType NodeTypeOption) bool {
 	return GetRetrievalOptions(nodeType) == RetrievalEnabled  && GetSyncingOptions(nodeType) == SyncingAutoSubscribe
 }
