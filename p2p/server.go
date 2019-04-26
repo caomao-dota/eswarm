@@ -799,9 +799,29 @@ running:
 }
 
 func (srv *Server) protoHandshakeChecks(peers map[enode.ID]*Peer, inboundCount int, c *conn) error {
+	lightPeerCnt := 0;
+	fullPeerCnt := 0
+
+	for _,peer := range peers {
+		//log.Info("node exist:","id",peer.ID(),"ip",peer.Node().IP(),"port",peer.Node().UDP())
+		if enode.IsLightNode(enode.NodeTypeOption(peer.Node().NodeType())) {
+			lightPeerCnt++
+		}else {
+			fullPeerCnt++
+		}
+	}
+	isLightNode := enode.IsLightNode(enode.NodeTypeOption(c.node.NodeType()))
+	log.Trace("connects:","light conn",lightPeerCnt," full conn",fullPeerCnt)
 	// Drop connections with no matching protocols.
-	if len(srv.Protocols) > 0 && countMatchingProtocols(srv.Protocols, c.caps) == 0 {
-		return DiscUselessPeer
+	switch {
+
+		case len(srv.Protocols) > 0 && countMatchingProtocols(srv.Protocols, c.caps) == 0:
+			return DiscUselessPeer
+
+		case !c.is(trustedConn|staticDialedConn) && (fullPeerCnt >= srv.MaxPeers && !isLightNode) || (lightPeerCnt >= srv.MaxPeers && isLightNode):
+			return DiscTooManyPeers
+		case !c.is(trustedConn) && c.is(inboundConn) && !isLightNode && inboundCount >= srv.maxInboundConns():
+			return DiscTooManyPeers
 	}
 	// Repeat the encryption handshake checks because the
 	// peer set might have changed between the handshakes.
@@ -809,23 +829,11 @@ func (srv *Server) protoHandshakeChecks(peers map[enode.ID]*Peer, inboundCount i
 }
 
 func (srv *Server) encHandshakeChecks(peers map[enode.ID]*Peer, inboundCount int, c *conn) error {
-	lightPeerCnt := 0;
-	fullPeerCnt := 0
-	for _,peer := range peers {
-		if enode.IsLightNode(enode.NodeTypeOption(peer.Node().NodeType())) {
-			lightPeerCnt++
-		}else {
-				fullPeerCnt++
-		}
-	}
 
-	isLightNode := enode.IsLightNode(enode.NodeTypeOption(c.node.NodeType()))
-	log.Info("connects:","light conn",lightPeerCnt," full conn",fullPeerCnt)
+
+
 	switch {
-	case !c.is(trustedConn|staticDialedConn) && (fullPeerCnt >= srv.MaxPeers && !isLightNode) || (lightPeerCnt >= srv.MaxPeers && isLightNode):
-		return DiscTooManyPeers
-	case !c.is(trustedConn) && c.is(inboundConn) && !isLightNode && inboundCount >= srv.maxInboundConns():
-		return DiscTooManyPeers
+
 	case peers[c.node.ID()] != nil:
 		return DiscAlreadyConnected
 	case c.node.ID() == srv.localnode.ID():
@@ -956,6 +964,11 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 	}
 	clog := srv.log.New("id", c.node.ID(), "addr", c.fd.RemoteAddr(), "conn", c.flags)
 
+	err = srv.checkpoint(c, srv.posthandshake)
+	if err != nil {
+		clog.Trace("Rejected peer before protocol handshake", "err", err)
+		return err
+	}
 	// Run the protocol handshake
 	phs, err := c.doProtoHandshake(srv.ourHandshake)
 	if err != nil {
@@ -964,11 +977,6 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 	}
 	c.node.SetNodeType(enr.NodeType(phs.NodeType))
 	//movee posthandshake to doProtoHandshake so that we can know the nodetype
-	err = srv.checkpoint(c, srv.posthandshake)
-	if err != nil {
-		clog.Trace("Rejected peer before protocol handshake", "err", err)
-		return err
-	}
 	if id := c.node.ID(); !bytes.Equal(crypto.Keccak256(phs.ID), id[:]) {
 		clog.Trace("Wrong devp2p handshake identity", "phsid", hex.EncodeToString(phs.ID))
 		return DiscUnexpectedIdentity

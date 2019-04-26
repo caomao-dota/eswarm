@@ -276,7 +276,7 @@ func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, c
 	}
 
 	if suggestedPeer != nil{
-		log.Info("Suggested peer:","uaddr",string(suggestedPeer.UAddr),"po",targetPO)
+		log.Trace("Suggested peer:","uaddr",string(suggestedPeer.UAddr),"po",targetPO)
 	}else{
 		//没有节点用可了，把标识成不能查询的恢复起来
 		//从0桶开始填满
@@ -409,7 +409,7 @@ func (k *Kademlia) __deprecatedSuggestPeer() (suggestedPeer *BzzAddr, saturation
 		})
 	}
 	if suggestedPeer != nil{
-		log.Info("Suggested peer:","oaddr",suggestedPeer.OAddr,"uaddr",string(suggestedPeer.UAddr),"po",targetPO)
+		log.Trace("Suggested peer:","oaddr",suggestedPeer.OAddr,"uaddr",string(suggestedPeer.UAddr),"po",targetPO)
 	}else{
 		//没有节点用可了，把标识成不能查询的恢复起来
 		//从0桶开始填满
