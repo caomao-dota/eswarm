@@ -818,11 +818,13 @@ func (srv *Server) encHandshakeChecks(peers map[enode.ID]*Peer, inboundCount int
 				fullPeerCnt++
 		}
 	}
+
 	isLightNode := enode.IsLightNode(enode.NodeTypeOption(c.node.NodeType()))
+	log.Info("connects:","light conn",lightPeerCnt," full conn",fullPeerCnt)
 	switch {
 	case !c.is(trustedConn|staticDialedConn) && (fullPeerCnt >= srv.MaxPeers && !isLightNode) || (lightPeerCnt >= srv.MaxPeers && isLightNode):
 		return DiscTooManyPeers
-	case !c.is(trustedConn) && c.is(inboundConn) && (!isLightNode && inboundCount >= srv.maxInboundConns()):
+	case !c.is(trustedConn) && c.is(inboundConn) && !isLightNode && inboundCount >= srv.maxInboundConns():
 		return DiscTooManyPeers
 	case peers[c.node.ID()] != nil:
 		return DiscAlreadyConnected
@@ -953,15 +955,18 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 		conn.handshakeDone(c.node.ID())
 	}
 	clog := srv.log.New("id", c.node.ID(), "addr", c.fd.RemoteAddr(), "conn", c.flags)
-	err = srv.checkpoint(c, srv.posthandshake)
-	if err != nil {
-		clog.Trace("Rejected peer before protocol handshake", "err", err)
-		return err
-	}
+
 	// Run the protocol handshake
 	phs, err := c.doProtoHandshake(srv.ourHandshake)
 	if err != nil {
 		clog.Trace("Failed proto handshake", "err", err)
+		return err
+	}
+	c.node.SetNodeType(enr.NodeType(phs.NodeType))
+	//movee posthandshake to doProtoHandshake so that we can know the nodetype
+	err = srv.checkpoint(c, srv.posthandshake)
+	if err != nil {
+		clog.Trace("Rejected peer before protocol handshake", "err", err)
 		return err
 	}
 	if id := c.node.ID(); !bytes.Equal(crypto.Keccak256(phs.ID), id[:]) {
