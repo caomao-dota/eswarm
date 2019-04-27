@@ -325,6 +325,12 @@ func (r *Registry) RequestSubscription(peerId enode.ID, s Stream, h *Range, prio
 
 // Subscribe initiates the streamer
 func (r *Registry) Subscribe(peerId enode.ID, s Stream, h *Range, priority uint8) error {
+	if h == nil {
+		log.Info("Subscribe","id",peerId,"stream:",s.Name,"range:","no")
+	}else {
+		log.Info("Subscribe","id",peerId,"stream:",s.Name,"range:",h.String())
+	}
+
 	// check if the stream is registered
 	if _, err := r.GetClientFunc(s.Name); err != nil {
 		return err
@@ -340,11 +346,13 @@ func (r *Registry) Subscribe(peerId enode.ID, s Stream, h *Range, priority uint8
 		to = h.To
 	}
 
+	log.Info("Set client param 1","id",peerId)
 	err := peer.setClientParams(s, newClientParams(priority, to))
 	if err != nil {
 		return err
 	}
 	if s.Live && h != nil {
+		log.Info("Set client param 2","id",peerId)
 		if err := peer.setClientParams(
 			getHistoryStream(s),
 			newClientParams(getHistoryPriority(priority), h.To),

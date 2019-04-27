@@ -224,6 +224,7 @@ func (d *Delivery) handleRetrieveRequestMsg(ctx context.Context, sp *Peer, req *
 			if err != nil {
 				log.Warn("ERROR in handleRetrieveRequestMsg", "err", err)
 			}
+			d.receiptStore.OnChunkDelivered(sp.Account(),uint32((len(chunk.Data())+4095)>>12))
 			return
 		}
 		select {
@@ -281,7 +282,7 @@ func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *Ch
 		if replyReceipt && d.bzz != nil { //TODO 优化每隔10帧或是10秒发送一次收据
 			hs, _ := d.bzz.GetOrCreateHandshake(sp.ID())
 			//用最低的优先级，发送一个收据
-			receipt, err := d.receiptStore.OnNodeChunkReceived(hs.Account,req.SData)
+			receipt, err := d.receiptStore.OnNodeChunkReceived(hs.Account,int64(len(req.SData)))
 			d.IncreaseAccount(hs.Account)
 			if err == nil {
 				err = sp.SendPriority(ctx, &ReceiptsMsg{receipt.Account, uint32(receipt.Stime.Unix()), receipt.Amount, receipt.Sign}, Mid)

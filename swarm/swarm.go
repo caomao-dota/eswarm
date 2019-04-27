@@ -91,7 +91,7 @@ type Swarm struct {
 // If mockStore is not nil, it will be used as the storage for chunk data.
 // MockStore should be used only for testing.
 func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err error) {
-	log.Info("Starting eswarm now!","version","042701")
+	log.Info("Starting eswarm now!","version","042702")
 	if bytes.Equal(common.FromHex(config.PublicKey), storage.ZeroAddr) {
 		return nil, fmt.Errorf("empty public key")
 	}
@@ -243,14 +243,14 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 	delivery.AttachBzz(self.bzz)
 	//创建PSS通信网络(暂略过，没有深入研究）
 	// Pss = postal service over swarm (devp2p over bzz)
-	/*self.ps, err = pss.NewPss(to, config.Pss)
+	self.ps, err = pss.NewPss(to, config.Pss)
 	if err != nil {
 		return nil, err
 	}
 	if pss.IsActiveHandshake {
 		pss.SetHandshakeController(self.ps, pss.NewHandshakeParams())
 	}
-*/
+
 	//创建api
 	self.api = api.NewAPI(self.fileStore, mockStore,self.dns, feedsHandler, self.privateKey)
 	self.api.SetCounter(delivery)

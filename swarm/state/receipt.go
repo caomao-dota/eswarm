@@ -593,16 +593,18 @@ func (rs *ReceiptStore) submitRoutine() {
 	每次数据传输完成后，用这个通知ReceiptStore，用于计数某些节点发送的总Chunk和收到的收据
     本函数返回一个unpayed的值，用于表示该节点目前有多少个未支付（收据）的数据了
 	调用者可以根据这个返回决定对相应节点的操作
+
+	TODO 根据unpaidAmount的设计黑名单
 */
-func (rs *ReceiptStore) OnChunkDelivered(nodeId [20]byte) uint32 {
+func (rs *ReceiptStore) OnChunkDelivered(nodeId [20]byte, amount4k uint32) uint32 {
 	rs.hmu.Lock()
 	defer rs.hmu.Unlock()
 
 	_, ok := rs.unpaidAmount[nodeId]
 	if !ok {
-		rs.unpaidAmount[nodeId] = 1
+		rs.unpaidAmount[nodeId] = amount4k
 	} else {
-		rs.unpaidAmount[nodeId] += 1
+		rs.unpaidAmount[nodeId] += amount4k
 	}
 	return rs.unpaidAmount[nodeId]
 }

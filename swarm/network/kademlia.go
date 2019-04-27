@@ -236,7 +236,7 @@ func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, c
 	if saturationDepth < MaxPoBin { //优先满足深度
 		//first find connected count for each bin
 		k.addrs.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
-			if po >= saturationDepth && sizeOfBin[po] <= k.MaxBinSize {
+			if po >= saturationDepth && sizeOfBin[po] < k.MaxBinSize {
 				return f(func(val pot.Val) bool {
 					e := val.(*entry)
 					_,ok := k.peers[string(e.UAddr)]
@@ -255,7 +255,7 @@ func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, c
 	}else{
 		//从0桶开始填满
 		k.addrs.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
-			if sizeOfBin[po] <= k.MaxBinSize {
+			if sizeOfBin[po] < k.MaxBinSize {
 				return f(func(val pot.Val) bool {
 					e := val.(*entry)
 					_,ok := k.peers[string(e.UAddr)]

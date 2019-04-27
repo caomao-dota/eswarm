@@ -76,6 +76,7 @@ type WrappedPriorityMsg struct {
 
 // NewPeer is the constructor for Peer
 func NewPeer(peer *protocols.Peer, streamer *Registry) *Peer {
+	log.Info("new stream peer:","id",peer.ID())
 	p := &Peer{
 		Peer:         peer,
 		pq:           pq.New(int(PriorityQueue), PriorityQueueCap),
@@ -391,6 +392,7 @@ func (p *Peer) removeClient(s Stream) error {
 }
 
 func (p *Peer) setClientParams(s Stream, params *clientParams) error {
+	log.Info("Set Client params","id",p.ID(),"stream",s.Name)
 	p.clientMu.Lock()
 	defer p.clientMu.Unlock()
 

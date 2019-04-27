@@ -825,7 +825,7 @@ func (srv *Server) protoHandshakeChecks(peers map[enode.ID]*Peer, inboundCount i
 	}
 
 	connects,_,_ := srv.ntab.TargetBucketInfo(c.node.ID())
-	if(connects.Length() > 4) {
+	if connects.Length() >= 4 && !isLightNode {
 		return DiscBucketFull
 	}
 
