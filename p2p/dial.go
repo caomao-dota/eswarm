@@ -20,6 +20,7 @@ import (
 	"container/heap"
 	"errors"
 	"fmt"
+	"github.com/plotozhu/MDCMainnet/p2p/discover"
 	"net"
 	"time"
 
@@ -94,6 +95,7 @@ type discoverTable interface {
 	AddConnectedNode(node *enode.Node)
 	RemoveConnectedNode(node *enode.Node)
 	OnNodeChanged(chan struct{})
+	TargetBucketInfo(nodeId enode.ID) (connects,entries,replacements *discover.NodeQueue)
 }
 
 // the dial history remembers recent dials.

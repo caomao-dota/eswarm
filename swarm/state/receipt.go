@@ -347,22 +347,23 @@ func (rs *ReceiptStore) saveReceipts(key []byte, receipts Receipts) error {
 
 //新收到了一个数据,在C记录中记录，并且返回一个签过名的收据
 //如果nodeId不合法，返回的收据为空，error为ErrInvalidNode
-func (rs *ReceiptStore) OnNodeChunkReceived(account [20]byte) (*Receipt, error) {
+func (rs *ReceiptStore) OnNodeChunkReceived(account [20]byte,dataLength int64 ) (*Receipt, error) {
 	rs.cmu.Lock()
 	defer rs.cmu.Unlock()
 
 	if len(account) != 20 {
 		return nil, ErrInvalidNode
 	}
+	chunkAmount := uint32((dataLength+4095) >> 12)
 	//update chunkOfNode
 	item, exist := rs.nodeCommCache.Get(account)
 	if !exist {
-		item = &ReceiptInStore{time.Now(), 1}
+		item = &ReceiptInStore{time.Now(), chunkAmount}
 	} else {
 		if MAX_STIME_DURATION < time.Since(item.(*ReceiptInStore).Stime) {
-			item = &ReceiptInStore{time.Now(), 1}
+			item = &ReceiptInStore{time.Now(), chunkAmount}
 		} else {
-			item = &ReceiptInStore{item.(*ReceiptInStore).Stime, item.(*ReceiptInStore).Amount + 1}
+			item = &ReceiptInStore{item.(*ReceiptInStore).Stime, item.(*ReceiptInStore).Amount + chunkAmount}
 		}
 
 	}

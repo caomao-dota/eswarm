@@ -1195,6 +1195,10 @@ func (tab *Table) AddConnectedNode(oneNode *enode.Node) {
 
 
 }
+func (tab *Table) TargetBucketInfo(nodeId enode.ID) (connects,entries,replacements *NodeQueue){
+	bucket := tab.bucket(nodeId)
+	return bucket.connects,bucket.entries,bucket.replacements
+}
 func (tab *Table) RemoveConnectedNode(oneNode *enode.Node) {
     //log.Info("45")
 	//defer func(){log.Info("45.1")}()

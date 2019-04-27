@@ -823,6 +823,12 @@ func (srv *Server) protoHandshakeChecks(peers map[enode.ID]*Peer, inboundCount i
 		case !c.is(trustedConn) && c.is(inboundConn) && !isLightNode && inboundCount >= srv.maxInboundConns():
 			return DiscTooManyPeers
 	}
+
+	connects,_,_ := srv.ntab.TargetBucketInfo(c.node.ID())
+	if(connects.Length() > 4) {
+		return DiscBucketFull
+	}
+
 	// Repeat the encryption handshake checks because the
 	// peer set might have changed between the handshakes.
 	return srv.encHandshakeChecks(peers, inboundCount, c)
