@@ -1179,36 +1179,37 @@ func (tab *Table) addVerifiedNode(nodeId enode.ID) {
 
 
 }
-/*
-func (tab *Table) AddConnectedNode(oneNode *enode.Node) {
+
+func (tab *Table) AddConnectedNode(nodeId enode.ID) (bool) {
     //log.Info("44")
 	//defer func(){log.Info("44.1")}()
 	tab.mutex.Lock()
 	defer tab.mutex.Unlock()
 	if !tab.isInitDone() {
-		return
+		return false
 	}
 
-	if oneNode.ID() == tab.self().ID() {
-		return
-	}
-
-
-	b := tab.bucket(oneNode.ID())
-
-	if b.connects.Contains(oneNode.ID()) { //已经加入了，直接退出
-		return
+	if nodeId == tab.self().ID() {
+		return true
 	}
 
 
-	_,node1 := b.entries.RemoveNode(oneNode.ID())
-	_,node2 := b.replacements.RemoveNode(oneNode.ID())
+	b := tab.bucket(nodeId)
 
-	n := tab.allNodes[oneNode.ID()]
+	if b.connects.Contains(nodeId) { //已经加入了，直接退出
+		return true
+	}
+
+
+	_,node1 := b.entries.RemoveNode(nodeId)
+	_,node2 := b.replacements.RemoveNode(nodeId)
+
+	n := tab.allNodes[nodeId]
 	if n == nil {
 
-		n = wrapNode(oneNode)
+	//	n = wrapNode(nodeId)
 		log.Info("node warpped:","id",n.ID(),"ip",n.IP(),"udp",n.UDP())
+		return false
 	}
 	log.Info("node from exist:","id",n.ID(),"ip",n.IP(),"udp",n.UDP())
 	n.addedAt = time.Now()
@@ -1219,15 +1220,16 @@ func (tab *Table) AddConnectedNode(oneNode *enode.Node) {
 		n = node2
 	}
 	b.connects.AddNode(n,false)
+	return true
 
-}*/
+}
 func (tab *Table) TargetBucketInfo(nodeId enode.ID) (connects,entries,replacements *NodeQueue){
 	bucket := tab.bucket(nodeId)
 	return bucket.connects,bucket.entries,bucket.replacements
 }
 
-func (tab *Table) RemoveConnectedNode(oneNode *enode.Node) {
-    log.Info("45")
+func (tab *Table) RemoveConnectedNode(nodeId enode.ID) {
+    //log.Info("45")
 	//defer func(){log.Info("45.1")}()
 	tab.mutex.Lock()
 	defer tab.mutex.Unlock()
@@ -1235,14 +1237,14 @@ func (tab *Table) RemoveConnectedNode(oneNode *enode.Node) {
 		return
 	}
 
-	if oneNode.ID() == tab.self().ID() {
+	if nodeId == tab.self().ID() {
 		return
 	}
 
-	b := tab.bucket(oneNode.ID())
+	b := tab.bucket(nodeId)
 	//前面anode在rlpx的时候，已经进行了一次不对称加密，所以是无法模仿出其他节点进来，因此判定一次IP只是冗余判定
 
-	_,n := b.connects.RemoveNode(oneNode.ID())
+	_,n := b.connects.RemoveNode(nodeId)
 	if n != nil {
 		//从网络中断开的，移动到最后
 		b.replacements.AddNode(n,true)

@@ -92,8 +92,8 @@ type discoverTable interface {
 	ReadRandomNodes([]*enode.Node) int
 	//by Aegon, interpret with Hive
 	GetKnownNodesSorted()[]*enode.Node
-	//AddConnectedNode(node *enode.Node)
-	RemoveConnectedNode(node *enode.Node)
+	AddConnectedNode(nodeId enode.ID) bool
+	RemoveConnectedNode(nodeId enode.ID)
 	OnNodeChanged(chan struct{})
 	TargetBucketInfo(nodeId enode.ID) (connects,entries,replacements *discover.NodeQueue)
 }
