@@ -1224,13 +1224,24 @@ func (tab *Table) AddConnectedNode(nodeId enode.ID) (bool) {
 	return true
 
 }
-func (tab *Table) TargetBucketInfo(nodeId enode.ID) (connects,entries,replacements *NodeQueue){
+func (tab *Table) TargetBucketInfo(nodeId enode.ID) (bucketId int,connects,entries,replacements *NodeQueue){
+	tab.mutex.Lock()
+	defer tab.mutex.Unlock()
 	bucket := tab.bucket(nodeId)
-	return bucket.connects,bucket.entries,bucket.replacements
+	bucketIndex := 0
+	//defer func(){log.Info("41.1")}()
+	d := enode.LogDist(tab.self().ID(), nodeId)
+	if d <= bucketMinDistance {
+		bucketIndex = 0
+	}else {
+		bucketIndex = d-bucketMinDistance-1
+	}
+
+	return bucketIndex,bucket.connects,bucket.entries,bucket.replacements
 }
 
 func (tab *Table) RemoveConnectedNode(nodeId enode.ID) {
-    //log.Info("45")
+    log.Info("Node Disconnected:","id",nodeId)
 	//defer func(){log.Info("45.1")}()
 	tab.mutex.Lock()
 	defer tab.mutex.Unlock()

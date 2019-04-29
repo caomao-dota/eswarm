@@ -95,7 +95,7 @@ type discoverTable interface {
 	AddConnectedNode(nodeId enode.ID) bool
 	RemoveConnectedNode(nodeId enode.ID)
 	OnNodeChanged(chan struct{})
-	TargetBucketInfo(nodeId enode.ID) (connects,entries,replacements *discover.NodeQueue)
+	TargetBucketInfo(nodeId enode.ID) (bucketId int,connects,entries,replacements *discover.NodeQueue)
 }
 
 // the dial history remembers recent dials.

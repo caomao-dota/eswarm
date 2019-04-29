@@ -811,7 +811,7 @@ func (srv *Server) protoHandshakeChecks(peers map[enode.ID]*Peer, inboundCount i
 		}
 	}
 	isLightNode := enode.IsLightNode(enode.NodeTypeOption(c.node.NodeType()))
-	log.Trace("connects:","light conn",lightPeerCnt," full conn",fullPeerCnt)
+	log.Info("connects:","light conn",lightPeerCnt," full conn",fullPeerCnt)
 	// Drop connections with no matching protocols.
 	switch {
 
@@ -824,7 +824,8 @@ func (srv *Server) protoHandshakeChecks(peers map[enode.ID]*Peer, inboundCount i
 			return DiscTooManyPeers
 	}
 
-	connects,_,_ := srv.ntab.TargetBucketInfo(c.node.ID())
+	bucketId,connects,_,_ := srv.ntab.TargetBucketInfo(c.node.ID())
+	log.Info("bucketInfo:","id",c.node.ID(),"bucketIndex",bucketId," connected",connects.Length())
 	if connects.Length() >= 4 && !isLightNode {
 		return DiscBucketFull
 	}
@@ -938,7 +939,7 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 	// Prevent leftover pending conns from entering the handshake.
 	srv.lock.Lock()
 	running := srv.running
-	srv.lock.Unlock()
+	defer srv.lock.Unlock()
 	if !running {
 		return errServerStopped
 	}
