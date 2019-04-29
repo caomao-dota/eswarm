@@ -1062,7 +1062,7 @@ func (srv *Server) runPeer(p *Peer) {
 		Peer:  p.ID(),
 		Error: err.Error(),
 	})
-	srv.ntab.RemoveConnectedNode(p.Node())
+	srv.ntab.RemoveConnectedNode(p.Node().ID())
 	// Note: run waits for existing peers to be sent on srv.delpeer
 	// before returning, so this send should not select on srv.quit.
 	srv.delpeer <- peerDrop{p, err, remoteRequested}
