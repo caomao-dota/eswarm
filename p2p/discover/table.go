@@ -1208,7 +1208,7 @@ func (tab *Table) AddConnectedNode(nodeId enode.ID) (bool) {
 	if n == nil {
 
 	//	n = wrapNode(nodeId)
-		log.Info("node warpped:","id",n.ID(),"ip",n.IP(),"udp",n.UDP())
+		log.Info("node warpped:","id",nodeId)
 		return false
 	}
 	log.Info("node from exist:","id",n.ID(),"ip",n.IP(),"udp",n.UDP())

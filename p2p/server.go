@@ -997,7 +997,9 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 		ip := tcp.IP
 		port := tcp.Port
 		//生成一个节点，添加到系统里
-		srv.ntab.AddConnectedNode(enode.NewV4(remotePubkey, ip, port, int(phs.ListenPort),phs.NodeType).ID())
+		if !srv.ntab.AddConnectedNode(enode.NewV4(remotePubkey, ip, port, int(phs.ListenPort),phs.NodeType).ID()) {
+			return errors.New("break peer and waiting for ping/pong first")
+		}
 	}
 
 	// If the checks completed successfully, runPeer has now been
