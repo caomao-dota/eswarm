@@ -702,13 +702,15 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) 
 			//这个是非常有可能ping不通的，因为ping的是连接的来源端口，如果ping通了，就记录，否则就不管了
 			t.sendPing(fromID, from, func(latency int64) {
 				n.latency = latency
-				t.tab.addVerifiedNode(n.ID())
+				t.tab.addVerifiedNode(n.ID(),n)
 			})
 		} else {
 			//收到了ping,上一次的pong的时间没有超过bondExpiration（24小时），认为是有效的
 			n.latency = t.db.GetNodeLatency(n.ID(),from.IP)
 
-			//t.tab.addVerifiedNode(n)
+			//但是这个时候，系统中很可能还没有这个节点（初次收到ping)
+
+			t.tab.addVerifiedNode(n.ID(),n)
 		}
 
 		// Update node database and endpoint predictor.

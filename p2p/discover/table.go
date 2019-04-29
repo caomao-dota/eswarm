@@ -1122,7 +1122,7 @@ func (tab *Table) addSeenNode(n *node) {
 // ping repeatedly.
 //
 // The caller must not hold tab.mutex.
-func (tab *Table) addVerifiedNode(nodeId enode.ID) {
+func (tab *Table) addVerifiedNode(nodeId enode.ID,backNode *node) {
     //log.Info("43")
 	//defer func(){log.Info("43.1")}()
 
@@ -1131,7 +1131,8 @@ func (tab *Table) addVerifiedNode(nodeId enode.ID) {
 	}
 	n,_ := tab.allNodes[nodeId]
 	if n== nil {
-		return
+		n = backNode
+		tab.allNodes[nodeId] = n
 	}
 	if n.ID() == tab.self().ID() {
 		return
@@ -1205,21 +1206,21 @@ func (tab *Table) AddConnectedNode(nodeId enode.ID) (bool) {
 	_,node2 := b.replacements.RemoveNode(nodeId)
 
 	n := tab.allNodes[nodeId]
-	if n == nil {
+	if n != nil {
+		log.Info("node from exist:","id",n.ID(),"ip",n.IP(),"udp",n.UDP())
+		n.addedAt = time.Now()
+		if node1 != nil {
+			n = node1
+		}
+		if node2 != nil {
+			n = node2
+		}
+		if n != nil {
+			b.connects.AddNode(n,false)
+		}
+	}
 
-	//	n = wrapNode(nodeId)
-		log.Info("node warpped:","id",nodeId)
-		return false
-	}
-	log.Info("node from exist:","id",n.ID(),"ip",n.IP(),"udp",n.UDP())
-	n.addedAt = time.Now()
-	if node1 != nil {
-		n = node1
-	}
-	if node2 != nil {
-		n = node2
-	}
-	b.connects.AddNode(n,false)
+
 	return true
 
 }
