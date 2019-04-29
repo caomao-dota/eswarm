@@ -81,6 +81,7 @@ type Table struct {
 	closed    chan struct{}
 	notifyChannel    chan struct{}
 	nodeAddedHook func(*node) // for testing
+	allNodes     map[enode.ID]*node
 
 }
 type AttributeID uint8
@@ -354,6 +355,7 @@ func newTable(t transport, db *enode.DB, bootnodes []*enode.Node) (*Table, error
 		closed:     make(chan struct{}),
 		rand:       mrand.New(mrand.NewSource(0)),
 		ips:        netutil.DistinctNetSet{Subnet: tableSubnet, Limit: tableIPLimit},
+		allNodes:   make(map[enode.ID]*node),
 	}
 	if err := tab.setFallbackNodes(bootnodes); err != nil {
 		return nil, err
@@ -486,6 +488,8 @@ func (c SortableNode) Swap(i, j int) {
 func (c SortableNode) Less(i, j int) bool {
 	return c[i].latency < c[j].latency
 }
+
+
 
 //按延时从小到大的顺序排好
 func (tab *Table) GetKnownNodesSorted() []*enode.Node{
@@ -711,7 +715,15 @@ func (tab *Table) loop() {
 	defer copyNodes.Stop()
 	defer replace.Stop()
 	// Start initial refresh.
-	go tab.doRefresh(refreshDone)
+	go func (){
+		tab.doRefresh(refreshDone)
+		revalidateDone = make(chan struct{})
+		go tab.doReplacementCheck(revalidateDone)
+		select {
+			case <- revalidateDone:
+		case <-tab.closeReq:
+		}
+	}()
 
 loop:
 	for {
@@ -811,8 +823,12 @@ func (tab *Table) loadSeedNodes() {
     //log.Info("32")
 	//defer func(){log.Info("32.1")}()
 	seeds := wrapNodes(tab.db.QuerySeeds(seedCount, seedMaxAge))
-
-	seeds = append(seeds, tab.nursery...)
+	sortNodes := SortableNode(seeds)
+	for _,node := range sortNodes {
+		node.latency = tab.db.GetNodeLatency(node.ID(),node.IP())
+	}
+	sort.Sort(sortNodes)
+	seeds = append(sortNodes, tab.nursery...)
 	for i := range seeds {
 		seed := seeds[i]
 		seed.latency =tab.db.GetNodeLatency(seed.ID(),seed.IP())
@@ -1064,8 +1080,11 @@ func (tab *Table) addSeenNode(n *node) {
 		return
 	}
 
+
 	tab.mutex.Lock()
 	defer tab.mutex.Unlock()
+
+	tab.allNodes[n.ID()] = n
 	b := tab.bucket(n.ID())
 
 	if b.entries.Contains( n.ID()) {
@@ -1103,10 +1122,15 @@ func (tab *Table) addSeenNode(n *node) {
 // ping repeatedly.
 //
 // The caller must not hold tab.mutex.
-func (tab *Table) addVerifiedNode(n *node) {
+func (tab *Table) addVerifiedNode(nodeId enode.ID) {
     //log.Info("43")
 	//defer func(){log.Info("43.1")}()
+
 	if !tab.isInitDone() {
+		return
+	}
+	n,_ := tab.allNodes[nodeId]
+	if n== nil {
 		return
 	}
 	if n.ID() == tab.self().ID() {
@@ -1155,6 +1179,7 @@ func (tab *Table) addVerifiedNode(n *node) {
 
 
 }
+/*
 func (tab *Table) AddConnectedNode(oneNode *enode.Node) {
     //log.Info("44")
 	//defer func(){log.Info("44.1")}()
@@ -1179,7 +1204,13 @@ func (tab *Table) AddConnectedNode(oneNode *enode.Node) {
 	_,node1 := b.entries.RemoveNode(oneNode.ID())
 	_,node2 := b.replacements.RemoveNode(oneNode.ID())
 
-	n := wrapNode(oneNode)
+	n := tab.allNodes[oneNode.ID()]
+	if n == nil {
+
+		n = wrapNode(oneNode)
+		log.Info("node warpped:","id",n.ID(),"ip",n.IP(),"udp",n.UDP())
+	}
+	log.Info("node from exist:","id",n.ID(),"ip",n.IP(),"udp",n.UDP())
 	n.addedAt = time.Now()
 	if node1 != nil {
 		n = node1
@@ -1188,19 +1219,15 @@ func (tab *Table) AddConnectedNode(oneNode *enode.Node) {
 		n = node2
 	}
 	b.connects.AddNode(n,false)
-    //log.Info("connected node :","id",n.ID(),"addr",n.addr(),"TCP",n.TCP(),"UDP",n.UDP())
 
-
-
-
-
-}
+}*/
 func (tab *Table) TargetBucketInfo(nodeId enode.ID) (connects,entries,replacements *NodeQueue){
 	bucket := tab.bucket(nodeId)
 	return bucket.connects,bucket.entries,bucket.replacements
 }
+
 func (tab *Table) RemoveConnectedNode(oneNode *enode.Node) {
-    //log.Info("45")
+    log.Info("45")
 	//defer func(){log.Info("45.1")}()
 	tab.mutex.Lock()
 	defer tab.mutex.Unlock()

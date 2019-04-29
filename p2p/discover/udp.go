@@ -316,7 +316,7 @@ func (t *udp) ping(toid enode.ID, toaddr *net.UDPAddr) (error,time.Duration) {
 	sentTime := time.Now()
 	errc := <- t.sendPing(toid, toaddr,nil)
 	if errc == nil {
-		t.tab.ProcessLive(toid,time.Since(sentTime),true)
+			t.tab.ProcessLive(toid,time.Since(sentTime),true)
 		go func(){
 			//latency := time.Since(sentTime)
 		//	t.latencyCache.Add(toid,latency)
@@ -699,15 +699,16 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) 
 		n.addedAt = time.Now()
 		if time.Since(t.db.LastPongReceived(n.ID(), from.IP)) > bondExpiration {
 
+			//这个是非常有可能ping不通的，因为ping的是连接的来源端口，如果ping通了，就记录，否则就不管了
 			t.sendPing(fromID, from, func(latency int64) {
 				n.latency = latency
-				t.tab.addVerifiedNode(n)
+				t.tab.addVerifiedNode(n.ID())
 			})
 		} else {
 			//收到了ping,上一次的pong的时间没有超过bondExpiration（24小时），认为是有效的
 			n.latency = t.db.GetNodeLatency(n.ID(),from.IP)
 
-			t.tab.addVerifiedNode(n)
+			//t.tab.addVerifiedNode(n)
 		}
 
 		// Update node database and endpoint predictor.

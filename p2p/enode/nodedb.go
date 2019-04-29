@@ -435,7 +435,7 @@ seek:
 			continue seek
 		}
 		for i := range nodes {
-			if nodes[i].ID() == n.ID() {
+			if nodes[i].ID() == n.ID() || uint8(n.NodeType()) == 0x11{
 				continue seek // duplicate
 			}
 		}

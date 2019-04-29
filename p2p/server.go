@@ -993,12 +993,12 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 		clog.Trace("Rejected peer", "err", err)
 		return err
 	}
-	if tcp, ok := c.fd.RemoteAddr().(*net.TCPAddr); ok {
+	/*if tcp, ok := c.fd.RemoteAddr().(*net.TCPAddr); ok {
 		ip := tcp.IP
 		port := tcp.Port
 		//生成一个节点，添加到系统里
-		srv.ntab.AddConnectedNode(enode.NewV4(remotePubkey, ip, port, int(phs.ListenPort),phs.NodeType))
-	}
+		//srv.ntab.AddConnectedNode(enode.NewV4(remotePubkey, ip, port, int(phs.ListenPort),phs.NodeType))
+	}*/
 
 	// If the checks completed successfully, runPeer has now been
 	// launched by run.
@@ -1062,7 +1062,7 @@ func (srv *Server) runPeer(p *Peer) {
 		Peer:  p.ID(),
 		Error: err.Error(),
 	})
-	srv.ntab.RemoveConnectedNode(p.Node())
+	//srv.ntab.RemoveConnectedNode(p.Node())
 	// Note: run waits for existing peers to be sent on srv.delpeer
 	// before returning, so this send should not select on srv.quit.
 	srv.delpeer <- peerDrop{p, err, remoteRequested}

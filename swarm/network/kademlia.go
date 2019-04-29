@@ -730,7 +730,8 @@ func (k *Kademlia) callable(e *entry) bool {
 	if e.conn != nil || e.retries > k.MaxRetries {
 		return false
 	}
-	if time.Since(e.lastRetry) < 20*time.Minute  {
+	lastVal := time.Since(e.lastRetry)/time.Second
+	if lastVal < 1200  {
 		return false
 	}
 	// calculate the allowed number of retries based on time lapsed since last seen

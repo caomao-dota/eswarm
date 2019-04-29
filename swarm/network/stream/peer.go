@@ -392,7 +392,7 @@ func (p *Peer) removeClient(s Stream) error {
 }
 
 func (p *Peer) setClientParams(s Stream, params *clientParams) error {
-	log.Info("Set Client params","id",p.ID(),"stream",s.Name)
+	//log.Info("Set Client params","id",p.ID(),"stream",s.Name)
 	p.clientMu.Lock()
 	defer p.clientMu.Unlock()
 
