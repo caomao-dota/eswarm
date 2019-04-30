@@ -74,7 +74,7 @@ func NewKadParams() *KadParams {
 		MaxProxDisplay:    16,
 		NeighbourhoodSize: 2,
 		MinBinSize:        2,
-		MaxBinSize:        4,
+		MaxBinSize:        5,
 		RetryInterval:     4200000000, // 4.2 sec
 		MaxRetries:        42,
 		RetryExponent:     2,
@@ -261,11 +261,12 @@ func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, c
 			}
 		})
 	}
-	//important 不要自己把桶填满，如果是自己填满了，其他节点就无法再连接进来了
-	/*if suggestedPeer == nil {
+	//important 不要自己把桶填满，如果是自己填满了，其他新节点就无法再连接进来了
+	//目前的算法是，桶内如果有minBinSize+1个节点，就不再主动向外连接
+	if suggestedPeer == nil {
 		//从0桶开始填满
 		k.addrs.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
-			if sizeOfBin[po] < k.MaxBinSize {
+			if sizeOfBin[po] < k.MinBinSize+1 {
 				return f(func(val pot.Val) bool {
 					e := val.(*entry)
 					_,ok := k.peers[string(e.UAddr)]
@@ -283,7 +284,7 @@ func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, c
 			}
 
 		})
-	}*/
+	}
 
 	if suggestedPeer != nil{
 		log.Trace("Suggested peer:","po",targetPO,"oaddr",common.Bytes2Hex(suggestedPeer.Over()))
