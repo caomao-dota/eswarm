@@ -213,6 +213,7 @@ func (h *Hive) connect() {
 		log.Trace(fmt.Sprintf("%08x attempt to connect to bee %08x", h.BaseAddr()[:4], addr.Address()[:4]))
 		h.addPeer(under)
 	}
+	log.Info("Hive exist")
 
 }
 

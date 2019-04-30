@@ -261,8 +261,8 @@ func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, c
 			}
 		})
 	}
-
-	if suggestedPeer == nil {
+	//important 不要自己把桶填满，如果是自己填满了，其他节点就无法再连接进来了
+	/*if suggestedPeer == nil {
 		//从0桶开始填满
 		k.addrs.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
 			if sizeOfBin[po] < k.MaxBinSize {
@@ -283,13 +283,12 @@ func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, c
 			}
 
 		})
-	}
+	}*/
 
 	if suggestedPeer != nil{
 		log.Trace("Suggested peer:","po",targetPO,"oaddr",common.Bytes2Hex(suggestedPeer.Over()))
 	}else{
 		//没有节点用可了，把标识成不能查询的恢复起来
-		//从0桶开始填满
 		k.addrs.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
 			return f(func(val pot.Val) bool {
 				e := val.(*entry)
