@@ -92,10 +92,10 @@ type discoverTable interface {
 	ReadRandomNodes([]*enode.Node) int
 	//by Aegon, interpret with Hive
 	GetKnownNodesSorted()[]*enode.Node
-	AddConnectedNode(nodeId enode.ID) bool
+	CanAddNode(n *enode.Node) bool
 	RemoveConnectedNode(nodeId enode.ID)
 	OnNodeChanged(chan struct{})
-	TargetBucketInfo(nodeId enode.ID) (bucketId int,connects,entries,replacements *discover.NodeQueue)
+	TargetBucketInfo(nodeId enode.ID) (bucketId int,entries,replacements *discover.NodeQueue)
 }
 
 // the dial history remembers recent dials.

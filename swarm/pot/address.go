@@ -165,6 +165,7 @@ func ToBytes(v Val) []byte {
 func DefaultPof(max int) func(one, other Val, pos int) (int, bool) {
 	return func(one, other Val, pos int) (int, bool) {
 		po, eq := proximityOrder(ToBytes(one), ToBytes(other), pos)
+		//log.Info("proximity:","1",ToBytes(one),"2",ToBytes(other),"pos",pos,"dist",po)
 		if po >= max {
 			eq = true
 			po = max

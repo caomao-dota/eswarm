@@ -19,6 +19,7 @@ package network
 import (
 	"bytes"
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/plotozhu/MDCMainnet/p2p/enode"
 	"math/rand"
 	"strings"
@@ -188,7 +189,14 @@ func (k *Kademlia) Register(peers ...*BzzAddr) error {
 	k.sendNeighbourhoodDepthChange()
 	return nil
 }
+func (k *Kademlia)GetIntendBinInfo(anode enode.ID) (int,int){
 
+	bin,_ := Pof(anode[:],k.base,0)
+//	bin = int(math.Log2(float64(bin)))
+	return k.conns.SizeOfBin(bin),bin
+
+
+}
 func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, changed bool) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
@@ -252,7 +260,9 @@ func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, c
 				return true
 			}
 		})
-	}else{
+	}
+
+	if suggestedPeer == nil {
 		//从0桶开始填满
 		k.addrs.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
 			if sizeOfBin[po] < k.MaxBinSize {
@@ -276,7 +286,7 @@ func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, c
 	}
 
 	if suggestedPeer != nil{
-		log.Trace("Suggested peer:","uaddr",string(suggestedPeer.UAddr),"po",targetPO)
+		log.Trace("Suggested peer:","po",targetPO,"oaddr",common.Bytes2Hex(suggestedPeer.Over()))
 	}else{
 		//没有节点用可了，把标识成不能查询的恢复起来
 		//从0桶开始填满
@@ -434,25 +444,35 @@ func (k *Kademlia) __deprecatedSuggestPeer() (suggestedPeer *BzzAddr, saturation
 }
 
 // On inserts the peer as a kademlia peer into the live peers
-func (k *Kademlia) On(p *Peer) (uint8, bool) {
+func (k *Kademlia) On(p *Peer) (depth uint8, changed bool,err error) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	var ins bool
-	 changed  := false
+	 changed  = false
 	 k.peers[string(p.UAddr)] = true
 	if p.NodeType() != enode.NodeTypeLight {
-		k.conns, _, _, _ = pot.Swap(k.conns, p, Pof, func(v pot.Val) pot.Val {
+		po := int(0)
+
+		k.conns, po, _, _ = pot.Swap(k.conns, p, Pof, func(v pot.Val) pot.Val {
 			// if not found live
 			if v == nil {
-				ins = true
-				// insert new online peer into conns
-				return p
+
+				if k.conns.SizeOfBin(po) < k.KadParams.MaxBinSize {
+					ins = true
+					// insert new online peer into conns
+					return p
+				}else {
+					err = errors.New(fmt.Sprintf("Full bucket id:=%v  po:=%v",common.Bytes2Hex(p.OAddr),po))
+					return v
+				}
+
 			}
 			// found among live peers, do nothing
 			return v
 		})
 
-		if ins && p.NodeType() != enode.NodeTypeLight {
+
+		if ins  {
 			a := newEntry(p.BzzAddr)
 			a.conn = p
 			// insert new online peer into addrs
@@ -487,7 +507,7 @@ func (k *Kademlia) On(p *Peer) (uint8, bool) {
 		})
 	}
 
-	return k.depth, changed
+	return k.depth, changed,err
 
 }
 

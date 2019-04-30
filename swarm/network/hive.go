@@ -114,6 +114,7 @@ func (h *Hive) Start(server *p2p.Server) error {
 	h.ticker = time.NewTicker(h.KeepAliveInterval)
 	h.refreshTicker = time.NewTicker(h.RefreshPeers)
 	server.SetNotificationChan(h.newNodeDiscov)
+	//server.SetNodeAddChecker(h.CheckNode)
 	// this loop is doing bootstrapping and maintains a healthy table
 	h.doRefresh()
 
@@ -121,6 +122,18 @@ func (h *Hive) Start(server *p2p.Server) error {
 	go h.refresh()
 	return nil
 }
+func (h *Hive) CheckNode(n *enode.Node) bool{
+	/*length,po := h.Kademlia.GetIntendBinInfo(n)
+	if  length >= h.KadParams.MaxBinSize {
+		log.Info("bucket size full :","id",n.ID(),"bucket",po,"connected",length)
+		return false
+	}else{
+		log.Info("bucket add ok :","id",n.ID(),"bucket",po,"connected",length)
+		return true
+	}*/
+	return true
+}
+
 func (h *Hive)refresh(){
 	for  {
 		select {
@@ -205,12 +218,14 @@ func (h *Hive) connect() {
 
 // Run protocol run function
 func (h *Hive) Run(p *BzzPeer) error {
+
 	h.trackPeer(p)
 	defer h.untrackPeer(p)
-
-
 	dp := NewPeer(p, h.Kademlia)
-	depth, changed := h.On(dp)
+	depth, changed,err  := h.On(dp)
+	if err != nil {
+		return err
+	}
 	// if we want discovery, advertise change of depth
 	if h.Discovery {
 		if changed {
@@ -228,6 +243,7 @@ func (h *Hive) Run(p *BzzPeer) error {
 	}
 	defer h.Off(dp)
 	return dp.Run(dp.HandleMsg)
+
 }
 
 func (h *Hive) trackPeer(p *BzzPeer) {

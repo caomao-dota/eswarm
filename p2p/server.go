@@ -152,7 +152,7 @@ type Config struct {
 	// Logger is a custom logger to use with the p2p.Server.
 	Logger log.Logger `toml:",omitempty"`
 }
-
+type AddCheck func(node *enode.Node) bool
 // Server manages all peer connections.
 type Server struct {
 	// Config fields may not be modified while the server is running.
@@ -189,6 +189,8 @@ type Server struct {
 	loopWG        sync.WaitGroup // loop, listenLoop
 	peerFeed      event.Feed
 	log           log.Logger
+
+	_addCheckFun  AddCheck
 }
 
 type peerOpFunc func(map[enode.ID]*Peer)
@@ -451,7 +453,7 @@ func (srv *Server) Start() (err error) {
 	srv.removetrusted = make(chan *enode.Node)
 	srv.peerOp = make(chan peerOpFunc)
 	srv.peerOpDone = make(chan struct{})
-
+	srv._addCheckFun = nil
 	if err := srv.setupLocalNode(); err != nil {
 		return err
 	}
@@ -470,7 +472,9 @@ func (srv *Server) Start() (err error) {
 	go srv.run(dialer)
 	return nil
 }
-
+func (srv *Server) SetNodeAddChecker(checker AddCheck)  {
+	srv._addCheckFun = checker
+}
 func (srv *Server) setupLocalNode() error {
 	// Create the devp2p handshake.
 	pubkey := crypto.FromECDSAPub(&srv.PrivateKey.PublicKey)
@@ -824,11 +828,9 @@ func (srv *Server) protoHandshakeChecks(peers map[enode.ID]*Peer, inboundCount i
 			return DiscTooManyPeers
 	}
 
-	bucketId,connects,_,_ := srv.ntab.TargetBucketInfo(c.node.ID())
-	log.Info("bucketInfo:","id",c.node.ID(),"bucketIndex",bucketId," connected",connects.Length())
-	if connects.Length() >= 4 && !isLightNode {
-		return DiscBucketFull
-	}
+	bucketId,entries,_ := srv.ntab.TargetBucketInfo(c.node.ID())
+	log.Info("bucketInfo:","id",c.node.ID(),"bucketIndex",bucketId," entries",entries.Length())
+
 
 	// Repeat the encryption handshake checks because the
 	// peer set might have changed between the handshakes.
@@ -982,7 +984,7 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 		clog.Trace("Failed proto handshake", "err", err)
 		return err
 	}
-	c.node.SetNodeType(enr.NodeType(phs.NodeType))
+	c.node = updateNodeByPhs(c.node,phs)
 	//movee posthandshake to doProtoHandshake so that we can know the nodetype
 	if id := c.node.ID(); !bytes.Equal(crypto.Keccak256(phs.ID), id[:]) {
 		clog.Trace("Wrong devp2p handshake identity", "phsid", hex.EncodeToString(phs.ID))
@@ -994,12 +996,13 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 		clog.Trace("Rejected peer", "err", err)
 		return err
 	}
-	if tcp, ok := c.fd.RemoteAddr().(*net.TCPAddr); ok {
-		ip := tcp.IP
-		port := tcp.Port
-		//生成一个节点，添加到系统里
-		if !srv.ntab.AddConnectedNode(enode.NewV4(remotePubkey, ip, port, int(phs.ListenPort),phs.NodeType).ID()) {
-			return errors.New("break peer and waiting for ping/pong first")
+	if !srv.ntab.CanAddNode(c.node) {
+		log.Info(" unable to add node to kad network","id",c.node.String(),"ip",c.node.IP(), "port",c.node.TCP())
+		return errors.New("break peer and waiting for ping/pong first")
+	}
+	if srv._addCheckFun != nil  {
+		if  !srv._addCheckFun(c.node){
+			return errors.New("bucket full!")
 		}
 	}
 
@@ -1017,6 +1020,11 @@ func nodeFromConn(pubkey *ecdsa.PublicKey, conn net.Conn) *enode.Node {
 		port = tcp.Port
 	}
 	return enode.NewV4(pubkey, ip, port, port,0)
+}
+
+func updateNodeByPhs(n *enode.Node,handshake *protoHandshake) *enode.Node{
+
+	return enode.NewV4(n.Pubkey(), n.IP(), n.TCP(), int(handshake.ListenPort),handshake.NodeType)
 }
 
 func truncateName(s string) string {

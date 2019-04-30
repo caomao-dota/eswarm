@@ -223,6 +223,7 @@ func Swap(t *Pot, k Val, pof Pof, f func(v Val) Val) (r *Pot, po int, found bool
 	}
 	size := t.size
 	po, found = pof(k, t.pin, t.po)
+	//log.Info("swap:","bucket",po)
 	if found {
 		val = f(t.pin)
 		// remove element
@@ -757,6 +758,21 @@ func (t *Pot) getPos(po int) (n *Pot, i int) {
 		return n, i
 	}
 	return nil, len(t.bins)
+}
+
+// getPos called on (n) returns the forking node at PO n and its index if it exists
+// otherwise nil
+// caller is supposed to hold the lock
+func (t *Pot) SizeOfBin(po int) (int) {
+
+	for _, n := range t.bins {
+
+		if po == n.po {
+			return n.size
+		}
+
+	}
+	return 0
 }
 
 // need called on (m, max, extra) uses max m out of extra, and then max
