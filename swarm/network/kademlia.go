@@ -751,7 +751,7 @@ func (k *Kademlia) callable(e *entry) bool {
 		return false
 	}
 	lastVal := time.Since(e.lastRetry)/time.Second
-	if lastVal < 1200  {
+	if lastVal < 60  {
 		return false
 	}
 	// calculate the allowed number of retries based on time lapsed since last seen

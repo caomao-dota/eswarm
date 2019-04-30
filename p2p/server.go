@@ -815,7 +815,7 @@ func (srv *Server) protoHandshakeChecks(peers map[enode.ID]*Peer, inboundCount i
 		}
 	}
 	isLightNode := enode.IsLightNode(enode.NodeTypeOption(c.node.NodeType()))
-	log.Info("connects:","light conn",lightPeerCnt," full conn",fullPeerCnt)
+	log.Trace("connects:","light conn",lightPeerCnt," full conn",fullPeerCnt)
 	// Drop connections with no matching protocols.
 	switch {
 
@@ -829,7 +829,7 @@ func (srv *Server) protoHandshakeChecks(peers map[enode.ID]*Peer, inboundCount i
 	}
 
 	bucketId,entries,_ := srv.ntab.TargetBucketInfo(c.node.ID())
-	log.Info("bucketInfo:","id",c.node.ID(),"bucketIndex",bucketId," entries",entries.Length())
+	log.Trace("bucketInfo:","id",c.node.ID(),"bucketIndex",bucketId," entries",entries.Length())
 
 
 	// Repeat the encryption handshake checks because the
@@ -941,7 +941,7 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 	// Prevent leftover pending conns from entering the handshake.
 	srv.lock.Lock()
 	running := srv.running
-	defer srv.lock.Unlock()
+	srv.lock.Unlock()
 	if !running {
 		return errServerStopped
 	}
