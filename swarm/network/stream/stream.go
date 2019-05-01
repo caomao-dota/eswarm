@@ -471,18 +471,15 @@ func (r *Registry) Run(p *network.BzzPeer) error {
 		if err != nil {
 			return err
 		}
-
-
-
 	}
 
 	//Aegon 注册同步流, 只有本地自动获取，对方也是自动获取的情况下，才允许订阅
-	if enode.GetSyncingOptions(enode.NodeTypeOption(r.NodeType)) == (enode.SyncingAutoSubscribe) && enode.GetSyncingOptions(enode.NodeTypeOption(p.Node().NodeType())) == (enode.SyncingAutoSubscribe) {
+	/*if enode.GetSyncingOptions(enode.NodeTypeOption(r.NodeType)) == (enode.SyncingAutoSubscribe) && enode.GetSyncingOptions(enode.NodeTypeOption(p.Node().NodeType())) == (enode.SyncingAutoSubscribe) {
 		peers := make(map[enode.ID]*Peer)
 		peers[sp.ID()]=sp
 		r.updateSyncing(peers)
 	}
-
+	*/
 
 	return sp.Run(sp.HandleMsg)
 }
