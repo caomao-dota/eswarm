@@ -197,7 +197,7 @@ func (k *Kademlia)GetIntendBinInfo(anode enode.ID) (int,int){
 
 
 }
-func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, changed bool) {
+func (k *Kademlia) __SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, changed bool) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 
@@ -241,54 +241,32 @@ func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, c
 	targetPO := 0
 	//寻找suggest peer
 	suggestedPeer = nil
-	if saturationDepth < MaxPoBin { //优先满足深度
-		//first find connected count for each bin
-		k.addrs.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
-			if po >= saturationDepth && sizeOfBin[po] < k.MaxBinSize {
-				return f(func(val pot.Val) bool {
-					e := val.(*entry)
-					_,ok := k.peers[string(e.UAddr)]
-					if k.callable(e) && !ok{
-						e.lastRetry = time.Now()
-						targetPO = po
-						suggestedPeer = e.BzzAddr
-						return false
-					}
-					return true
-				})
-			}else{
-				return true
-			}
-		})
-	}
-	//important 不要自己把桶填满，如果是自己填满了，其他新节点就无法再连接进来了
-	//目前的算法是，桶内如果有minBinSize+1个节点，就不再主动向外连接
-	if suggestedPeer == nil {
-		//从0桶开始填满
-		k.addrs.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
-			if sizeOfBin[po] < k.MinBinSize+1 {
-				return f(func(val pot.Val) bool {
-					e := val.(*entry)
-					_,ok := k.peers[string(e.UAddr)]
 
-					if k.callable(e) && !ok {
-						e.lastRetry = time.Now()
-						targetPO = po
-						suggestedPeer = e.BzzAddr
-						return false
-					}
-					return true
-				})
-			}else{ //桶里连接满了，找下一个po吧
-				return true
-			}
+	//从优先满足广度，直至广度达到 k.MinBinSize+1
+	k.addrs.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
+		if sizeOfBin[po] < k.MinBinSize+1 {
+			return f(func(val pot.Val) bool {
+				e := val.(*entry)
+				_,ok := k.peers[string(e.UAddr)]
 
-		})
-	}
+				if k.callable(e) && !ok {
+					e.lastRetry = time.Now()
+					targetPO = po
+					suggestedPeer = e.BzzAddr
+					return false
+				}
+				return true
+			})
+		}else{ //桶里连接满了，找下一个po吧
+			return true
+		}
+
+	})
+
 
 	if suggestedPeer != nil{
 		log.Trace("Suggested peer:","po",targetPO,"oaddr",common.Bytes2Hex(suggestedPeer.Over()))
-	}else{
+	}/*else{
 		//没有节点用可了，把标识成不能查询的恢复起来
 		k.addrs.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
 			return f(func(val pot.Val) bool {
@@ -301,7 +279,7 @@ func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, c
 				return true
 			})
 		})
-	}
+	}*/
 
 	if uint8(saturationDepth) < k.depth {
 		k.depth = uint8(saturationDepth)
@@ -311,8 +289,8 @@ func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, c
 	return suggestedPeer, 0, false
 }
 // SuggestPeer returns an unconnected peer address as a peer suggestion for connection
-// 这么简单的目标，写出这么复杂的逻辑.......,我还是改了吧
-func (k *Kademlia) __deprecatedSuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, changed bool) {
+// 这么简单的目标，写出这么复杂的逻辑.......
+func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, changed bool) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	radius := neighbourhoodRadiusForPot(k.conns, k.NeighbourhoodSize, k.base)
@@ -420,20 +398,6 @@ func (k *Kademlia) __deprecatedSuggestPeer() (suggestedPeer *BzzAddr, saturation
 	}
 	if suggestedPeer != nil{
 		log.Trace("Suggested peer:","oaddr",suggestedPeer.OAddr,"uaddr",string(suggestedPeer.UAddr),"po",targetPO)
-	}else{
-		//没有节点用可了，把标识成不能查询的恢复起来
-		//从0桶开始填满
-		k.addrs.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
-			return f(func(val pot.Val) bool {
-				e := val.(*entry)
-				_,ok := k.peers[string(e.UAddr)]
-				if !ok {
-					e.lastRetry = time.Unix(0,0)
-					return true
-				}
-				return true
-			})
-		})
 	}
 
 	if uint8(saturationDepth) < k.depth {
@@ -751,7 +715,7 @@ func (k *Kademlia) callable(e *entry) bool {
 		return false
 	}
 	lastVal := time.Since(e.lastRetry)/time.Second
-	if lastVal < 60  {
+	if lastVal < 120  {
 		return false
 	}
 	// calculate the allowed number of retries based on time lapsed since last seen

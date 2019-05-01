@@ -145,6 +145,7 @@ func (h *Hive)refresh(){
 				go h.doRefresh()
 				//log.Debug(" New Node processed")
 			case <- h.quitC:
+				close(h.newNodeDiscov)
 			return
 
 		}

@@ -793,10 +793,12 @@ running:
 	for _, p := range peers {
 		p.Disconnect(DiscQuitting)
 	}
+	fmt.Println("remain Peers:","total",len(peers))
 	// Wait for peers to shut down. Pending connections and tasks are
 	// not handled here and will terminate soon-ish because srv.quit
 	// is closed.
 	for len(peers) > 0 {
+
 		p := <-srv.delpeer
 		p.log.Trace("<-delpeer (spindown)", "remainingTasks", len(runningTasks))
 		delete(peers, p.ID())
