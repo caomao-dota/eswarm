@@ -374,7 +374,7 @@ func NewSwarmNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 	}
 	bzzconfig := bzzapi.NewConfig()
 	bzzconfig.Path = datadir
-	bzzconfig.LightNodeEnabled = true
+	bzzconfig.NodeType = 17
 	bzzconfig.LocalStoreParams.DbCapacity = 20000  //5G
 	bzzconfig.LocalStoreParams.CacheCapacity = 100 //25M
 	key, err := getSwarmKey(rawStack, config.SwarmAccount, config.SwarmAccountPassword)
