@@ -195,26 +195,26 @@ func  PrepareForTest(t *testing.T){
 func Test_CRecStream(t *testing.T){
 	PrepareForTest(t)
 	//3 from store2
-	store1.OnNodeChunkReceived(store2.account)
-	store1.OnNodeChunkReceived(store2.account)
-	store1.OnNodeChunkReceived(store2.account)
+	store1.OnNodeChunkReceived(store2.account,4096)
+	store1.OnNodeChunkReceived(store2.account,4096)
+	store1.OnNodeChunkReceived(store2.account,4096)
 
 	//4 from store3
-	store1.OnNodeChunkReceived(store3.account)
-	store1.OnNodeChunkReceived(store3.account)
-	store1.OnNodeChunkReceived(store3.account)
-	store1.OnNodeChunkReceived(store3.account)
+	store1.OnNodeChunkReceived(store3.account,4096)
+	store1.OnNodeChunkReceived(store3.account,4096)
+	store1.OnNodeChunkReceived(store3.account,4096)
+	store1.OnNodeChunkReceived(store3.account,4096)
 
 	//1 from store4
-	store1.OnNodeChunkReceived(store4.account)
+	store1.OnNodeChunkReceived(store4.account,4096)
 
 	//2 from store5
-	store1.OnNodeChunkReceived(store5.account)
-	store1.OnNodeChunkReceived(store5.account)
+	store1.OnNodeChunkReceived(store5.account,4096)
+	store1.OnNodeChunkReceived(store5.account,4096)
 
 	//7 from store6
 	for i := 0; i< 7; i++ {
-		store1.OnNodeChunkReceived(store6.account)
+		store1.OnNodeChunkReceived(store6.account,4096)
 	}
 
 	timerC := time.NewTimer(1*time.Second)
@@ -261,7 +261,7 @@ func Test_CRecStream(t *testing.T){
 
 func mockChunkDelivery(chunkSender,chunkReceiver *ReceiptStore,t *testing.T){
 
-	receipt,err := chunkReceiver.OnNodeChunkReceived(chunkSender.account)
+	receipt,err := chunkReceiver.OnNodeChunkReceived(chunkSender.account,4096)
 	if err != nil {
 		t.Error(err)
 	}
@@ -373,8 +373,8 @@ func Test_DeliverCounter(t *testing.T){
 	var receipt *Receipt
 	unpaied := uint32(10)
 	for i := uint32(0); i < unpaied; i++ {
-		store4.OnChunkDelivered(store5.account)
-		receipt,_ = store5.OnNodeChunkReceived(store4.account)
+		store4.OnChunkDelivered(store5.account,4096)
+		receipt,_ = store5.OnNodeChunkReceived(store4.account,4096)
 	}
 	 calcUnpaied,_ := store4.unpaidAmount[store5.account]
 	if  calcUnpaied != unpaied {
@@ -408,8 +408,8 @@ func Test_Unordered(t *testing.T){
 	 receipts := make([]*Receipt,20)
 	unpaied := uint32(20)
 	for i := uint32(0); i < unpaied; i++ {
-		store4.OnChunkDelivered(store5.account)
-		receipt,_ := store5.OnNodeChunkReceived(store4.account)
+		store4.OnChunkDelivered(store5.account,4096)
+		receipt,_ := store5.OnNodeChunkReceived(store4.account,4096)
 		receipts[i] = receipt
 	}
 	calcUnpaied,_ := store4.unpaidAmount[store5.account]
@@ -485,8 +485,8 @@ func Test_Unordered2(t *testing.T){
 	receipts := make([]*Receipt,20)
 	unpaied := uint32(20)
 	for i := uint32(0); i < unpaied; i++ {
-		store4.OnChunkDelivered(store5.account)
-		receipt,_ := store5.OnNodeChunkReceived(store4.account)
+		store4.OnChunkDelivered(store5.account,4096)
+		receipt,_ := store5.OnNodeChunkReceived(store4.account,4096)
 		receipts[i] = receipt
 	}
 	calcUnpaied,_ := store4.unpaidAmount[store5.account]

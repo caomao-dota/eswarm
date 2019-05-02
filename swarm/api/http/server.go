@@ -903,8 +903,8 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 				if err == nil {
 					//log.Info("addr resolved:","uri",actUri)
 					reader, isEncrypted := s.api.Retrieve(newContext, addr)
-
-					if _, err := reader.Size(newContext, nil); err == nil {
+					_, err := reader.Size(newContext, nil);
+					if  err == nil {
 					//	log.Info("size ok:","uri",actUri)
 						w.Header().Set("X-Decrypted", fmt.Sprintf("%v", isEncrypted))
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"github.com/plotozhu/MDCMainnet/common"
@@ -131,7 +132,7 @@ type OnError func(http.ResponseWriter, *http.Request,  string,  int)
 //get data from server and write to response
 func (s *HttpReader)GetDataFromCentralServer(uri string, r *http.Request,w http.ResponseWriter, hash []byte, onError OnError  ){
 
-
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	req, err := http.NewRequest("GET", uri, bytes.NewBuffer([]byte("")))
 	if err != nil {
 		log.Error("Error Occured. %+v", err)
