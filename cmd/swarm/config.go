@@ -224,8 +224,10 @@ func cmdLineOverride(currentConfig *bzzapi.Config, ctx *cli.Context) *bzzapi.Con
 	if ctx.GlobalIsSet(SwarmDeliverySkipCheckFlag.Name) {
 		currentConfig.DeliverySkipCheck = true
 	}
+	if ctx.GlobalIsSet(SwarmNodeTypeFlag.Name) {
+		currentConfig.NodeType = ctx.GlobalUint(SwarmNodeTypeFlag.Name)
+	}
 
-	currentConfig.NodeType = ctx.GlobalUint(SwarmNodeTypeFlag.Name)
 
 	currentConfig.SwapAPI = ctx.GlobalString(SwarmSwapAPIFlag.Name)
 	if currentConfig.SwapEnabled && currentConfig.SwapAPI == "" {
