@@ -502,7 +502,7 @@ func (t *Pot) eachBin(val Val, pof Pof, po int, f func(int, int, func(func(val V
 	_, lim := t.getPos(spr)
 	var size int
 	var n *Pot
-	for i := 0; i < lim; i++ {
+	/*for i := 0; i < lim; i++ {
 		n = t.bins[i]
 		size += n.size
 		if n.po < po {
@@ -511,8 +511,8 @@ func (t *Pot) eachBin(val Val, pof Pof, po int, f func(int, int, func(func(val V
 		if !f(n.po, n.size, n.each) {
 			return
 		}
-	}
-	if lim == len(t.bins) {
+	}*/
+	if lim == len(t.bins) {//没找到任何大于spr的bin
 		if spr >= po {
 			f(spr, 1, func(g func(Val) bool) bool {
 				return g(t.pin)
@@ -521,7 +521,7 @@ func (t *Pot) eachBin(val Val, pof Pof, po int, f func(int, int, func(func(val V
 		return
 	}
 
-	n = t.bins[lim]
+	n = t.bins[lim] //第一个大于spr的桶
 
 	spo := spr
 	if n.po == spr {
@@ -529,7 +529,8 @@ func (t *Pot) eachBin(val Val, pof Pof, po int, f func(int, int, func(func(val V
 		size += n.size
 	}
 	if spr >= po {
-		if !f(spr, t.size-size, func(g func(Val) bool) bool {
+		//用 spr,t.size-n.size,f1，来执行参数中的f
+		if !f(spr, t.size - size, func(g func(Val) bool) bool {
 			return t.eachFrom(func(v Val) bool {
 				return g(v)
 			}, spo)
@@ -747,6 +748,7 @@ func (t *Pot) eachNeighbourAsync(val Val, pof Pof, max int, maxPos int, f func(V
 // getPos called on (n) returns the forking node at PO n and its index if it exists
 // otherwise nil
 // caller is supposed to hold the lock
+
 func (t *Pot) getPos(po int) (n *Pot, i int) {
 	for i, n = range t.bins {
 		if po > n.po {

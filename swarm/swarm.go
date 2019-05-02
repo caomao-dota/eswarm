@@ -91,7 +91,7 @@ type Swarm struct {
 // If mockStore is not nil, it will be used as the storage for chunk data.
 // MockStore should be used only for testing.
 func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err error) {
-	log.Info("Starting eswarm now!","version","050101")
+	log.Info("Starting eswarm now!","version","050201")
 	if bytes.Equal(common.FromHex(config.PublicKey), storage.ZeroAddr) {
 		return nil, fmt.Errorf("empty public key")
 	}
@@ -499,7 +499,8 @@ func (s *Swarm) Stop() error {
 
 // Protocols implements the node.Service interface
 func (s *Swarm) Protocols() (protos []p2p.Protocol) {
-	if enode.GetRetrievalOptions(enode.NodeTypeOption(s.config.NodeType)) != (enode.RetrievalEnabled) {
+	//bootnode不参与pss
+	if enode.IsBootNode(enode.NodeTypeOption(s.config.NodeType)) {
 		protos = append(protos, s.bzz.Protocols()...)
 	} else {
 		protos = append(protos, s.bzz.Protocols()...)

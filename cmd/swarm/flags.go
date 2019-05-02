@@ -160,7 +160,7 @@ var (
 		Name:  "nodetype",
 		Usage: "change node type",
 		EnvVar: SwarmEnvNodeType,
-		Value: 1,
+		Value: 36,
 	}
 	SwarmFeedNameFlag = cli.StringFlag{
 		Name:  "name",

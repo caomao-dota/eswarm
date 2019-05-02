@@ -60,6 +60,7 @@ const (
 
 var (
 	addressLength = len(pot.Address{})
+	ErrInvalidToSend = errors.New("Invalid node to send msg")
 )
 
 // cache is used for preventing backwards routing
@@ -697,14 +698,21 @@ func sendMsg(p *Pss, sp *network.Peer, msg *PssMsg) bool {
 	p.fwdPoolMu.RLock()
 	pp := p.fwdPool[sp.Info().ID]
 	p.fwdPoolMu.RUnlock()
+	if pp != nil {
+		err := pp.Send(context.TODO(), msg)
+		if err != nil {
+			metrics.GetOrRegisterCounter("pss.pp.send.error", nil).Inc(1)
+			log.Error(err.Error())
 
-	err := pp.Send(context.TODO(), msg)
-	if err != nil {
-		metrics.GetOrRegisterCounter("pss.pp.send.error", nil).Inc(1)
-		log.Error(err.Error())
+		}
+		return err == nil
+	}else {
+		log.Error("A undeliver node found","id",sp.Info().ID,"err",ErrInvalidToSend)
+		return false
 	}
 
-	return err == nil
+
+
 }
 
 // Forwards a pss message to the peer(s) based on recipient address according to the algorithm

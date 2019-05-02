@@ -27,7 +27,7 @@ import (
 	"time"
 	"unicode"
 
-	cli "gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1"
 
 	"github.com/naoina/toml"
 	"github.com/plotozhu/MDCMainnet/cmd/utils"
@@ -224,6 +224,8 @@ func cmdLineOverride(currentConfig *bzzapi.Config, ctx *cli.Context) *bzzapi.Con
 	if ctx.GlobalIsSet(SwarmDeliverySkipCheckFlag.Name) {
 		currentConfig.DeliverySkipCheck = true
 	}
+
+	currentConfig.NodeType = ctx.GlobalUint(SwarmNodeTypeFlag.Name)
 
 	currentConfig.SwapAPI = ctx.GlobalString(SwarmSwapAPIFlag.Name)
 	if currentConfig.SwapEnabled && currentConfig.SwapAPI == "" {
