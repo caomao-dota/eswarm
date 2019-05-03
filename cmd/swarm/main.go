@@ -472,26 +472,29 @@ func setSwarmBootstrapNodes(ctx *cli.Context, bzzCfg  *bzzapi.Config, cfg *node.
 		return
 	}
 
-	cfg.P2P.BootstrapNodes = []*enode.Node{}
-	bootnodeAddrs := ctx.GlobalString(SwarmBootnodesAddrFlag.Name)
 
 
-	bootnodes := append([]string{},SwarmBootnodes...)
-	if bootnodeAddrs != "" {
-		nodes,reportUrl,err := util.GetBootnodesInfo(bootnodeAddrs)
-		if err == nil {
-			if len(nodes) != 0 {
-				bootnodes = append(bootnodes,nodes...)
+	if !enode.IsBootNode(enode.NodeTypeOption(bzzCfg.NodeType)){
+		cfg.P2P.BootstrapNodes = []*enode.Node{}
+		bootnodeAddrs := ctx.GlobalString(SwarmBootnodesAddrFlag.Name)
+		bootnodes := append([]string{},SwarmBootnodes...)
+		if bootnodeAddrs != "" {
+			nodes,reportUrl,err := util.GetBootnodesInfo(bootnodeAddrs)
+			if err == nil {
+				if len(nodes) != 0 {
+					bootnodes = append(bootnodes,nodes...)
+				}
 			}
+			bzzCfg.ServerAddr = reportUrl
 		}
-		bzzCfg.ServerAddr = reportUrl
-	}
-	for _, url := range bootnodes {
-		node, err := enode.ParseV4(url)
-		if err != nil {
-			log.Error("Bootstrap URL invalid", "enode", url, "err", err)
+		for _, url := range bootnodes {
+			node, err := enode.ParseV4(url)
+			if err != nil {
+				log.Error("Bootstrap URL invalid", "enode", url, "err", err)
+			}
+			cfg.P2P.BootstrapNodes = append(cfg.P2P.BootstrapNodes, node)
 		}
-		cfg.P2P.BootstrapNodes = append(cfg.P2P.BootstrapNodes, node)
+
 	}
 
 

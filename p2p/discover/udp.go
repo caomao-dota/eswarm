@@ -695,7 +695,7 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) 
 		})
 
 		// Ping back if our last pong on file is too far in the past.
-		n := wrapNode(enode.NewV4(req.senderKey, from.IP, int(req.From.TCP), from.Port,req.NodeType))
+		n := wrapNode(enode.NewV4(req.senderKey, req.From.IP, int(req.From.TCP), from.Port,req.NodeType))
 		n.addedAt = time.Now()
 		if time.Since(t.db.LastPongReceived(n.ID(), from.IP)) > bondExpiration {
 
@@ -706,7 +706,7 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) 
 			})
 		} else {
 			//收到了ping,上一次的pong的时间没有超过bondExpiration（24小时），认为是有效的
-			n.latency = t.db.GetNodeLatency(n.ID(),from.IP)
+			n.latency = t.db.GetNodeLatency(n.ID(),req.From.IP)
 
 			//但是这个时候，系统中很可能还没有这个节点（初次收到ping)
 
