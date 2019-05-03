@@ -695,7 +695,7 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) 
 		})
 
 		// Ping back if our last pong on file is too far in the past.
-		n := wrapNode(enode.NewV4(req.senderKey, req.From.IP, int(req.From.TCP), from.Port,req.NodeType))
+		n := wrapNode(enode.NewV4(req.senderKey, req.From.IP, int(req.From.TCP), int(req.From.UDP),req.NodeType))
 		n.addedAt = time.Now()
 		if time.Since(t.db.LastPongReceived(n.ID(), from.IP)) > bondExpiration {
 
