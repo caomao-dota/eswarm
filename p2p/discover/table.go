@@ -1119,29 +1119,51 @@ func (tab *Table) addVerifiedNode(n  *node) {
 	b := tab.bucket(n.ID())
 
 	if  b.entries.Contains( n.ID()) {
+		oldNode := b.entries.Get(n.ID())
 		// Already in bucket, moved to front.
+		if !oldNode.IP().Equal(n.IP()){
+			log.Info("corrected:","ID",n.ID(),"oldIP",oldNode.IP(),"newIP",n.IP)
+		}
+
+		b.entries.ReplaceNode(n, func(nodeInEntries *node) bool {
+			if nodeInEntries.ID() == n.ID() && nodeInEntries.LIP().Equal(n.LIP()) {
+				return true
+			}
+			return false
+		})
 		b.entries.MoveFront(n.ID())
 		return
 	}
 	if b.entries.AddNode(n,true) == false { //add不成功是因为队列满了，加入到replace中去
-		if b.replacements.Length() >= bucketSize {
-			b.replacements.ReplaceNode( n,func (oldNode *node) bool{
-				if oldNode.latency > int64(10*time.Hour) {
-					tab.removeIP(b, oldNode.IP())
+		if b.replacements.Contains(n.ID()){ //如果在replacement队列中存在，就替换一下
+			b.replacements.ReplaceNode(n, func(nodeInEntries *node) bool {
+				if nodeInEntries.ID() == n.ID() {
 					return true
 				}
 				return false
 			})
-			return
+			b.replacements.MoveFront(n.ID()) //	移动到最前面
 		}else{
-			if !tab.addIP(b, n.IP()) {
-				// Can't add: IP limit reached.
+			if b.replacements.Length() >= bucketSize {
+				b.replacements.ReplaceNode( n,func (oldNode *node) bool{
+					if oldNode.latency > int64(10*time.Hour) {
+						tab.removeIP(b, oldNode.IP())
+						return true
+					}
+					return false
+				})
 				return
+			}else{
+				if !tab.addIP(b, n.IP()) {
+					// Can't add: IP limit reached.
+					return
+				}
+				// Bucket full, maybe add as replacement.
+				b.replacements.AddNode( n,false)
+				b.replacements.MoveFront(n.ID())
 			}
-			// Bucket full, maybe add as replacement.
-			b.replacements.AddNode( n,false)
-			b.replacements.MoveFront(n.ID())
 		}
+
 	}else{
 		//只有添加到了entries,才需要通知上层
 		if tab.nodeAddedHook != nil {

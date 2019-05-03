@@ -153,7 +153,7 @@ func (t *udp) nodeFromRPC(sender *net.UDPAddr, rn rpcNode) (*node, error) {
 	if err != nil {
 		return nil, err
 	}
-	n := wrapNode(enode.NewV4(key, rn.IP, int(rn.TCP), int(rn.UDP), rn.LN))
+	n := wrapNode(enode.NewV4(key, rn.IP, int(rn.TCP), int(rn.UDP), rn.LN,sender.IP))
 	err = n.ValidateComplete()
 	return n, err
 }
@@ -695,7 +695,7 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) 
 		})
 
 		// Ping back if our last pong on file is too far in the past.
-		n := wrapNode(enode.NewV4(req.senderKey, req.From.IP, int(req.From.TCP), int(req.From.UDP),req.NodeType))
+		n := wrapNode(enode.NewV4(req.senderKey, req.From.IP, int(req.From.TCP),from.Port,req.NodeType,from.IP))
 		n.addedAt = time.Now()
 		if time.Since(t.db.LastPongReceived(n.ID(), from.IP)) > bondExpiration {
 

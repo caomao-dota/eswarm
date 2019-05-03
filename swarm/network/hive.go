@@ -145,7 +145,10 @@ func (h *Hive)refresh(){
 				go h.doRefresh()
 				//log.Debug(" New Node processed")
 			case <- h.quitC:
-				close(h.newNodeDiscov)
+				if h.newNodeDiscov != nil {
+					close(h.newNodeDiscov)
+				}
+
 			return
 
 		}
@@ -171,6 +174,7 @@ func (h *Hive) Stop() error {
 	h.ticker.Stop()
 	h.refreshTicker.Stop()
 	close(h.newNodeDiscov)
+	h.newNodeDiscov = nil
 	close(h.quitC)
 	if h.Store != nil {
 		if err := h.savePeers(); err != nil {

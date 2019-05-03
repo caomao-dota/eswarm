@@ -99,7 +99,9 @@ func (v *IP) DecodeRLP(s *rlp.Stream) error {
 	}
 	return nil
 }
+type LocalIP net.IP
 
+func (v LocalIP) ENRKey() string { return "lip" }
 // KeyError is an error related to a key.
 type KeyError struct {
 	Key string

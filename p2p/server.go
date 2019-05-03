@@ -368,7 +368,7 @@ func (srv *Server) Self() *enode.Node {
 	srv.lock.Unlock()
 
 	if ln == nil {
-		return enode.NewV4(&srv.PrivateKey.PublicKey, net.ParseIP("0.0.0.0"), 0, 0, 0)
+		return enode.NewV4(&srv.PrivateKey.PublicKey, net.ParseIP("0.0.0.0"), 0, 0, 0,net.ParseIP("127.0.0.1"))
 	}
 	return ln.Node()
 }
@@ -1024,12 +1024,12 @@ func nodeFromConn(pubkey *ecdsa.PublicKey, conn net.Conn) *enode.Node {
 		ip = tcp.IP
 		port = tcp.Port
 	}
-	return enode.NewV4(pubkey, ip, port, port,0)
+	return enode.NewV4(pubkey, ip, port, port,0,ip)
 }
 
 func updateNodeByPhs(n *enode.Node,handshake *protoHandshake) *enode.Node{
 
-	return enode.NewV4(n.Pubkey(), n.IP(), n.TCP(), int(handshake.ListenPort),handshake.NodeType)
+	return enode.NewV4(n.Pubkey(), n.IP(), n.TCP(), int(handshake.ListenPort),handshake.NodeType,n.IP())
 }
 
 func truncateName(s string) string {

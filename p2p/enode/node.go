@@ -124,7 +124,12 @@ func (n *Node) Incomplete() bool {
 func (n *Node) Load(k enr.Entry) error {
 	return n.r.Load(k)
 }
-
+// IP returns the IP address of the node.
+func (n *Node) LIP() net.IP {
+	var ip net.IP
+	n.Load((*enr.LocalIP)(&ip))
+	return ip
+}
 // IP returns the IP address of the node.
 func (n *Node) IP() net.IP {
 	var ip net.IP

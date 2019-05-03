@@ -193,7 +193,7 @@ func (pool *serverPool) discoverNodes() {
 		if err != nil {
 			continue
 		}
-		pool.discNodes <- enode.NewV4(pubkey, n.IP, int(n.TCP), int(n.UDP),n.LN)
+		pool.discNodes <- enode.NewV4(pubkey, n.IP, int(n.TCP), int(n.UDP),n.LN,n.IP)
 	}
 }
 
@@ -708,7 +708,7 @@ func (e *poolEntry) DecodeRLP(s *rlp.Stream) error {
 		return err
 	}
 	addr := &poolEntryAddress{ip: entry.IP, port: entry.Port, fails: entry.Fails, lastSeen: mclock.Now()}
-	e.node = enode.NewV4(pubkey, entry.IP, int(entry.Port), int(entry.Port),entry.LN)
+	e.node = enode.NewV4(pubkey, entry.IP, int(entry.Port), int(entry.Port),entry.LN,nil)
 	e.addr = make(map[string]*poolEntryAddress)
 	e.addr[addr.strKey()] = addr
 	e.addrSelect = *newWeightedRandomSelect()
