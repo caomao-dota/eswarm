@@ -43,31 +43,36 @@ func TestTable_pingReplace(t *testing.T) {
 	}
 
 	run(true, true)
-	run(false, true)
+		run(false, true)
 	run(true, false)
 	run(false, false)
 }
 
 func testPingReplace(t *testing.T, newNodeIsResponding, lastInBucketIsResponding bool) {
+
 	transport := newPingRecorder()
 	tab, db := newTestTable(transport)
 	defer db.Close()
+
 	defer tab.Close()
 
-	<-tab.initDone
+//	<-tab.initDone
 
 	// Fill up the sender's bucket.
 	pingKey, _ := crypto.HexToECDSA("45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8")
-	pingSender := wrapNode(enode.NewV4(&pingKey.PublicKey, net.IP{}, 99, 99,uint8(enode.NodeTypeFull)))
+	pingSender := wrapNode(enode.NewV4(&pingKey.PublicKey, net.IP{}, 99, 99,uint8(enode.NodeTypeFull),net.IP{}))
 	last := fillBucket(tab, pingSender)
+
 
 	// Add the sender as if it just pinged us. Revalidate should replace the last node in
 	// its bucket if it is unresponsive. Revalidate again to ensure that
 	transport.dead[last.ID()] = !lastInBucketIsResponding
 	transport.dead[pingSender.ID()] = !newNodeIsResponding
 	tab.addSeenNode(pingSender)
-	tab.doRevalidate(make(chan struct{}, 1))
-	tab.doRevalidate(make(chan struct{}, 1))
+	refresh := time.NewTimer(30*time.Minute)
+	tab.doRevalidate(refresh)
+
+	tab.doRevalidate(refresh)
 
 	if !transport.pinged[last.ID()] {
 		// Oldest node in bucket is pinged to see whether it is still alive.
@@ -90,6 +95,10 @@ func testPingReplace(t *testing.T, newNodeIsResponding, lastInBucketIsResponding
 	if found := tab.bucket(pingSender.ID()).entries.Contains( pingSender.ID()); found != wantNewEntry {
 		t.Errorf("new entry found: %t, want: %t", found, wantNewEntry)
 	}
+
+
+	//go func (){close(tab.closed)}()
+
 }
 
 func TestBucket_bumpNoDuplicates(t *testing.T) {
@@ -191,7 +200,7 @@ func checkIPLimitInvariant(t *testing.T, tab *Table) {
 	tabset := netutil.DistinctNetSet{Subnet: tableSubnet, Limit: tableIPLimit}
 	for _, b := range tab.buckets {
 		for _, n := range b.entries.GetEntries() {
-			tabset.Add(n.IP())
+			tabset.Add(n.SelectBest().IP())
 		}
 	}
 	if tabset.String() != tab.ips.String() {
@@ -270,7 +279,7 @@ func TestTable_ReadRandomNodesGetAll(t *testing.T) {
 		tab, db := newTestTable(transport)
 		defer db.Close()
 		defer tab.Close()
-		<-tab.initDone
+
 
 		for i := 0; i < len(buf); i++ {
 			ld := cfg.Rand.Intn(len(tab.buckets))
@@ -314,41 +323,11 @@ func (*closeTest) Generate(rand *rand.Rand, size int) reflect.Value {
 	return reflect.ValueOf(t)
 }
 
-func TestTable_addVerifiedNode(t *testing.T) {
-	tab, db := newTestTable(newPingRecorder())
-	<-tab.initDone
-	defer db.Close()
-	defer tab.Close()
 
-	// Insert two nodes.
-	n1 := nodeAtDistance(tab.self().ID(), 256, net.IP{88, 77, 66, 1})
-	n2 := nodeAtDistance(tab.self().ID(), 256, net.IP{88, 77, 66, 2})
-	tab.addSeenNode(n1)
-	tab.addSeenNode(n2)
-
-	// Verify bucket content:
-	bcontent := []*node{n1, n2}
-	if !reflect.DeepEqual(tab.bucket(n1.ID()).entries, bcontent) {
-		t.Fatalf("wrong bucket content: %v", tab.bucket(n1.ID()).entries)
-	}
-
-	// Add a changed version of n2.
-	newrec := n2.Record()
-	newrec.Set(enr.IP{99, 99, 99, 99})
-	newn2 := wrapNode(enode.SignNull(newrec, n2.ID()))
-	tab.addVerifiedNode(newn2)
-
-	// Check that bucket is updated correctly.
-	newBcontent := []*node{newn2, n1}
-	if !reflect.DeepEqual(tab.bucket(n1.ID()).entries, newBcontent) {
-		t.Fatalf("wrong bucket content after update: %v", tab.bucket(n1.ID()).entries)
-	}
-	checkIPLimitInvariant(t, tab)
-}
 
 func TestTable_addSeenNode(t *testing.T) {
 	tab, db := newTestTable(newPingRecorder())
-	<-tab.initDone
+
 	defer db.Close()
 	defer tab.Close()
 
@@ -359,8 +338,16 @@ func TestTable_addSeenNode(t *testing.T) {
 	tab.addSeenNode(n2)
 
 	// Verify bucket content:
-	bcontent := []*node{n1, n2}
-	if !reflect.DeepEqual(tab.bucket(n1.ID()).entries, bcontent) {
+	bcontent := make([]*NodeItems,2)
+	n11 := newNodeItem(n1.ID())
+	n11.AddNode(n1,false)
+
+	n12 := newNodeItem(n2.ID())
+	n12.AddNode(n2,false)
+	bcontent[0] = n11
+	bcontent[1] = n12
+
+	if !reflect.DeepEqual(tab.bucket(n1.ID()).entries.GetEntries(), bcontent) {
 		t.Fatalf("wrong bucket content: %v", tab.bucket(n1.ID()).entries)
 	}
 
@@ -370,8 +357,11 @@ func TestTable_addSeenNode(t *testing.T) {
 	newn2 := wrapNode(enode.SignNull(newrec, n2.ID()))
 	tab.addSeenNode(newn2)
 
+	n12.AddNode(newn2,false)
+
+
 	// Check that bucket content is unchanged.
-	if !reflect.DeepEqual(tab.bucket(n1.ID()).entries, bcontent) {
+	if !reflect.DeepEqual(tab.bucket(n1.ID()).entries.GetEntries(), bcontent) {
 		t.Fatalf("wrong bucket content after update: %v", tab.bucket(n1.ID()).entries)
 	}
 	checkIPLimitInvariant(t, tab)
@@ -388,7 +378,7 @@ func TestTable_Lookup(t *testing.T) {
 	}
 	// seed table with initial node (otherwise lookup will terminate immediately)
 	seedKey, _ := decodePubkey(lookupTestnet.dists[256][0])
-	seed := wrapNode(enode.NewV4(seedKey, net.IP{127, 0, 0, 1}, 0, 256,0x24))
+	seed := wrapNode(enode.NewV4(seedKey, net.IP{127, 0, 0, 1}, 0, 256,0x24,net.IP{127, 0, 0, 1}))
 
 	fillTable(tab, []*node{seed})
 
@@ -624,7 +614,7 @@ func (tn *preminedTestnet) findnode(toid enode.ID, toaddr *net.UDPAddr, target e
 	var result []*node
 	for i, ekey := range tn.dists[toaddr.Port] {
 		key, _ := decodePubkey(ekey)
-		node := wrapNode(enode.NewV4(key, net.ParseIP("127.0.0.1"), i, next,0x24))
+		node := wrapNode(enode.NewV4(key, net.ParseIP("127.0.0.1"), i, next,0x24,net.ParseIP("127.0.0.1")))
 		result = append(result, node)
 	}
 	return result, nil

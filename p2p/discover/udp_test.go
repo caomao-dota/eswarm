@@ -74,10 +74,10 @@ func newUDPTest(t *testing.T) *udpTest {
 		remoteaddr: &net.UDPAddr{IP: net.IP{10, 0, 1, 99}, Port: 30303},
 	}
 	test.db, _ = enode.OpenDB("")
-	ln := enode.NewLocalNode(test.db, test.localkey)
+	ln := enode.NewLocalNode(test.db, test.localkey,0x24)
 	test.table, test.udp, _ = newUDP(test.pipe, ln, Config{PrivateKey: test.localkey})
 	// Wait for initial refresh so the table doesn't send unexpected findnode.
-	<-test.table.initDone
+
 	return test
 }
 
@@ -152,7 +152,7 @@ func TestUDP_pingTimeout(t *testing.T) {
 
 	toaddr := &net.UDPAddr{IP: net.ParseIP("1.2.3.4"), Port: 2222}
 	toid := enode.ID{1, 2, 3, 4}
-	if err := test.udp.ping(toid, toaddr); err != errTimeout {
+	if err,_ := test.udp.ping(toid, toaddr); err != errTimeout {
 		t.Error("expected timeout error, got", err)
 	}
 }
@@ -259,11 +259,15 @@ func TestUDP_findnode(t *testing.T) {
 	for i := 0; i < numCandidates; i++ {
 		key := newkey()
 		ip := net.IP{10, 13, 0, byte(i)}
-		n := wrapNode(enode.NewV4(&key.PublicKey, ip, 0, 2000))
+		n := wrapNode(enode.NewV4(&key.PublicKey, ip, 0, 2000,0x24,ip))
 		// Ensure half of table content isn't verified live yet.
-		if i > numCandidates/2 {
-			n.livenessChecks = 1
+		if i >= numCandidates/2 {
+			n.findAt = time.Now()
+			n.testAt = time.Now()
 			live[n.ID()] = true
+		}else {
+			n.findAt = TimeInvalid
+			n.testAt = TimeInvalid
 		}
 		nodes.push(n, numCandidates)
 	}

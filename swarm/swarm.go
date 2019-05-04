@@ -91,7 +91,7 @@ type Swarm struct {
 // If mockStore is not nil, it will be used as the storage for chunk data.
 // MockStore should be used only for testing.
 func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err error) {
-	log.Info("Starting eswarm now!","version","050304")
+	log.Info("Starting eswarm now!","version","050401")
 	if bytes.Equal(common.FromHex(config.PublicKey), storage.ZeroAddr) {
 		return nil, fmt.Errorf("empty public key")
 	}
@@ -109,7 +109,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 		}
 	}
 
-	//swarm是一堆功能的集合
+	//swarm是一堆功能的集合的Ω√
 	self = &Swarm{
 		config:       config,
 		backend:      backend,

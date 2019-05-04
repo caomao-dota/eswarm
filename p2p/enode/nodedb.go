@@ -21,6 +21,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"github.com/plotozhu/MDCMainnet/log"
 	"net"
 	"os"
 	"sync"
@@ -150,7 +151,8 @@ func splitNodeKey(key []byte) (id ID, rest []byte) {
 func nodeItemKey(id ID, ip net.IP, field string) []byte {
 	ip16 := ip.To16()
 	if ip16 == nil {
-		panic(fmt.Errorf("invalid IP (length %d)", len(ip)))
+		log.Error(fmt.Sprintf("invalid IP (length %d)", len(ip)))
+		ip16=net.IP{0,0,0,0}.To16()
 	}
 	return bytes.Join([][]byte{nodeKey(id), ip16, []byte(field)}, []byte{':'})
 }

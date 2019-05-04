@@ -31,21 +31,32 @@ import (
 
 // node represents a host on the network.
 // The fields of Node may not be modified.
+var (
+	LatencyInvalid = int64(100*time.Hour)
+	TimeInvalid = time.Unix(0,0)
+	RevalidateInterval = 30*time.Second
+)
 type node struct {
 	enode.Node
-	addedAt        time.Time // time when the node was added to the table
-	testAt         time.Time
-	findAt         time.Time
+	selected       bool			// this instance has been passed testing for candinator
+	addedAt        time.Time 	// first time of ping
+	testAt         time.Time 	//last time send ping
+	findAt         time.Time    //last time of received ping
 	latency         int64		 //ping/pong delay ,by the unit of millium-second
 }
 
 type encPubkey [64]byte
 
 func encodePubkey(key *ecdsa.PublicKey) encPubkey {
-	var e encPubkey
-	math.ReadBits(key.X, e[:len(e)/2])
-	math.ReadBits(key.Y, e[len(e)/2:])
-	return e
+	if key == nil {
+		return encPubkey{0}
+	}else {
+		var e encPubkey
+		math.ReadBits(key.X, e[:len(e)/2])
+		math.ReadBits(key.Y, e[len(e)/2:])
+		return e
+	}
+
 }
 
 func decodePubkey(e encPubkey) (*ecdsa.PublicKey, error) {

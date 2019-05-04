@@ -316,15 +316,13 @@ func (t *udp) ping(toid enode.ID, toaddr *net.UDPAddr) (error,time.Duration) {
 	sentTime := time.Now()
 	errc := <- t.sendPing(toid, toaddr,nil)
 	if errc == nil {
-			t.tab.ProcessLive(toid,time.Since(sentTime),true)
+			//t.tab.ProcessLive(toid,time.Since(sentTime),true)
 		go func(){
-			//latency := time.Since(sentTime)
-		//	t.latencyCache.Add(toid,latency)
 
 			t.db.UpdateNodeLatency(toid,toaddr.IP,int64(time.Since(sentTime)))
 		}()
 	}else {
-		t.tab.ProcessLive(toid,time.Since(sentTime),false)
+		//t.tab.ProcessLive(toid,time.Since(sentTime),false)
 	}
 	return errc,time.Since(sentTime)
 }
@@ -695,22 +693,23 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) 
 		})
 
 		// Ping back if our last pong on file is too far in the past.
-		n := wrapNode(enode.NewV4(req.senderKey, req.From.IP, int(req.From.TCP),from.Port,req.NodeType,from.IP))
-		n.addedAt = time.Now()
+		n := (enode.NewV4(req.senderKey, req.From.IP, int(req.From.TCP),from.Port,req.NodeType,from.IP))
+
 		if time.Since(t.db.LastPongReceived(n.ID(), from.IP)) > bondExpiration {
 
 			//这个是非常有可能ping不通的，因为ping的是连接的来源端口，如果ping通了，就记录，否则就不管了
 			t.sendPing(fromID, from, func(latency int64) {
-				n.latency = latency
-				t.tab.addVerifiedNode(n)
+
+				t.tab.OnPingReceived(n)
+				//pong 也receive了
 			})
 		} else {
 			//收到了ping,上一次的pong的时间没有超过bondExpiration（24小时），认为是有效的
-			n.latency = t.db.GetNodeLatency(n.ID(),req.From.IP)
+
 
 			//但是这个时候，系统中很可能还没有这个节点（初次收到ping)
 
-			t.tab.addVerifiedNode(n)
+			t.tab.OnPingReceived(n)
 		}
 
 		// Update node database and endpoint predictor.
@@ -775,6 +774,7 @@ func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []by
 		if netutil.CheckRelayIP(from.IP, n.IP()) == nil {
 			p.Nodes = append(p.Nodes, nodeToRPC(n))
 		}
+
 		if len(p.Nodes) == maxNeighbors {
 			t.send(from, fromID, neighborsPacket, &p)
 			p.Nodes = p.Nodes[:0]

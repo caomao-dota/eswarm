@@ -46,6 +46,7 @@ func newTestTable(t transport) (*Table, *enode.DB) {
 func nodeAtDistance(base enode.ID, ld int, ip net.IP) *node {
 	var r enr.Record
 	r.Set(enr.IP(ip))
+
 	return wrapNode(enode.SignNull(&r, idAtDistance(base, ld)))
 }
 
@@ -80,7 +81,7 @@ func fillBucket(tab *Table, n *node) (last *node) {
 	for b.entries.Length() < bucketSize {
 		b.entries.AddNode(nodeAtDistance(tab.self().ID(), ld, intIP(ld)),false)
 	}
-	return b.entries[bucketSize-1]
+	return b.entries.GetEntries()[bucketSize-1].SelectBest()
 }
 
 // fillTable adds nodes the table to the end of their corresponding bucket
@@ -123,7 +124,7 @@ func (t *pingRecorder) ping(toid enode.ID, toaddr *net.UDPAddr) (error, time.Dur
 
 	t.pinged[toid] = true
 	if t.dead[toid] {
-		return errTimeout,100*time.Hour
+		return errTimeout,time.Duration(LatencyInvalid)
 	} else {
 		return nil,10*time.Millisecond
 	}
