@@ -289,7 +289,7 @@ func  (ni *NodeItems) SelectBest()*node {
 	if node != nil {
 		node.selected = true
 	}else {
-		log.Error("Error NodeItems","ID",node.ID(),"items",len(ni.Items))
+		log.Error("Error NodeItems","ID",ni.ID(),"items",len(ni.Items))
 	}
 	return node
 }
@@ -322,9 +322,7 @@ func  (ni *NodeItems) getPossibleNode()*node {
 		}
 
 	}
-	if result.latency >= LatencyInvalid {
-		return nil
-	}
+
 	return result
 }
 
