@@ -304,7 +304,12 @@ func TestUDP_findnode(t *testing.T) {
 	}
 	waitNeighbors(want)
 }
-
+type BasicInfo struct {
+	Id enode.ID
+	IP net.IP
+	TCP uint16
+	UDP uint16
+}
 func TestUDP_findnodeMultiReply(t *testing.T) {
 	test := newUDPTest(t)
 	defer test.close()
@@ -346,11 +351,19 @@ func TestUDP_findnodeMultiReply(t *testing.T) {
 	test.packetIn(nil, neighborsPacket, &neighbors{Expiration: futureExp, Nodes: rpclist[:2]})
 	test.packetIn(nil, neighborsPacket, &neighbors{Expiration: futureExp, Nodes: rpclist[2:]})
 
+
+	Extract :=func (nodes []*node) []*BasicInfo{
+		result := make([]*BasicInfo,len(nodes))
+		for i,n := range nodes {
+			result[i]= &BasicInfo{n.ID(),n.IP(),uint16(n.TCP()),uint16(n.UDP())}
+		}
+		return result
+	}
 	// check that the sent neighbors are all returned by findnode
 	select {
 	case result := <-resultc:
 		want := append(list[:2], list[3:]...)
-		if !reflect.DeepEqual(result, want) {
+		if !reflect.DeepEqual(Extract(result), Extract(want)) {
 			t.Errorf("neighbors mismatch:\n  got:  %v\n  want: %v", result, want)
 		}
 	case err := <-errc:

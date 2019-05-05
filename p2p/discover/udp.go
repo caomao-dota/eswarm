@@ -387,7 +387,7 @@ func (t *udp) findnode(toid enode.ID, toaddr *net.UDPAddr, target encPubkey) ([]
 			}
 			nodes = append(nodes, n)
 		}
-		return true,  true /// 只要正常返回了，就是成功了nreceived >= bucketSize
+		return true,  nreceived >= bucketSize /// 只要正常返回了，就是成功了nreceived >= bucketSize
 	})
 	t.send(toaddr, toid, findnodePacket, &findnode{
 		Target:     target,
@@ -562,7 +562,7 @@ func (t *udp) send(toaddr *net.UDPAddr, toid enode.ID, ptype byte, req packet) (
 
 func (t *udp) write(toaddr *net.UDPAddr, toid enode.ID, what string, packet []byte) error {
 	_, err := t.conn.WriteToUDP(packet, toaddr)
-	log.Trace(">> "+what, "id", toid, "addr", toaddr, "err", err)
+	log.Info(">> "+what, "id", toid, "addr", toaddr, "err", err)
 	return err
 }
 
@@ -608,6 +608,7 @@ func (t *udp) readLoop(unhandled chan<- ReadPacket) {
 			log.Debug("UDP read error", "err", err)
 			return
 		}
+		log.Info("Receive data:","size",nbytes,"from",from)
 		if t.handlePacket(from, buf[:nbytes]) != nil && unhandled != nil {
 			select {
 			case unhandled <- ReadPacket{buf[:nbytes], from}:
@@ -627,7 +628,7 @@ func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 	if err == nil {
 		err = packet.preverify(t, from, fromID, fromKey)
 	}
-	log.Trace("<< "+packet.name(), "id", fromID, "addr", from, "err", err)
+	log.Info("<< "+packet.name(), "id", fromID, "addr", from, "err", err)
 	if err == nil {
 		packet.handle(t, from, fromID, hash)
 	}
@@ -700,7 +701,7 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) 
 			//这个是非常有可能ping不通的，因为ping的是连接的来源端口，如果ping通了，就记录，否则就不管了
 			t.sendPing(fromID, from, func(latency int64) {
 
-				t.tab.OnPingReceived(n)
+				go t.tab.OnPingReceived(n)
 				//pong 也receive了
 			})
 		} else {
@@ -709,7 +710,7 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) 
 
 			//但是这个时候，系统中很可能还没有这个节点（初次收到ping)
 
-			t.tab.OnPingReceived(n)
+			go t.tab.OnPingReceived(n)
 		}
 
 		// Update node database and endpoint predictor.
@@ -717,10 +718,7 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) 
 		t.localNode.UDPEndpointStatement(from, &net.UDPAddr{IP: req.To.IP, Port: int(req.To.UDP)})
 //	}
 
-		if !t.DoneFindWork {
-			t.DoneFindWork = true
-			t.tab.LookupRandom()
-		}
+
 
 }
 

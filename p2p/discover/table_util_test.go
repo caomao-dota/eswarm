@@ -39,6 +39,7 @@ func init() {
 func newTestTable(t transport) (*Table, *enode.DB) {
 	db, _ := enode.OpenDB("")
 	tab, _ := newTable(t, db, nil)
+	tab.initDone = true
 	return tab, db
 }
 
@@ -88,7 +89,7 @@ func fillBucket(tab *Table, n *node) (last *node) {
 // if the bucket is not full. The caller must not hold tab.mutex.
 func fillTable(tab *Table, nodes []*node) {
 	for _, n := range nodes {
-		tab.addSeenNode(n)
+		tab.AddSeenNode(n)
 	}
 }
 

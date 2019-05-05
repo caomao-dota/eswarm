@@ -680,6 +680,7 @@ running:
 			// it will keep the node connected.
 			srv.log.Trace("Adding static node", "node", n)
 			if n.ID() != srv.localnode.ID(){
+				srv.ntab.DoPing(n)
 				dialstate.addStatic(n)
 			}
 

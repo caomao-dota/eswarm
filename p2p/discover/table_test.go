@@ -68,7 +68,7 @@ func testPingReplace(t *testing.T, newNodeIsResponding, lastInBucketIsResponding
 	// its bucket if it is unresponsive. Revalidate again to ensure that
 	transport.dead[last.ID()] = !lastInBucketIsResponding
 	transport.dead[pingSender.ID()] = !newNodeIsResponding
-	tab.addSeenNode(pingSender)
+	tab.AddSeenNode(pingSender)
 	refresh := time.NewTimer(30*time.Minute)
 	tab.doRevalidate(refresh)
 
@@ -166,7 +166,7 @@ func TestTable_IPLimit(t *testing.T) {
 
 	for i := 0; i < tableIPLimit+1; i++ {
 		n := nodeAtDistance(tab.self().ID(), i, net.IP{172, 0, 1, byte(i)})
-		tab.addSeenNode(n)
+		tab.AddSeenNode(n)
 	}
 	if tab.len() > tableIPLimit {
 		t.Errorf("too many nodes in table")
@@ -184,7 +184,7 @@ func TestTable_BucketIPLimit(t *testing.T) {
 	d := 3
 	for i := 0; i < bucketIPLimit+1; i++ {
 		n := nodeAtDistance(tab.self().ID(), d, net.IP{172, 0, 1, byte(i)})
-		tab.addSeenNode(n)
+		tab.AddSeenNode(n)
 	}
 	if tab.len() > bucketIPLimit {
 		t.Errorf("too many nodes in table")
@@ -277,6 +277,7 @@ func TestTable_ReadRandomNodesGetAll(t *testing.T) {
 	test := func(buf []*enode.Node) bool {
 		transport := newPingRecorder()
 		tab, db := newTestTable(transport)
+
 		defer db.Close()
 		defer tab.Close()
 
@@ -334,8 +335,8 @@ func TestTable_addSeenNode(t *testing.T) {
 	// Insert two nodes.
 	n1 := nodeAtDistance(tab.self().ID(), 256, net.IP{88, 77, 66, 1})
 	n2 := nodeAtDistance(tab.self().ID(), 256, net.IP{88, 77, 66, 2})
-	tab.addSeenNode(n1)
-	tab.addSeenNode(n2)
+	tab.AddSeenNode(n1)
+	tab.AddSeenNode(n2)
 
 	// Verify bucket content:
 	bcontent := make([]*NodeItems,2)
@@ -355,7 +356,7 @@ func TestTable_addSeenNode(t *testing.T) {
 	newrec := n2.Record()
 	newrec.Set(enr.IP{99, 99, 99, 99})
 	newn2 := wrapNode(enode.SignNull(newrec, n2.ID()))
-	tab.addSeenNode(newn2)
+	tab.AddSeenNode(newn2)
 
 	n12.AddNode(newn2,false)
 

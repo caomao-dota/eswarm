@@ -111,8 +111,8 @@ func  (ni *NodeItems)GetLastTestTime() time.Time{
 	doPing对nodeItems里的每一项执行一次ping操作
  */
 func  (ni *NodeItems)DoPing(t transport,ch chan bool){
-			ni.mutex.Lock()
-			defer ni.mutex.Unlock()
+	ni.mutex.Lock()
+	defer ni.mutex.Unlock()
 	go func (){
 		if len(ni.Items) > 0 {
 
@@ -335,7 +335,7 @@ type Table struct {
 	closed    chan struct{}
 	notifyChannel    chan struct{}
 	nodeAddedHook func(*node) // for testing
-	allNodes     map[enode.ID]*NodeItems
+	//allNodes     map[enode.ID]*NodeItems
 
 }
 type AttributeID uint8
@@ -464,7 +464,7 @@ func (nq *NodeQueue)doAddNodeItems(anode *NodeItems,shouldUpdate bool) bool{
 		}
 	}
 }
-func (nq *NodeQueue)AddNode(anode *node,shouldUpdate bool) bool{
+func (nq *NodeQueue)AddNode(anode *node,shouldUpdate bool) (bool, *NodeItems){
 	nq.mutex.Lock()
 	defer nq.mutex.Unlock()
     //log.Info("3")
@@ -472,15 +472,15 @@ func (nq *NodeQueue)AddNode(anode *node,shouldUpdate bool) bool{
 	nodeItems,ok := nq.exists[anode.ID()]
 	if ok {
 		nodeItems.AddNode(anode,shouldUpdate)
-		return true
+		return true,nodeItems
 	}else {
 		if  len (nq.entries) < nq.maxsize {
 			nodeItems = newNodeItem(anode.ID())
 			nodeItems.AddNode(anode,shouldUpdate)
 			nq.doAddNodeItems(nodeItems,shouldUpdate)
-			return true
+			return true,nodeItems
 		}
-		return false
+		return false,nil
 	}
 }
 func (nq *NodeQueue)GetEntries() []*NodeItems{
@@ -594,7 +594,7 @@ func newTable(t transport, db *enode.DB, bootnodes []*enode.Node) (*Table, error
 		closed:     make(chan struct{}),
 		rand:       mrand.New(mrand.NewSource(0)),
 		ips:        netutil.DistinctNetSet{Subnet: tableSubnet, Limit: tableIPLimit},
-		allNodes:   make(map[enode.ID]*NodeItems),
+		//allNodes:   make(map[enode.ID]*NodeItems),
 	}
 	if err := tab.setFallbackNodes(bootnodes); err != nil {
 		return nil, err
@@ -981,6 +981,7 @@ loop:
 	close(tab.closed)
 }
 
+
 // doRefresh performs a lookup for a random target to keep buckets
 // full. seed nodes are inserted if the table is empty (initial
 // bootstrap or discarded faulty peers).
@@ -990,7 +991,7 @@ func (tab *Table) doRefresh(refresh *time.Timer) {
 	defer func (){
 		if !tab.initDone  {
 			tab.initDone = true
-			if(tab.waiting != nil ) {
+			if tab.waiting != nil  {
 				close(tab.waiting)
 				tab.waiting = nil
 			}
@@ -1050,12 +1051,11 @@ const (
 	StateEntries =1
 	StateReplace = 2
 )
-func (tab *Table)UpdateNodeStatus(nodeId enode.ID,b *bucket,alive bool ){
+func (tab *Table)updateNodeStatus(nodeId enode.ID,b *bucket,alive bool ){
     //log.Info("33")
 	//defer func(){log.Info("33.1")}()
 	//b := tab.buckets[bi]
-	tab.mutex.Lock()
-	defer tab.mutex.Unlock()
+
 	var anode  *NodeItems
 	anode = nil
 	//state 0 not found /1 in  connects /2 in entries /3 in replacement
@@ -1090,6 +1090,7 @@ func (tab *Table)UpdateNodeStatus(nodeId enode.ID,b *bucket,alive bool ){
 
 }
 
+
 // doRevalidate checks that the last node in a random bucket is still live
 // and replaces or deletes the node if it isn't.
 func (tab *Table) doReplacementCheck() {
@@ -1108,7 +1109,7 @@ func (tab *Table) doReplacementCheck() {
 	//如果测试成功了，移动到etnries的最前面
 
 	result := <-ch
-	tab.UpdateNodeStatus(last.ID(),tab.buckets[bi],result)
+	tab.updateNodeStatus(last.ID(),tab.buckets[bi],result)
 }
 
 // doRevalidate checks that the last node in a random bucket is still live
@@ -1119,7 +1120,10 @@ func (tab *Table) doRevalidate( revalidate *time.Timer) {
     //log.Info("35")
 	//defer func(){log.Info("35.1")}()
 	//all connected is set to seen now
+	tab.mutex.Lock()
+
 	last, bi := tab.nodeToRevalidate()
+	tab.mutex.Unlock()
 	if last == nil {
 		// No non-empty bucket found.
 		return
@@ -1131,13 +1135,12 @@ func (tab *Table) doRevalidate( revalidate *time.Timer) {
 	last.DoPing(tab.net,ch)
 	//如果测试失败了，移动到replacement的最后面
 	result := <-ch
-	tab.UpdateNodeStatus(last.ID(),tab.buckets[bi],result)
+	tab.updateNodeStatus(last.ID(),tab.buckets[bi],result)
 }
 
 // nodeToRevalidate returns the last node in a random, non-empty bucket.
 func (tab *Table) nodeToRevalidate() (n *NodeItems, bi int) {
-	tab.mutex.Lock()
-	defer tab.mutex.Unlock()
+
     //log.Info("36")
 	//defer func(){log.Info("36.1")}()
 	for _, bi = range tab.rand.Perm(len(tab.buckets)) {
@@ -1155,8 +1158,7 @@ func (tab *Table) nodeToRevalidate() (n *NodeItems, bi int) {
 }
 // nodeToRevalidate returns the last node in a random, non-empty bucket.
 func (tab *Table) replaceNodeToCheck() (n *NodeItems, bi int) {
-	tab.mutex.Lock()
-	defer tab.mutex.Unlock()
+
     //log.Info("37")
 	//defer func(){log.Info("37.1")}()
 	for _, bi = range tab.rand.Perm(len(tab.buckets)) {
@@ -1174,8 +1176,7 @@ func (tab *Table) replaceNodeToCheck() (n *NodeItems, bi int) {
 	return nil, 0
 }
 func (tab *Table) nextRevalidateTime() time.Duration {
-	tab.mutex.Lock()
-	defer tab.mutex.Unlock()
+
     //log.Info("38")
 	//defer func(){log.Info("38.1")}()
 	return time.Duration(tab.rand.Int63n(int64(revalidateInterval)))
@@ -1184,8 +1185,7 @@ func (tab *Table) nextRevalidateTime() time.Duration {
 // copyLiveNodes adds nodes from the table to the database if they have been in the table
 // longer then minTableTime.
 func (tab *Table) copyLiveNodes() {
-	tab.mutex.Lock()
-	defer tab.mutex.Unlock()
+
     //log.Info("39")
 	//defer func(){log.Info("39.1")}()
 	now := time.Now()
@@ -1248,6 +1248,12 @@ func (tab *Table) AddBootnode(n *enode.Node) {
 // added to the replacements list.
 //
 // The caller must not hold tab.mutex.
+
+func (tab *Table) AddSeenNode(n *node) {
+	tab.mutex.Lock()
+	defer tab.mutex.Unlock()
+	tab.addSeenNode(n)
+}
 func (tab *Table) addSeenNode(n *node) {
     //log.Info("42")
 	//defer func(){log.Info("42.1")}()
@@ -1256,15 +1262,16 @@ func (tab *Table) addSeenNode(n *node) {
 	}
 
 
-	tab.mutex.Lock()
-	defer tab.mutex.Unlock()
 
-	nodes,ok := tab.allNodes[n.ID()]
+
+	/*nodes,ok := tab.allNodes[n.ID()]
 	if !ok  {
 		nodes = newNodeItem(n.ID())
 		tab.allNodes[n.ID()] = nodes
 	}
+
 	nodes.AddNode(n,false)
+	*/
 	b := tab.bucket(n.ID())
 
 	//fmt.Println(fmt.Sprintf("add seen node,curent:%v,max:%v",b.entries.Length(),b.entries.maxsize))
@@ -1312,16 +1319,11 @@ func (tab *Table) addSeenNode(n *node) {
 
 }
 
+func (tab *Table) DoPing(n  *enode.Node) {
+	tab.AddSeenNode(wrapNode(n))
 
-// addVerifiedNode adds a node whose existence has been verified recently to the front of a
-// bucket. If the node is already in the bucket, it is moved to the front. If the bucket
-// has no space, the node is added to the replacements list.
-//
-// There is an additional safety measure: if the table is still initializing the node
-// is not added. This prevents an attack where the table could be filled by just sending
-// ping repeatedly.
-//
-// The caller must not hold tab.mutex.
+	tab.OnPingReceived(n)
+}
 func (tab *Table) OnPingReceived(n  *enode.Node) {
     //log.Info("43")
 	//defer func(){log.Info("43.1")}()
@@ -1339,13 +1341,29 @@ func (tab *Table) OnPingReceived(n  *enode.Node) {
 
 		oldNode := b.entries.Get(n.ID())
 		oldNode.OnPingReceived(n)
+		return
 
 	} else if b.replacements.Contains(n.ID()) {
 		oldNode := b.replacements.Get(n.ID())
 		oldNode.OnPingReceived(n)
+		ch := make(chan bool )
+		oldNode.DoPing(tab.net,ch)
+		//如果测试失败了，移动到replacement的最后面
+		result := <-ch
+		tab.updateNodeStatus(oldNode.ID(),tab.bucket(oldNode.ID()),result)
+
 
 	} else {
-		b.replacements.AddNode(wrapNode(n),true)
+
+		_,oldNode := b.replacements.AddNode(wrapNode(n),true)
+		if oldNode != nil {
+			ch := make(chan bool )
+			oldNode.DoPing(tab.net,ch)
+			//如果测试失败了，移动到replacement的最后面
+			result := <-ch
+			tab.updateNodeStatus(oldNode.ID(),tab.bucket(oldNode.ID()),result)
+		}
+
 	}
 
 
@@ -1381,7 +1399,7 @@ func (tab *Table) DoPongResult(n *enode.Node,duration int64,ok bool)  {
 	}
 	result := <- ch
 
-	tab.UpdateNodeStatus(n.ID(),b,result)
+	tab.updateNodeStatus(n.ID(),b,result)
 
 }
 /**
@@ -1391,11 +1409,13 @@ func (tab *Table) DoPongResult(n *enode.Node,duration int64,ok bool)  {
 func (tab *Table) CanAddNode(n *enode.Node) (bool) {
     //log.Info("44")
 	//defer func(){log.Info("44.1")}()
-	tab.mutex.Lock()
-	defer tab.mutex.Unlock()
+
 
 	b := tab.bucket(n.ID())
 
+	//tab.OnPingReceived(n)
+	tab.mutex.Lock()
+	defer tab.mutex.Unlock()
 	if  b.entries.Contains( n.ID()) {
 		nodes := b.entries.Get(n.ID())
 		return nodes.NodeExist(encodePubkey(n.Pubkey()))
@@ -1434,7 +1454,7 @@ func (tab *Table) RemoveConnectedNode(nodeId enode.ID) {
 
 
 	b := tab.bucket(nodeId)
-	tab.UpdateNodeStatus(nodeId,b,false)
+	tab.updateNodeStatus(nodeId,b,false)
 
 	//前面anode在rlpx的时候，已经进行了一次不对称加密，所以是无法模仿出其他节点进来，因此判定一次IP只是冗余判定
 
