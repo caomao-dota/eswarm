@@ -688,7 +688,7 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) 
 //	if t.localNode.NodeType() == enode.NodeTypeFull {
 		t.send(from, fromID, pongPacket, &pong{
 			To:         makeEndpoint(from, req.From.TCP),
-			NodeType: t.localNode.NodeType(),
+			NodeType: 	t.localNode.NodeType(),
 			ReplyTok:   mac,
 			Expiration: uint64(time.Now().Add(expiration).Unix()),
 		})

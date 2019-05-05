@@ -1089,6 +1089,12 @@ func (tab *Table)updateNodeStatus(nodeId enode.ID,b *bucket,alive bool ){
 			_,items := b.replacements.RemoveNodeItems(nodeId)
 			b.entries.AddNodeItems(items,true)
 			b.entries.MoveFront(items.ID())
+			if tab.nodeAddedHook != nil {
+				tab.nodeAddedHook(items.SelectBest())
+			}
+
+		}else {
+			b.replacements.MoveBack(nodeId)
 		}
 	} else {
 		//新的东西，其实不应该出现
