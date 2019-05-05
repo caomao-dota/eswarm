@@ -28,6 +28,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/plotozhu/MDCMainnet/p2p/enr"
 	mrand "math/rand"
 	"net"
 	"sort"
@@ -1103,7 +1104,24 @@ func (tab *Table)updateNodeStatus(nodeId enode.ID,b *bucket,alive bool ){
 
 
 }
+func (tab *Table)UpdateIPInfo(nodeId enode.ID,oldIP net.IP,newIP net.IP){
+	tab.mutex.Lock()
+	defer tab.mutex.Unlock()
+	b := tab.bucket(nodeId)
+	node := b.entries.Get(nodeId)
+	if node == nil  {
+		node = b.replacements.Get(nodeId)
+	}
 
+	if node != nil {
+		for _,n := range node.Items {
+			if n.IP().Equal(oldIP) {
+				n.Node.Record().Set(enr.IP(newIP))
+				break;
+			}
+		}
+	}
+}
 
 // doRevalidate checks that the last node in a random bucket is still live
 // and replaces or deletes the node if it isn't.

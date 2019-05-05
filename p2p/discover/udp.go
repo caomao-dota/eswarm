@@ -482,16 +482,19 @@ func (t *udp) loop() {
 			var matched bool // whether any replyMatcher considered the reply acceptable.
 			for el := plist.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*replyMatcher)
-				if p.from == r.from && p.ptype == r.ptype && p.ip.Equal(r.ip) {
-					ok, requestDone := p.callback(r.data)
-					matched = matched || ok
-					// Remove the matcher if callback indicates that all replies have been received.
-					if requestDone {
-						p.errc <- nil
-						plist.Remove(el)
-					}
-					// Reset the continuous timeout counter (time drift detection)
-					contTimeouts = 0
+				if p.from == r.from && p.ptype == r.ptype  {
+					if r.ptype == pongPacket  || p.ip.Equal(r.ip){
+							ok, requestDone := p.callback(r.data)
+							matched = matched || ok
+							// Remove the matcher if callback indicates that all replies have been received.
+							if requestDone {
+								p.errc <- nil
+								plist.Remove(el)
+							}
+							// Reset the continuous timeout counter (time drift detection)
+							contTimeouts = 0
+						}
+
 				}
 			}
 			r.matched <- matched
@@ -694,11 +697,11 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) 
 		})
 
 		// Ping back if our last pong on file is too far in the past.
-		n := (enode.NewV4(req.senderKey, req.From.IP, int(req.From.TCP),int(req.From.UDP),req.NodeType,from.IP))
+		n := enode.NewV4(req.senderKey, req.From.IP, int(req.From.TCP),int(req.From.UDP),req.NodeType,from.IP)
 
 		log.Info("ping:","ip",req.From.IP,"port",req.From.TCP," udp",from.Port)
 		if time.Since(t.db.LastPongReceived(n.ID(), from.IP)) > bondExpiration {
-			//这个是非常有可能ping不通的，因为ping的是连接的来源端口，如果ping通了，就记录，否则就不管了
+			//
 			t.sendPing(fromID, from, func(latency int64) {
 
 				go t.tab.OnPingReceived(n)
@@ -732,7 +735,8 @@ func (req *pong) preverify(t *udp, from *net.UDPAddr, fromID enode.ID, fromKey e
 func (req *pong) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) {
 	log.Info("pong:","ip",req.To.IP,"port",req.To.TCP," udp from",from.Port," udp req:",req.To.UDP)
 	t.localNode.UDPEndpointStatement(from, &net.UDPAddr{IP: req.To.IP, Port: int(req.To.UDP)})
-	t.db.UpdateLastPongReceived(fromID, from.IP, time.Now())
+	t.db.UpdateLastPongReceived(fromID, req.To.IP, time.Now())
+	//更新表中的IP信息，这样就可以下一次按照这个进行连接了
 }
 
 func (req *pong) name() string { return "PONG/v4" }
