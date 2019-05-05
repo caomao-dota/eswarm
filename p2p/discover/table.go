@@ -58,8 +58,8 @@ const (
 
 	maxFindnodeFailures = 5 // Nodes exceeding this limit are dropped
 	refreshInterval     = 10 * time.Minute //30 * time.Minute
-	revalidateInterval  = 10 * time.Minute
-	copyNodesInterval   = 30 * time.Minute
+	revalidateInterval  = 10 * time.Second
+	copyNodesInterval   = 30 * time.Second
 	seedMinTableTime    = 5 * time.Minute
 	seedCount           = 30
 	seedMaxAge          = 5 * 24 * time.Hour

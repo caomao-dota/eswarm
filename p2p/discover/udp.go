@@ -696,8 +696,8 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) 
 		// Ping back if our last pong on file is too far in the past.
 		n := (enode.NewV4(req.senderKey, req.From.IP, int(req.From.TCP),from.Port,req.NodeType,from.IP))
 
+		log.Info("ping:","ip",req.From.IP,"port",req.From.TCP," udp",from.Port)
 		if time.Since(t.db.LastPongReceived(n.ID(), from.IP)) > bondExpiration {
-
 			//这个是非常有可能ping不通的，因为ping的是连接的来源端口，如果ping通了，就记录，否则就不管了
 			t.sendPing(fromID, from, func(latency int64) {
 
@@ -705,11 +705,6 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) 
 				//pong 也receive了
 			})
 		} else {
-			//收到了ping,上一次的pong的时间没有超过bondExpiration（24小时），认为是有效的
-
-
-			//但是这个时候，系统中很可能还没有这个节点（初次收到ping)
-
 			go t.tab.OnPingReceived(n)
 		}
 
@@ -735,6 +730,7 @@ func (req *pong) preverify(t *udp, from *net.UDPAddr, fromID enode.ID, fromKey e
 }
 
 func (req *pong) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) {
+	log.Info("pong:","ip",req.To.IP,"port",req.To.TCP," udp from",from.Port," udp req:",req.To.UDP)
 	t.localNode.UDPEndpointStatement(from, &net.UDPAddr{IP: req.To.IP, Port: int(req.To.UDP)})
 	t.db.UpdateLastPongReceived(fromID, from.IP, time.Now())
 }
@@ -793,10 +789,12 @@ func (req *neighbors) preverify(t *udp, from *net.UDPAddr, fromID enode.ID, from
 	if !t.handleReply(fromID, from.IP, neighborsPacket, req) {
 		return errUnsolicitedReply
 	}
+
 	return nil
 }
 
 func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) {
+	log.Info("neighbours:","ip",len(req.Nodes),"nodes",req.Nodes)
 }
 
 func (req *neighbors) name() string { return "NEIGHBORS/v4" }
