@@ -69,9 +69,17 @@ type NodeItems struct {
 	Items map[encPubkey]*node
 	mutex sync.Mutex
 }
-func newNodeItem(nodeId enode.ID) *NodeItems {
+/*func newNodeItem(nodeId enode.ID) *NodeItems {
 	return &NodeItems{
 		Id:nodeId,Items:make(map[encPubkey]*node),
+	}
+}*/
+func newNodeItem(n *node) *NodeItems {
+	item := make(map[encPubkey]*node)
+	item[encodePubkey(n.Pubkey())] = n
+	return &NodeItems{
+		Id:n.ID(),
+		Items:item,
 	}
 }
 func  (ni *NodeItems) ID() enode.ID {
@@ -280,6 +288,8 @@ func  (ni *NodeItems) SelectBest()*node {
 	node := ni.getPossibleNode()
 	if node != nil {
 		node.selected = true
+	}else {
+		log.Error("Error NodeItems","ID",node.ID(),"items",len(ni.Items))
 	}
 	return node
 }
@@ -475,8 +485,8 @@ func (nq *NodeQueue)AddNode(anode *node,shouldUpdate bool) (bool, *NodeItems){
 		return true,nodeItems
 	}else {
 		if  len (nq.entries) < nq.maxsize {
-			nodeItems = newNodeItem(anode.ID())
-			nodeItems.AddNode(anode,shouldUpdate)
+			nodeItems = newNodeItem(anode)
+
 			nq.doAddNodeItems(nodeItems,shouldUpdate)
 			return true,nodeItems
 		}
@@ -1214,9 +1224,12 @@ func (tab *Table) closest(target enode.ID, nresults int) *nodesByDistance {
 	for _, b := range &tab.buckets {
 		for _, n := range b.entries.GetEntries() {
 			node := n.SelectBest()
-			if (node.testAt) != TimeInvalid{
-				close.push(n.SelectBest(), nresults)
+			if node != nil {
+				if (node.testAt) != TimeInvalid{
+					close.push(n.SelectBest(), nresults)
+				}
 			}
+
 
 		}
 	}
@@ -1295,8 +1308,8 @@ func (tab *Table) addSeenNode(n *node) {
 		b.entries.AddNode(n,false)
 	}else {
 		if n.testAt != TimeInvalid {
-			nodeItem := newNodeItem(n.ID())
-			nodeItem.AddNode(n,false)
+			nodeItem := newNodeItem(n)
+
 			ok,replaced := b.entries.ReplaceNodeItems(nodeItem, func(nodeInEntries *NodeItems) bool {
 				if nodeInEntries.GetLastTestTime() == TimeInvalid {
 					return true
