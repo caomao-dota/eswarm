@@ -231,12 +231,13 @@ type DistinctNetSet struct {
 func (s *DistinctNetSet) Add(ip net.IP) bool {
 	key := s.key(ip)
 	n,ok := s.members.Load(string(key))
-	if ok && n.(uint) < s.Limit {
+	if ok && n.(uint) > s.Limit {
 
-		s.members.Store(string(key), n.(uint) + 1)
-		return true
+
+		return false
 	}
-	return false
+	s.members.Store(string(key), 1)
+	return true
 }
 
 // Remove removes an IP from the set.
