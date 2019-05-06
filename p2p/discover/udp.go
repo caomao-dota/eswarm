@@ -565,7 +565,7 @@ func (t *udp) send(toaddr *net.UDPAddr, toid enode.ID, ptype byte, req packet) (
 
 func (t *udp) write(toaddr *net.UDPAddr, toid enode.ID, what string, packet []byte) error {
 	_, err := t.conn.WriteToUDP(packet, toaddr)
-	log.Info(">> "+what, "id", toid, "addr", toaddr, "err", err)
+	log.Trace(">> "+what, "id", toid, "addr", toaddr, "err", err)
 	return err
 }
 
@@ -611,7 +611,7 @@ func (t *udp) readLoop(unhandled chan<- ReadPacket) {
 			log.Debug("UDP read error", "err", err)
 			return
 		}
-		log.Info("Receive data:","size",nbytes,"from",from)
+		//log.Trace("Receive data:","size",nbytes,"from",from)
 		if t.handlePacket(from, buf[:nbytes]) != nil && unhandled != nil {
 			select {
 			case unhandled <- ReadPacket{buf[:nbytes], from}:
@@ -631,7 +631,7 @@ func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 	if err == nil {
 		err = packet.preverify(t, from, fromID, fromKey)
 	}
-	log.Info("<< "+packet.name(), "id", fromID, "addr", from, "err", err)
+	log.Trace("<< "+packet.name(), "id", fromID, "addr", from, "err", err)
 	if err == nil {
 		packet.handle(t, from, fromID, hash)
 	}
@@ -700,7 +700,7 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) 
 		n := enode.NewV4(req.senderKey, req.From.IP, int(req.From.TCP),int(req.From.UDP),req.NodeType,from.IP)
 
 		n.Set(enr.LUDP(from.Port))
-		log.Info("ping:","ping.from ip",req.From.IP,"ping.from port",req.From.TCP," from",from.IP," udp",from.Port)
+		log.Trace("ping:","ping.from ip",req.From.IP,"ping.from port",req.From.TCP," from",from.IP," udp",from.Port)
 		if time.Since(t.db.LastPongReceived(n.ID(), from.IP)) > bondExpiration {
 			//
 			t.sendPing(fromID, from, func(latency int64) {
@@ -734,7 +734,7 @@ func (req *pong) preverify(t *udp, from *net.UDPAddr, fromID enode.ID, fromKey e
 }
 
 func (req *pong) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) {
-	log.Info("pong:","ip",req.To.IP,"port",req.To.TCP," udp req:",req.To.UDP," udp from",from.Port)
+	log.Trace("pong:","ip",req.To.IP,"port",req.To.TCP," udp req:",req.To.UDP," udp from",from.Port)
 //	t.localNode.UDPEndpointStatement(from, &net.UDPAddr{IP: req.To.IP, Port: int(req.To.UDP)})
 	t.db.UpdateLastPongReceived(fromID, from.IP, time.Now())
 
@@ -799,7 +799,7 @@ func (req *neighbors) preverify(t *udp, from *net.UDPAddr, fromID enode.ID, from
 }
 
 func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) {
-	log.Info("neighbours:","ip",len(req.Nodes),"nodes",req.Nodes)
+	//log.Trace("neighbours:","ip",len(req.Nodes),"nodes",req.Nodes)
 }
 
 func (req *neighbors) name() string { return "NEIGHBORS/v4" }
