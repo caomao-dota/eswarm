@@ -154,8 +154,8 @@ func (t *udp) nodeFromRPC(sender *net.UDPAddr, rn rpcNode) (*node, error) {
 	if err != nil {
 		return nil, err
 	}
-	n := wrapNode(enode.NewV4(key, rn.IP, int(rn.TCP), int(rn.UDP), rn.LN,sender.IP))
-	n.Set(enr.LUDP(sender.Port))
+	n := wrapNode(enode.NewV4(key, rn.IP, int(rn.TCP), int(rn.UDP), rn.LN,net.IP{}))
+
 	err = n.ValidateComplete()
 	return n, err
 }
@@ -484,8 +484,7 @@ func (t *udp) loop() {
 			var matched bool // whether any replyMatcher considered the reply acceptable.
 			for el := plist.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*replyMatcher)
-				if p.from == r.from && p.ptype == r.ptype  {
-					if r.ptype == pongPacket  || p.ip.Equal(r.ip){
+				if p.from == r.from && p.ptype == r.ptype &&  p.ip.Equal(r.ip){
 							ok, requestDone := p.callback(r.data)
 							matched = matched || ok
 							// Remove the matcher if callback indicates that all replies have been received.
@@ -495,7 +494,6 @@ func (t *udp) loop() {
 							}
 							// Reset the continuous timeout counter (time drift detection)
 							contTimeouts = 0
-						}
 
 				}
 			}
