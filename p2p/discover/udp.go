@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hashicorp/golang-lru"
+	"github.com/plotozhu/MDCMainnet/p2p/enr"
 	"net"
 	"sync"
 	"time"
@@ -699,6 +700,7 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) 
 		// Ping back if our last pong on file is too far in the past.
 		n := enode.NewV4(req.senderKey, req.From.IP, int(req.From.TCP),int(req.From.UDP),req.NodeType,from.IP)
 
+		n.Set(enr.LUDP(from.Port))
 		log.Info("ping:","ping.from ip",req.From.IP,"ping.from port",req.From.TCP," from",from.IP," udp",from.Port)
 		if time.Since(t.db.LastPongReceived(n.ID(), from.IP)) > bondExpiration {
 			//

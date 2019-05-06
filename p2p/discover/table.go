@@ -129,7 +129,7 @@ func  (ni *NodeItems)DoPing(t transport,ch chan bool){
 				node.testAt = time.Now()
 				var toAddr net.UDPAddr
 				lip := node.LIP()
-				if len(lip) == 0 {
+				if len(lip) == 0 || node.LUDP() == 0{
 					toAddr = net.UDPAddr{IP: node.IP(), Port: node.UDP()}
 				}else {
 					toAddr = net.UDPAddr{IP: lip, Port: int(node.LUDP())}
