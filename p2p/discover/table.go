@@ -896,7 +896,11 @@ func (tab *Table) findnode(n *node, targetKey encPubkey, reply chan<- []*node) {
 	//defer func(){log.Info("18.1")}()
 
 	fails := tab.db.FindFails(n.ID(), n.IP())
-	r, err := tab.net.findnode(n.ID(), n.addr(), targetKey)
+	udpTarget := n.addr()
+	if !n.LIP().Equal(net.IP{}) {
+		udpTarget = &net.UDPAddr{IP:n.LIP(),Port:int(n.LUDP())}
+	}
+	r, err := tab.net.findnode(n.ID(),udpTarget , targetKey)
 	if err == errClosed {
 		// Avoid recording failures on shutdown.
 		reply <- nil
