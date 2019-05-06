@@ -65,6 +65,9 @@ type UDP uint16
 
 func (v UDP) ENRKey() string { return "udp" }
 
+type LUDP uint16
+
+func (v LUDP) ENRKey() string { return "lport" }
 // ID is the "id" key, which holds the name of the identity scheme.
 type ID string
 
@@ -78,6 +81,10 @@ type NodeType uint8
 func (v NodeType) ENRKey() string { return "nt" }
 // IP is the "ip" key, which holds the IP address of the node.
 type IP net.IP
+
+type LocalIP net.IP
+
+func (v LocalIP) ENRKey() string { return "lip" }
 
 func (v IP) ENRKey() string { return "ip" }
 
@@ -99,9 +106,7 @@ func (v *IP) DecodeRLP(s *rlp.Stream) error {
 	}
 	return nil
 }
-type LocalIP net.IP
 
-func (v LocalIP) ENRKey() string { return "lip" }
 // KeyError is an error related to a key.
 type KeyError struct {
 	Key string

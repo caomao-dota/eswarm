@@ -130,6 +130,12 @@ func (n *Node) LIP() net.IP {
 	n.Load((*enr.LocalIP)(&ip))
 	return ip
 }
+
+func (n *Node) LUDP() uint16 {
+	var port enr.LUDP
+	n.Load(&port)
+	return uint16(port)
+}
 // IP returns the IP address of the node.
 func (n *Node) IP() net.IP {
 	var ip net.IP
@@ -143,7 +149,13 @@ func (n *Node) NodeType() enr.NodeType {
 
 	return enr.NodeType(ln)
 }
+// IP returns the IP address of the node.
+func (n *Node) Set(val enr.Entry)  {
 
+	n.r.Set(val)
+
+
+}
 // IP returns the IP address of the node.
 func (n *Node) SetNodeType(nodeType enr.NodeType)  {
 

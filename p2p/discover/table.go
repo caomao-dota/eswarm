@@ -127,7 +127,14 @@ func  (ni *NodeItems)DoPing(t transport,ch chan bool){
 
 			for _,node := range ni.Items {
 				node.testAt = time.Now()
-				err,duration := t.ping(node.ID(),&net.UDPAddr{IP: node.IP(), Port: node.UDP()})
+				var toAddr net.UDPAddr
+				lip := node.LIP()
+				if len(lip) == 0 {
+					toAddr = net.UDPAddr{IP: node.IP(), Port: node.UDP()}
+				}else {
+					toAddr = net.UDPAddr{IP: lip, Port: int(node.LUDP())}
+				}
+				err,duration := t.ping(node.ID(),&toAddr)
 				ni.mutex.Lock()
 				if err == nil {
 					ni.onPongSuccess(node,int64(duration))
@@ -211,7 +218,7 @@ func (ni *NodeItems)DoPongResult(n *enode.Node,duration int64 , ok bool, ch chan
 
 }
 //在收到ping的时候，更新信息
-func (ni *NodeItems)OnPingReceived(n *enode.Node) error{
+func (ni *NodeItems)OnPingReceived(n *enode.Node,ip net.IP,port uint16) error{
 	ni.mutex.Lock()
 	defer ni.mutex.Unlock()
 	if ni.Id != n.ID() {
@@ -232,6 +239,8 @@ func (ni *NodeItems)OnPingReceived(n *enode.Node) error{
 		newN.findAt = time.Now()
 		newN.testAt = TimeInvalid
 	}
+	newN.Node.Set(enr.LocalIP(ip))
+	newN.Node.Set(enr.LUDP(port))
 	ni.Items[pubKey] = newN
 	return nil
 }
@@ -1049,6 +1058,7 @@ func (tab *Table) loadSeedNodes() {
 	seeds = append(sortNodes, tab.nursery...)
 	for i := range seeds {
 		seed := seeds[i]
+		seed.Set(enr.LocalIP(nil))
 		seed.latency =tab.db.GetNodeLatency(seed.ID(),seed.IP())
 		age := log.Lazy{Fn: func() interface{} { return time.Since(tab.db.LastPongReceived(seed.ID(), seed.IP())) }}
 		log.Trace("Found seed node in database", "id", seed.ID(), "addr", seed.addr(), "age", age,"latency",seed.latency)
@@ -1284,16 +1294,16 @@ func (tab *Table) AddBootnode(n *enode.Node) {
 //
 // The caller must not hold tab.mutex.
 
-func (tab *Table) AddSeenNode(n *node) {
+func (tab *Table) AddSeenNode(n *node) *NodeItems{
 	tab.mutex.Lock()
 	defer tab.mutex.Unlock()
-	tab.addSeenNode(n)
+	return tab.addSeenNode(n)
 }
-func (tab *Table) addSeenNode(n *node) {
+func (tab *Table) addSeenNode(n *node) *NodeItems{
     //log.Info("42")
 	//defer func(){log.Info("42.1")}()
 	if n.ID() == tab.self().ID() {
-		return
+		return nil
 	}
 
 
@@ -1312,22 +1322,27 @@ func (tab *Table) addSeenNode(n *node) {
 	//fmt.Println(fmt.Sprintf("add seen node,curent:%v,max:%v",b.entries.Length(),b.entries.maxsize))
 	if b.entries.Contains( n.ID()) {
 		// Already in bucket, don't add.
-		b.entries.Get(n.ID()).AddNode(n,false)
-		return
+		result := b.entries.Get(n.ID())
+		 result.AddNode(n,false)
+		return  result
+
 	}
 
 
 	if b.replacements.Contains(n.ID()){
-		b.replacements.Get(n.ID()).AddNode(n,false)
-		return
+		result :=b.replacements.Get(n.ID())
+		 result.AddNode(n,false)
+		return result
+
 	}
 	if !tab.addIP(b, n.IP()) {
 		// Can't add: IP limit reached.
-		return
+		return nil
 	}
 
+	var result *NodeItems
 	if b.entries.Length() < b.entries.maxsize {
-		b.entries.AddNode(n,false)
+		_,result = b.entries.AddNode(n,false)
 	}else {
 		if n.testAt != TimeInvalid {
 			nodeItem := newNodeItem(n)
@@ -1340,26 +1355,32 @@ func (tab *Table) addSeenNode(n *node) {
 			})
 			if ok {
 				b.replacements.AddNodeItems( replaced,false)
+				result = replaced
 			}
 		}else {
 
 			// Add to end of bucket:
-			b.replacements.AddNode( n,false)
+			_,result = b.replacements.AddNode( n,false)
 		}
 
 	}
 
 
 	n.addedAt = time.Now()
+	return result
 
 }
 
 func (tab *Table) DoPing(n  *enode.Node) {
-	tab.AddSeenNode(wrapNode(n))
 
-	tab.OnPingReceived(n)
+
+	toTest := tab.AddSeenNode(wrapNode(n))
+	ch := make(chan bool)
+	toTest.DoPing(tab.net,ch)
+	result := <- ch
+	tab.updateNodeStatus(toTest.ID(),tab.bucket(toTest.ID()),result)
 }
-func (tab *Table) OnPingReceived(n  *enode.Node) {
+func (tab *Table) OnPingReceived(n  *enode.Node,ip net.IP,port uint16) {
     //log.Info("43")
 	//defer func(){log.Info("43.1")}()
 
@@ -1375,12 +1396,12 @@ func (tab *Table) OnPingReceived(n  *enode.Node) {
 	if  b.entries.Contains( n.ID()) {
 
 		oldNode := b.entries.Get(n.ID())
-		oldNode.OnPingReceived(n)
+		oldNode.OnPingReceived(n,ip,port)
 		return
 
 	} else if b.replacements.Contains(n.ID()) {
 		oldNode := b.replacements.Get(n.ID())
-		oldNode.OnPingReceived(n)
+		oldNode.OnPingReceived(n,ip,port)
 		ch := make(chan bool )
 		oldNode.DoPing(tab.net,ch)
 		//如果测试失败了，移动到replacement的最后面

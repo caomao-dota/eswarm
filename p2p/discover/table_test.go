@@ -615,7 +615,7 @@ func (tn *preminedTestnet) findnode(toid enode.ID, toaddr *net.UDPAddr, target e
 	var result []*node
 	for i, ekey := range tn.dists[toaddr.Port] {
 		key, _ := decodePubkey(ekey)
-		node := wrapNode(enode.NewV4(key, net.ParseIP("127.0.0.1"), i, next,0x24,net.ParseIP("127.0.0.1")))
+		node := wrapNode(enode.NewV4(key, net.ParseIP("127.0.0.1"), i, next,0x24,net.IP{}))
 		result = append(result, node)
 	}
 	return result, nil
