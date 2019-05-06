@@ -810,9 +810,10 @@ func (k *Kademlia) string() string {
 		})
 		r := strings.Join(row, " ")
 		r = r + wsrow
-		peersrows[po] = strings.Join(row, " ")
+		peersrows[po] = r[:31]
 		return true
 	})
+	rest = k.lconns.Size()
 	k.lconns.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
 		var rowlen int
 		if po >= k.MaxProxDisplay {
@@ -828,7 +829,7 @@ func (k *Kademlia) string() string {
 		})
 		r := strings.Join(row, " ")
 		r = r + wsrow
-		lightrows[po] = r[:31]
+		lightrows[po] = strings.Join(row, " ")
 		return true
 	})
 

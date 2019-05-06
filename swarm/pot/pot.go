@@ -502,7 +502,7 @@ func (t *Pot) eachBin(val Val, pof Pof, po int, f func(int, int, func(func(val V
 	_, lim := t.getPos(spr)
 	var size int
 	var n *Pot
-	/*for i := 0; i < lim; i++ {
+	for i := 0; i < lim; i++ {
 		n = t.bins[i]
 		size += n.size
 		if n.po < po {
@@ -511,7 +511,7 @@ func (t *Pot) eachBin(val Val, pof Pof, po int, f func(int, int, func(func(val V
 		if !f(n.po, n.size, n.each) {
 			return
 		}
-	}*/
+	}
 	if lim == len(t.bins) {//没找到任何大于spr的bin
 		if spr >= po {
 			f(spr, 1, func(g func(Val) bool) bool {

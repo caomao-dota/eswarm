@@ -155,6 +155,7 @@ func (t *udp) nodeFromRPC(sender *net.UDPAddr, rn rpcNode) (*node, error) {
 		return nil, err
 	}
 	n := wrapNode(enode.NewV4(key, rn.IP, int(rn.TCP), int(rn.UDP), rn.LN,sender.IP))
+	n.Set(enr.LUDP(sender.Port))
 	err = n.ValidateComplete()
 	return n, err
 }
