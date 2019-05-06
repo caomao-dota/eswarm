@@ -236,7 +236,7 @@ func (s *DistinctNetSet) Add(ip net.IP) bool {
 
 		return false
 	}
-	s.members.Store(string(key), 1)
+	s.members.Store(string(key), uint(1))
 	return true
 }
 
