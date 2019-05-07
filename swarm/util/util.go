@@ -180,9 +180,10 @@ func (s *HttpReader)GetDataFromCentralServer(uri string, r *http.Request,w http.
 			w.Write(body)
 		}
 		retrieved = true
-		return
+
 		//log.Trace("Response Body:", string(body))
 	}
+	return
 }
 
 type RpData struct{
