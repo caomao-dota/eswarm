@@ -646,11 +646,8 @@ func (tab *Table) seedRand() {
 	crand.Read(b[:])
 
 	tab.mutex.Lock()
-	log.Info("lock7")
-
 	tab.rand.Seed(int64(binary.BigEndian.Uint64(b[:])))
 	tab.mutex.Unlock()
-	log.Info("unlock7")
 }
 
 // ReadRandomNodes fills the given slice with random nodes from the table. The results
@@ -662,8 +659,7 @@ func (tab *Table) ReadRandomNodes(buf []*enode.Node) (n int) {
 		return 0
 	}
 	tab.mutex.Lock()
-	log.Info("lock8")
-	defer func (){ tab.mutex.Unlock(); 	log.Info("unlock8")}()
+	defer tab.mutex.Unlock()
 
 	// Find all non-empty buckets and get a fresh slice of their entries.
 	var buckets [][]*NodeItems
@@ -760,8 +756,7 @@ func (c SortableNode) Less(i, j int) bool {
 //按延时从小到大的顺序排好
 func (tab *Table) GetKnownNodesSorted() []*enode.Node{
 	tab.mutex.Lock()
-	log.Info("lock9")
-	defer func (){ tab.mutex.Unlock(); 	log.Info("unlock9")}()
+	defer tab.mutex.Unlock()
     //log.Info("13")
 	//defer func(){log.Info("13.1")}()
 	ret := make(SortableNode,0)
@@ -804,11 +799,8 @@ func (tab *Table) Resolve(n *enode.Node) *enode.Node {
 	//defer func(){log.Info("14.1")}()
 	hash := n.ID()
 	tab.mutex.Lock()
-	log.Info("lock10")
-
 	cl := tab.closest(hash, 1)
 	tab.mutex.Unlock()
-	log.Info("unlock10")
 	if len(cl.entries) > 0 && cl.entries[0].ID() == hash {
 		return unwrapNode(cl.entries[0])
 	}
@@ -851,11 +843,9 @@ func (tab *Table) lookup(targetKey encPubkey, refreshIfEmpty bool) []*node {
 	//defer func(){log.Info("17.1")}()
 	for {
 		tab.mutex.Lock()
-		log.Info("lock 11")
 		// generate initial result set
 		result = tab.closest(target, bucketSize)
 		tab.mutex.Unlock()
-		log.Info("unlock 11")
 		if len(result.entries) > 0 || !refreshIfEmpty {
 			break
 		}
@@ -939,8 +929,7 @@ func (tab *Table) findnode(n *node, targetKey encPubkey, reply chan<- []*node) {
 
 func (tab *Table) setupRefreshTime() time.Duration{
 	tab.mutex.Lock()
-	log.Info("lock12")
-	defer func (){ tab.mutex.Unlock(); 	log.Info("unlock12")}()
+	defer tab.mutex.Unlock()
     //log.Info("19")
 	//defer func(){log.Info("19.1")}()
 	knownCount := 0
@@ -1131,8 +1120,7 @@ func (tab *Table)updateNodeStatus(nodeId enode.ID,b *bucket,alive bool ){
 }
 func (tab *Table)UpdateIPInfo(nodeId enode.ID,oldIP net.IP,newIP net.IP){
 	tab.mutex.Lock()
-	log.Info("lock13")
-	defer func (){ tab.mutex.Unlock(); 	log.Info("unlock13")}()
+	defer tab.mutex.Unlock()
 	b := tab.bucket(nodeId)
 	node := b.entries.Get(nodeId)
 	if node == nil  {
@@ -1179,11 +1167,9 @@ func (tab *Table) doRevalidate( revalidate *time.Timer) {
 	//defer func(){log.Info("35.1")}()
 	//all connected is set to seen now
 	tab.mutex.Lock()
-	log.Info("lock 14")
 
 	last, bi := tab.nodeToRevalidate()
 	tab.mutex.Unlock()
-	log.Info("unlock 14")
 	if last == nil {
 		// No non-empty bucket found.
 		return
@@ -1315,8 +1301,7 @@ func (tab *Table) AddBootnode(n *enode.Node) {
 
 func (tab *Table) AddSeenNode(n *node) *NodeItems{
 	tab.mutex.Lock()
-	log.Info("lock1")
-	defer func (){ tab.mutex.Unlock(); 	log.Info("unlock1")}()
+	defer tab.mutex.Unlock()
 	return tab.addSeenNode(n)
 }
 func (tab *Table) addSeenNode(n *node) *NodeItems{
@@ -1409,8 +1394,7 @@ func (tab *Table) OnPingReceived(n  *enode.Node,ip net.IP,port uint16) {
 	}
 
 	tab.mutex.Lock()
-	log.Info("lock2")
-	defer func (){ tab.mutex.Unlock(); 	log.Info("unlock2")}()
+	defer tab.mutex.Unlock()
 
 	b := tab.bucket(n.ID())
 
@@ -1449,9 +1433,9 @@ func (tab *Table) OnPingReceived(n  *enode.Node,ip net.IP,port uint16) {
 func (tab *Table) DoPongResult(n *enode.Node,duration int64,ok bool)  {
 
 
+
 	tab.mutex.Lock()
-	log.Info("lock3")
-	defer func (){ tab.mutex.Unlock(); 	log.Info("unlock3")}()
+	defer tab.mutex.Unlock()
 
 	if n.ID() == tab.self().ID() {
 		return
@@ -1492,8 +1476,7 @@ func (tab *Table) CanAddNode(n *enode.Node) (bool) {
 
 	//tab.OnPingReceived(n)
 	tab.mutex.Lock()
-	log.Info("lock4")
-	defer func (){ tab.mutex.Unlock(); 	log.Info("unlock4")}()
+	defer tab.mutex.Unlock()
 	if  b.entries.Contains( n.ID()) {
 		nodes := b.entries.Get(n.ID())
 		return nodes.NodeExist(encodePubkey(n.Pubkey()))
@@ -1505,8 +1488,7 @@ func (tab *Table) CanAddNode(n *enode.Node) (bool) {
 }
 func (tab *Table) TargetBucketInfo(nodeId enode.ID) (bucketId int,entries,replacements *NodeQueue){
 	tab.mutex.Lock()
-	log.Info("lock5")
-	defer func (){ tab.mutex.Unlock(); 	log.Info("unlock5")}()
+	defer tab.mutex.Unlock()
 	bucket := tab.bucket(nodeId)
 	bucketIndex := 0
 	//defer func(){log.Info("41.1")}()
@@ -1524,8 +1506,7 @@ func (tab *Table) RemoveConnectedNode(nodeId enode.ID) {
     log.Info("Node Disconnected:","id",nodeId)
 	//defer func(){log.Info("45.1")}()
 	tab.mutex.Lock()
-	log.Info("lock6")
-	defer func (){ tab.mutex.Unlock(); 	log.Info("unlock6")}()
+	defer tab.mutex.Unlock()
 
 
 	if nodeId == tab.self().ID() {
