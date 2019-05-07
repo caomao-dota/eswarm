@@ -171,8 +171,12 @@ func (h *Hive)doRefresh(){
 // Stop terminates the updateloop and saves the peers
 func (h *Hive) Stop() error {
 	log.Info(fmt.Sprintf("%08x hive stopping, saving peers", h.BaseAddr()[:4]))
-	h.ticker.Stop()
-	h.refreshTicker.Stop()
+	if h.ticker != nil {
+		h.ticker.Stop()
+	}
+	if h.refreshTicker != nil {
+		h.refreshTicker.Stop()
+	}
 	close(h.newNodeDiscov)
 	h.newNodeDiscov = nil
 	close(h.quitC)
