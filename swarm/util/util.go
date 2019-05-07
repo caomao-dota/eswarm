@@ -304,6 +304,7 @@ func GetBootnodesInfo(uri string  ) (bootnodes []string, reportAddress string, e
 		result,err := DecipherData(strings.Replace(string(body),"\n","",-1))
 
 		if  err == nil {
+			log.Info("Get :","cnt",len(result.BootNodes))
 			return result.BootNodes,result.ReportAddr,nil
 		}else{
 			return nil,"",err

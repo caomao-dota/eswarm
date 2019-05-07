@@ -1009,7 +1009,9 @@ func (k *Kademlia) knowNeighbours(addrs [][]byte) (got bool, n int, missing [][]
 	}
 	return gots == len(addrs), gots, culprits
 }
-
+func (k *Kademlia)GetConnectedNodes() (int,int){
+	return k.conns.Size(),k.lconns.Size()
+}
 // connectedNeighbours tests if all neighbours in the peerpot
 // are currently connected in the kademlia
 // It is used in Healthy function for testing only

@@ -410,3 +410,7 @@ func (d *Delivery) handleReceiptsMsg(sp *Peer, receipt *ReceiptsMsg) error {
 func (d *Delivery)GetReceiptsLogs() []state.Receipts{
 	return d.receiptStore.GetReceiptsLogs()
 }
+
+func (d *Delivery)GetConnectedNodes() (int,int){
+	return d.kad.GetConnectedNodes()
+}

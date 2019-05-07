@@ -84,6 +84,7 @@ var (
 type Counter interface {
 	GetReceivedChunkInfo() map[common.Address]int64
 	GetReceiptsLogs()  []state.Receipts
+	GetConnectedNodes() (int,int)
 }
 // Resolver interface resolve a domain name to a hash using ENS
 type Resolver interface {
@@ -1054,6 +1055,19 @@ func (a *API) GetReadCount(ctx context.Context) (*DelivryState, error) {
 
 
 		return &DelivryState{ a.counter.GetReceivedChunkInfo(),a.counter.GetReceiptsLogs()}, nil
+	}
+
+}
+
+// ResolveFeed attempts to extract feed information out of the manifest, if provided
+// If not, it attempts to extract the feed out of a set of key-value pairs
+func (a *API) GetNodeCount(ctx context.Context) (int,int) {
+	if a.counter == nil {
+		return 0,0
+	}else{
+
+
+		return a.counter.GetConnectedNodes()
 	}
 
 }

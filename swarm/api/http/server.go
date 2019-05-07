@@ -195,6 +195,12 @@ func NewServer(api *api.API, corsString string) *Server {
 			defaultMiddlewares...,
 		),
 	})
+	mux.Handle("/nodes:/", methodHandler{
+		"GET": Adapt(
+			http.HandlerFunc(server.HandleGetNodes),
+			defaultMiddlewares...,
+		),
+	})
 	mux.Handle("/duration:/", methodHandler{
 		"POST": Adapt(
 			http.HandlerFunc(server.HandleDuration),
@@ -1056,6 +1062,17 @@ type receiptResult struct {
 	DataFromCentral int64
 	Chunks []datacount
 	Receipts []receiptInfo
+}
+type NodeCountInfo struct {
+	Full int
+	Light int
+}
+// HandleGetFile handles a GET request to bzz://<manifest>/<path> and responds
+// with the content of the file at <path> from the given <manifest>
+func (s *Server) HandleGetNodes(w http.ResponseWriter, r *http.Request) {
+	ret := NodeCountInfo{0,0}
+	ret.Full,ret.Light = s.api.GetNodeCount(r.Context())
+	json.NewEncoder(w).Encode(&ret)
 }
 // HandleGetFile handles a GET request to bzz://<manifest>/<path> and responds
 // with the content of the file at <path> from the given <manifest>
