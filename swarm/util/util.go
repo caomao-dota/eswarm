@@ -131,13 +131,14 @@ func (hr *HttpReader)GetChunkFromCentral(uri string,start int64,topHash []byte,r
 }
 type OnError func(http.ResponseWriter, *http.Request,  string,  int)
 //get data from server and write to response
-func (s *HttpReader)GetDataFromCentralServer(uri string, r *http.Request,w http.ResponseWriter, hash []byte, onError OnError  ){
-
+func (s *HttpReader)GetDataFromCentralServer(uri string, r *http.Request,w http.ResponseWriter, hash []byte, onError OnError  ) (retrieved bool){
+	retrieved = true
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	req, err := http.NewRequest("GET", uri, bytes.NewBuffer([]byte("")))
 	if err != nil {
 		log.Error("Error Occured. %+v", err)
 		onError(w, r, fmt.Sprintf("Error Occured :%+v", err), http.StatusInternalServerError)
+		retrieved = false
 		return
 	}
 	for k,vv := range r.Header {
@@ -150,6 +151,7 @@ func (s *HttpReader)GetDataFromCentralServer(uri string, r *http.Request,w http.
 	response, err := s.httpClient.Do(req)
 	if err != nil || response == nil || (response.StatusCode < 200 || response.StatusCode >= 300) {
 		log.Error("Error sending request to API endpoint.", "error:", err)
+		retrieved = false
 		onError(w, r, fmt.Sprintf("Error Occured :%+v", err), http.StatusBadRequest)
 	} else {
 		// Close the connection to reuse it
@@ -177,7 +179,7 @@ func (s *HttpReader)GetDataFromCentralServer(uri string, r *http.Request,w http.
 			}
 			w.Write(body)
 		}
-
+		retrieved = true
 		return
 		//log.Trace("Response Body:", string(body))
 	}

@@ -96,7 +96,7 @@ func NewServer(api *api.API, corsString string) *Server {
 
 	server := &Server{api: api,
 		//	db:db,
-		m3u8: M3U8Opt{sizelost: 0},
+		m3u8: M3U8Opt{cachedDuration:30000,centralRetrived:false},
 	}
 
 	defaultMiddlewares := []Adapter{
@@ -218,7 +218,7 @@ func NewServer(api *api.API, corsString string) *Server {
 	}()
 	server.entries, _ = lru.New(10000)
 	server.httpClient = util.CreateHttpReader()
-	server.cachedDuration = 0
+
 	return server
 }
 
@@ -228,7 +228,9 @@ func (s *Server) ListenAndServe(addr string) error {
 }
 
 type M3U8Opt struct {
-	sizelost int //timeout second
+
+	cachedDuration int32
+	centralRetrived bool
 }
 
 // browser API for registering bzz url scheme handlers:
@@ -877,15 +879,18 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 
 				newContext = context.WithValue(newContext, "reporter", s.httpClient)
 				newContext = context.WithValue(newContext, "hash", common.HexToHash(string(hash)))
-				var timeout int32
-				duration := atomic.LoadInt32(&s.cachedDuration)
-				if duration <= 5000 {
-					timeout = 5000
-				} else if duration >= 30000 {
-					timeout = 20000
-				} else {
-					timeout =  duration/2 + 5000
+				var timeout int32 = 30000
+				duration := atomic.LoadInt32(&s.m3u8.cachedDuration)
+				if s.m3u8.centralRetrived {
+					if duration <= 5000 {
+						timeout = 5000
+					} else if duration >= 30000 {
+						timeout = 20000
+					} else {
+						timeout =  duration/2 + 5000
+					}
 				}
+
 
 				log.Info("set timeout:","ms",int64(timeout))
 				newContext, _ = context.WithTimeout(newContext, time.Duration(int64(timeout) * int64(time.Millisecond)))
@@ -930,7 +935,7 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 			}
 			//s.m3u8.sizelost++
 			log.Debug("Get from central node:","uri",actUri)
-			s.httpClient.GetDataFromCentralServer(path+act, r, w, common.Hex2Bytes(string(hash)), respondError)
+			s.m3u8.centralRetrived  = s.httpClient.GetDataFromCentralServer(path+act, r, w, common.Hex2Bytes(string(hash)), respondError)
 			return
 
 		}
@@ -1194,7 +1199,7 @@ func (s *Server) HandleDuration(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		value ,err := strconv.Atoi(string(durationBuf))
 		if err == nil {
-			atomic.StoreInt32(&s.cachedDuration,int32(value))
+			atomic.StoreInt32(&s.m3u8.cachedDuration,int32(value))
 			w.WriteHeader(http.StatusOK)
 			return
 		}
