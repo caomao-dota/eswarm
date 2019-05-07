@@ -148,7 +148,7 @@ func (k *Kademlia) Register(peers ...*BzzAddr) error {
 	defer k.lock.Unlock()
 	var known, size int
 	for _, p := range peers {
-		log.Trace("kademlia trying to register", "addr", p)
+		//log.Trace("kademlia trying to register", "addr", p)
 		// error if self received, peer should know better
 		// and should be punished for this
 		if bytes.Equal(p.Address(), k.base) {

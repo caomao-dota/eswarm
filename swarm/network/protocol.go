@@ -228,7 +228,7 @@ func (b *Bzz) performHandshake(p *protocols.Peer, handshake *HandshakeMsg) error
 	handshake.Account = rsh.(*HandshakeMsg).Account
 	p.SetAccount(handshake.Account)
 	p.Node().SetNodeType(enr.NodeType(handshake.NodeType))
-	log.Trace("peer type:",p.Node().NodeType(),"enode:",string(handshake.peerAddr.UAddr))
+	log.Trace("hand shake","peer type",p.Node().NodeType(),"enode:",string(handshake.peerAddr.UAddr))
 	return nil
 }
 

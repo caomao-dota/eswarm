@@ -628,6 +628,7 @@ func newTable(t transport, db *enode.DB, bootnodes []*enode.Node) (*Table, error
 	tab.loadSeedNodes()
 	tab.nodeAddedHook = func(i *node) {
 		log.Debug("noded added:","id",i.ID(),"addr",i.IP(),"port",i.UDP())
+		i.registered = true
 		if tab.notifyChannel != nil {
 			tab.notifyChannel <- struct{}{}
 		}
@@ -1097,6 +1098,11 @@ func (tab *Table)updateNodeStatus(nodeId enode.ID,b *bucket,alive bool ){
 			b.replacements.AddNodeItems(items,true)
 		}else{
 			b.entries.MoveFront(nodeId)
+			if !anode.SelectBest().registered {
+				if tab.nodeAddedHook != nil {
+					tab.nodeAddedHook(anode.SelectBest())
+				}
+			}
 		}
 
 	} else if anode = b.replacements.Get(nodeId); anode != nil {
@@ -1238,8 +1244,7 @@ func (tab *Table) copyLiveNodes() {
 	for _, b := range &tab.buckets {
 		for _, n := range b.entries.GetEntries() {
 			for _,node := range n.Items {
-				value := now.Sub(node.addedAt)
-				if  value >= seedMinTableTime {
+				if now.Sub(node.addedAt) >= seedMinTableTime {
 					tab.db.UpdateNode(unwrapNode(node))
 				}
 			}
@@ -1402,7 +1407,14 @@ func (tab *Table) OnPingReceived(n  *enode.Node,ip net.IP,port uint16) {
 
 		oldNode := b.entries.Get(n.ID())
 		oldNode.OnPingReceived(n,ip,port)
-		return
+		if !oldNode.SelectBest().registered {
+			go  tab.DoPing(&oldNode.SelectBest().Node)
+			//log.Info("lock2","id",n.ID(),"value",1.1)
+		}else{
+			//log.Info("lock2","id",n.ID(),"value",1)
+		}
+
+
 
 	} else if b.replacements.Contains(n.ID()) {
 		oldNode := b.replacements.Get(n.ID())

@@ -43,6 +43,7 @@ type node struct {
 	testAt         time.Time 	//last time send ping
 	findAt         time.Time    //last time of received ping
 	latency         int64		 //ping/pong delay ,by the unit of millium-second
+	registered      bool
 }
 
 type encPubkey [64]byte
