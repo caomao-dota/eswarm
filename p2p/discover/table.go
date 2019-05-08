@@ -355,7 +355,7 @@ type Table struct {
 	nodeAddedHook func(*node) // for testing
 	nodeByIp      map[string]map[enode.ID]*node
 	//allNodes     map[enode.ID]*NodeItem
-
+	onTesting    bool
 }
 type AttributeID uint8
 
@@ -580,7 +580,7 @@ type bucket struct {
 	ips          netutil.DistinctNetSet
 }
 
-func newTable(t transport, db *enode.DB, bootnodes []*enode.Node) (*Table, error) {
+func newTable(t transport, db *enode.DB, bootnodes []*enode.Node,onTest bool ) (*Table, error) {
 	tab := &Table{
 		net:        t,
 		db:         db,
@@ -593,6 +593,7 @@ func newTable(t transport, db *enode.DB, bootnodes []*enode.Node) (*Table, error
 		ips:        netutil.DistinctNetSet{Subnet: tableSubnet, Limit: tableIPLimit},
 		nodeByIp:   make( map[string]map[enode.ID]*node),
 		//allNodes:   make(map[enode.ID]*NodeItem),
+		onTesting:  onTest,
 	}
 	if err := tab.setFallbackNodes(bootnodes); err != nil {
 		return nil, err
@@ -614,7 +615,10 @@ func newTable(t transport, db *enode.DB, bootnodes []*enode.Node) (*Table, error
 		}
 		//log.Debug("noded OK:","id",i.ID(),"addr",i.IP(),"port",i.UDP())
 	}
-	go tab.loop()
+	if !onTest {
+		go tab.loop()
+	}
+
 	return tab, nil
 }
 
@@ -876,7 +880,7 @@ func (tab *Table) findnode(n *node, targetKey encPubkey, reply chan<- []*node) {
     //log.Info("18")
 	//defer func(){log.Info("18.1")}()
 
-	if time.Since(n.findAt) > 30 * time.Second {
+	if time.Since(n.findAt) > 30 * time.Second && n.latency != LatencyInvalid{
 		tab.mutex.Lock()
 		n.findAt = time.Now()
 		tab.mutex.Unlock()
@@ -905,9 +909,11 @@ func (tab *Table) findnode(n *node, targetKey encPubkey, reply chan<- []*node) {
 
 		// Grab as many nodes as possible. Some of them might not be alive anymore, but we'll
 		// just remove those again during revalidation.
+		tab.mutex.Lock()
 		for _, n := range r {
 			tab.addSeenNode(n)
 		}
+		tab.mutex.Unlock()
 		reply <- r
 	} else{
 		reply <- []*node{}
@@ -1270,7 +1276,7 @@ func (tab *Table) AddBootnode(n *enode.Node) {
  */
 func (tab *Table) shrinkUnsedBranches(n *node){
 
-	index := fmt.Sprintf("%v:%v",n.IP(),n.UDP())
+	index := fmt.Sprintf("%v:%v",n.IP().String(),n.UDP())
 	nodes := tab.nodeByIp[index]
 	nodesToCut := make([]*node,0)
 	if nodes != nil {
@@ -1292,7 +1298,8 @@ func (tab *Table) doRemoveUnusedNode(n *node) {
 
 	b.entries.RemoveNodeItem(n.ID())
 	b.replacements.RemoveNodeItem(n.ID())
-	index := fmt.Sprintf("%v:%v",n.IP(),n.UDP())
+	index := fmt.Sprintf("%v:%v",n.IP().String(),n.UDP())
+	log.Info("Remove unused node:","id",n.ID(),"ip",n.IP(),"porrt",n.UDP())
 	nodes := tab.nodeByIp[index]
 	if nodes != nil {
 		delete(nodes,n.ID())
@@ -1375,6 +1382,13 @@ func (tab *Table) addSeenNode(n *node) *node{
 
 
 	n.addedAt = time.Now()
+
+	if  nodes == nil {
+		tab.nodeByIp[index]=make(map[enode.ID]*node)
+		tab.nodeByIp[index][n.ID()]= n
+	}else {
+		nodes[n.ID()] = n
+	}
 	return result
 
 }
@@ -1384,7 +1398,7 @@ func (n *node )OnPingReceived (ip net.IP,port uint16){
 	n.Node.Set(enr.LocalIP(ip))
 	n.Node.Set(enr.LUDP(port))
 }
-func (tab *Table)RequestPing(node *enode.Node, ch chan bool) {
+func (tab *Table)RequestPing(node *enode.Node, ch chan *enode.Node) {
 	b := tab.bucket(node.ID())
 	n := b.entries.Get(node.ID())
 	if n != nil {
@@ -1396,13 +1410,13 @@ func (tab *Table)RequestPing(node *enode.Node, ch chan bool) {
 		}else {
 			log.Warn("want to connect an unping node:","id",node.ID())
 			if ch != nil {
-				ch <- false
+				ch <- nil
 			}
 		}
 	}
 
 }
-func (tab *Table) DoPing(n  *node,ch chan bool ) {
+func (tab *Table) DoPing(n  *node,ch chan *enode.Node ) {
 
 	go func (){
 		n.testAt = time.Now()
@@ -1424,7 +1438,7 @@ func (tab *Table) DoPing(n  *node,ch chan bool ) {
 		tab.updateNodeStatus(n.ID(),tab.bucket(n.ID()),err == nil )
 		tab.mutex.Unlock()
 		if ch != nil {
-			ch <- err==nil
+			ch <- &n.Node
 		}
 	}()
 

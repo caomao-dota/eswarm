@@ -285,7 +285,7 @@ func newUDP(c conn, ln *enode.LocalNode, cfg Config) (*Table, *udp, error) {
 		DoneFindWork:    false,
 	}
 	udp.latencyCache,_ = lru.New(LatencyCacheSize)
-	tab, err := newTable(udp, ln.Database(), cfg.Bootnodes)
+	tab, err := newTable(udp, ln.Database(), cfg.Bootnodes,false)
 	if err != nil {
 		return nil, nil, err
 	}

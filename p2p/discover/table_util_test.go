@@ -38,7 +38,7 @@ func init() {
 
 func newTestTable(t transport) (*Table, *enode.DB) {
 	db, _ := enode.OpenDB("")
-	tab, _ := newTable(t, db, nil)
+	tab, _ := newTable(t, db, nil,true)
 	tab.initDone = true
 	return tab, db
 }
@@ -80,9 +80,9 @@ func fillBucket(tab *Table, n *node) (last *node) {
 	ld := enode.LogDist(tab.self().ID(), n.ID())
 	b := tab.bucket(n.ID())
 	for b.entries.Length() < bucketSize {
-		b.entries.AddNode(nodeAtDistance(tab.self().ID(), ld, intIP(ld)),false)
+		b.entries.AddNode(nodeAtDistance(tab.self().ID(), ld, intIP(ld)))
 	}
-	return b.entries.GetEntries()[bucketSize-1].SelectBest()
+	return b.entries.entries[bucketSize-1]
 }
 
 // fillTable adds nodes the table to the end of their corresponding bucket

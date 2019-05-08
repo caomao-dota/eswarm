@@ -164,7 +164,10 @@ func (h *Hive)doRefresh(){
 	for _,node := range  knownNodes{
 		nodes = append(nodes,NewAddr(node))
 	}
+	//log.Info("hive doRefresh lock")
+	//defer log.Info("hive doRefresh unlock")
 	h.refreshLock.Lock()
+
 	defer h.refreshLock.Unlock()
 	h.Register(nodes...)
 

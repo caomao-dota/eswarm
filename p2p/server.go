@@ -184,6 +184,7 @@ type Server struct {
 	removestatic  chan *enode.Node
 	addtrusted    chan *enode.Node
 	removetrusted chan *enode.Node
+	pingFinished  chan *enode.Node
 	posthandshake chan *conn
 	addpeer       chan *conn
 	delpeer       chan peerDrop
@@ -454,8 +455,10 @@ func (srv *Server) Start() (err error) {
 	srv.removestatic = make(chan *enode.Node)
 	srv.addtrusted = make(chan *enode.Node)
 	srv.removetrusted = make(chan *enode.Node)
+	srv.pingFinished = make(chan *enode.Node)
 	srv.peerOp = make(chan peerOpFunc)
 	srv.peerOpDone = make(chan struct{})
+
 	srv._addCheckFun = nil
 	if err := srv.setupLocalNode(); err != nil {
 		return err
@@ -682,12 +685,15 @@ running:
 			// it will keep the node connected.
 			srv.log.Trace("Adding static node", "node", n)
 			if n.ID() != srv.localnode.ID(){
-				ch := make(chan bool )
-				srv.ntab.RequestPing(n,ch)
-				<- ch
+
+				go srv.ntab.RequestPing(n,srv.pingFinished)
+
+
+			}
+		case n := <- srv.pingFinished:
+			if n != nil {
 				dialstate.addStatic(n)
 			}
-
 		case n := <-srv.removestatic:
 			// This channel is used by RemovePeer to send a
 			// disconnect request to a peer and begin the

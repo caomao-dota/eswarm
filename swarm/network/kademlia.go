@@ -172,7 +172,7 @@ func (k *Kademlia) Register(peers ...*BzzAddr) error {
 				return newEntry(p)
 			}
 
-			log.Trace("found among known peers, underlay addr is same, do nothing", "new", p, "old", e.BzzAddr)
+		//	log.Trace("found among known peers, underlay addr is same, do nothing", "new", p, "old", e.BzzAddr)
 
 			return v
 		})
@@ -291,8 +291,10 @@ func (k *Kademlia) __SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int,
 // SuggestPeer returns an unconnected peer address as a peer suggestion for connection
 // 这么简单的目标，写出这么复杂的逻辑.......
 func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, changed bool) {
+	//log.Info("lock Sp")
 	k.lock.Lock()
-	defer k.lock.Unlock()
+	//defer log.Info("unlock Sp")
+	defer  k.lock.Unlock() ;
 	radius := neighbourhoodRadiusForPot(k.conns, k.NeighbourhoodSize, k.base)
 	// collect undersaturated bins in ascending order of number of connected peers
 	// and from shallow to deep (ascending order of PO)

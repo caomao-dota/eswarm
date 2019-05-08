@@ -377,6 +377,7 @@ func TestTable_Lookup(t *testing.T) {
 	seedKey, _ := decodePubkey(lookupTestnet.dists[256][0])
 	seed := wrapNode(enode.NewV4(seedKey, net.IP{127, 0, 0, 1}, 0, 256,0x24,net.IP{127, 0, 0, 1}))
 
+	seed.Set(enr.LUDP(256))
 	fillTable(tab, []*node{seed})
 
 	results := tab.lookup(lookupTestnet.target, true)
