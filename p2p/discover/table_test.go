@@ -137,7 +137,7 @@ func TestBucket_bumpNoDuplicates(t *testing.T) {
 
 				if b.entries.hasDuplicated(anode.ID()) {
 					t.Logf("bucket has duplicates after %d/%d bumps:", i+1, len(bumps))
-					for _, n := range b.entries.GetEntries() {
+					for _, n := range b.entries.entries {
 						t.Logf("  %p", n)
 					}
 					return false
@@ -199,8 +199,8 @@ func checkIPLimitInvariant(t *testing.T, tab *Table) {
 
 	tabset := netutil.DistinctNetSet{Subnet: tableSubnet, Limit: tableIPLimit}
 	for _, b := range tab.buckets {
-		for _, n := range b.entries.GetEntries() {
-			tabset.Add(n.SelectBest().IP())
+		for _, n := range b.entries.entries {
+			tabset.Add(n.IP())
 		}
 	}
 	if tabset.String() != tab.ips.String() {
@@ -245,7 +245,7 @@ func TestTable_closest(t *testing.T) {
 
 		// check that the result nodes have minimum distance to target.
 		for _, b := range tab.buckets {
-			for _, n := range b.entries.GetEntries() {
+			for _, n := range b.entries.entries {
 				if nodeByDist.contains( n.ID()) {
 					continue // don't run the check below for nodes in result
 				}
@@ -339,16 +339,12 @@ func TestTable_addSeenNode(t *testing.T) {
 	tab.AddSeenNode(n2)
 
 	// Verify bucket content:
-	bcontent := make([]*NodeItems,2)
-	n11 := newNodeItem(n1.ID())
-	n11.AddNode(n1,false)
+	bcontent := make([]*node,2)
 
-	n12 := newNodeItem(n2.ID())
-	n12.AddNode(n2,false)
-	bcontent[0] = n11
-	bcontent[1] = n12
+	bcontent[0] = n1
+	bcontent[1] = n2
 
-	if !reflect.DeepEqual(tab.bucket(n1.ID()).entries.GetEntries(), bcontent) {
+	if !reflect.DeepEqual(tab.bucket(n1.ID()).entries.entries, bcontent) {
 		t.Fatalf("wrong bucket content: %v", tab.bucket(n1.ID()).entries)
 	}
 
@@ -358,11 +354,11 @@ func TestTable_addSeenNode(t *testing.T) {
 	newn2 := wrapNode(enode.SignNull(newrec, n2.ID()))
 	tab.AddSeenNode(newn2)
 
-	n12.AddNode(newn2,false)
+	//n2.AddNode(newn2,false)
 
 
 	// Check that bucket content is unchanged.
-	if !reflect.DeepEqual(tab.bucket(n1.ID()).entries.GetEntries(), bcontent) {
+	if !reflect.DeepEqual(tab.bucket(n1.ID()).entries.entries, bcontent) {
 		t.Fatalf("wrong bucket content after update: %v", tab.bucket(n1.ID()).entries)
 	}
 	checkIPLimitInvariant(t, tab)

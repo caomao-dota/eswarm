@@ -384,8 +384,8 @@ func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, c
 			// stop if found
 			f(func(val pot.Val) bool {
 				e := val.(*entry)
-				_,ok := k.peers[string(e.UAddr)]
-				if k.callable(e) && !ok {
+				//_,ok := k.peers[string(e.UAddr)]
+				if k.callable(e) /*&& !ok*/ {
 					targetPO = po
 					e.lastRetry = time.Unix(0,0)
 					suggestedPeer = e.BzzAddr
@@ -716,17 +716,17 @@ func (k *Kademlia) callable(e *entry) bool {
 	}
 
 	// calculate the allowed number of retries based on time lapsed since last seen
-	timeAgo := int64(time.Since(e.seenAt))
+	timeElasped := int64(time.Since(e.seenAt))
 	div := int64(k.RetryExponent)
 	div += (150000 - rand.Int63n(300000)) * div / 1000000
 	var retries int
-	for delta := timeAgo; delta > k.RetryInterval; delta /= div {
+	for delta := timeElasped; delta > k.RetryInterval; delta /= div {
 		retries++
 	}
 	// this is never called concurrently, so safe to increment
 	// peer can be retried again
 	if retries < e.retries {
-		log.Trace(fmt.Sprintf("%08x: %v long time since last try (at %v) needed before retry %v, wait only warrants %v", k.BaseAddr()[:4], e, timeAgo, e.retries, retries))
+		log.Trace(fmt.Sprintf("%08x: %v long time since last try (at %v) needed before retry %v, wait only warrants %v", k.BaseAddr()[:4], e, timeElasped, e.retries, retries))
 		return false
 	}
 	// function to sanction or prevent suggesting a peer

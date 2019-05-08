@@ -38,11 +38,11 @@ var (
 )
 type node struct {
 	enode.Node
-	selected       bool			// this instance has been passed testing for candinator
 	addedAt        time.Time 	// first time of ping
 	testAt         time.Time 	//last time send ping
 	findAt         time.Time    //last time of received ping
 	latency         int64		 //ping/pong delay ,by the unit of millium-second
+	seenAt          time.Time   //last ping received
 	registered      bool
 }
 

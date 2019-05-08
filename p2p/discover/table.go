@@ -26,7 +26,7 @@ import (
 	"crypto/ecdsa"
 	crand "crypto/rand"
 	"encoding/binary"
-	"errors"
+
 	"fmt"
 	"github.com/plotozhu/MDCMainnet/p2p/enr"
 	mrand "math/rand"
@@ -65,33 +65,33 @@ const (
 	seedCount           = 30
 	seedMaxAge          = 5 * 24 * time.Hour
 )
-type NodeItems struct {
+
+
+
+/*
+type NodeItem struct {
 	Id enode.ID
 	Items map[encPubkey]*node
 	mutex sync.Mutex
 }
-/*func newNodeItem(nodeId enode.ID) *NodeItems {
-	return &NodeItems{
-		Id:nodeId,Items:make(map[encPubkey]*node),
-	}
-}*/
-func newNodeItem(n *node) *NodeItems {
+
+func newNodeItem(n *node) *NodeItem {
 	item := make(map[encPubkey]*node)
 	item[encodePubkey(n.Pubkey())] = n
-	return &NodeItems{
+	return &NodeItem{
 		Id:n.ID(),
 		Items:item,
 	}
 }
-func  (ni *NodeItems) ID() enode.ID {
+func  (ni *NodeItem) ID() enode.ID {
 	return ni.Id
 }
-func  (ni *NodeItems) AddNode(n *node,replace bool ) error {
+func  (ni *NodeItem) AddNode(n *node,replace bool ) error {
 	ni.mutex.Lock()
 	defer ni.mutex.Unlock()
 	return ni.doAddNode(n,replace)
 }
-func  (ni *NodeItems) doAddNode(n *node,replace bool ) error {
+func  (ni *NodeItem) doAddNode(n *node,replace bool ) error {
 
 	if ni.Id != n.ID() {
 		return errors.New(fmt.Sprintf("unmatched node ID: %v != %v ",ni.Id,n.ID()))
@@ -104,7 +104,7 @@ func  (ni *NodeItems) doAddNode(n *node,replace bool ) error {
 	}
 	return nil
 }
-func  (ni *NodeItems)GetLastTestTime() time.Time{
+func  (ni *NodeItem)GetLastTestTime() time.Time{
 	ni.mutex.Lock()
 	defer ni.mutex.Unlock()
 
@@ -116,10 +116,10 @@ func  (ni *NodeItems)GetLastTestTime() time.Time{
 	}
 	return TimeInvalid
 }
-/**
-	doPing对nodeItems里的每一项执行一次ping操作
- */
-func  (ni *NodeItems)DoPing(t transport,ch chan bool){
+
+// doPing对NodeItem里的每一项执行一次ping操作
+
+func  (ni *NodeItem)DoPing(t transport,ch chan bool){
 	ni.mutex.Lock()
 	defer ni.mutex.Unlock()
 	go func (){
@@ -151,7 +151,7 @@ func  (ni *NodeItems)DoPing(t transport,ch chan bool){
 		 |  N       | N
 		 |  Y       |Y
 		 |  Y       |N
-		 */
+		 * /
 
 		ni.mutex.Lock()
 		 latency := LatencyInvalid
@@ -177,7 +177,7 @@ func  (ni *NodeItems)DoPing(t transport,ch chan bool){
 
 }
 
-func (ni *NodeItems)NodeExist(pubKey encPubkey) bool {
+func (ni *NodeItem)NodeExist(pubKey encPubkey) bool {
 	ni.mutex.Lock()
 	defer ni.mutex.Unlock()
 	return ni.Items[pubKey] != nil
@@ -188,8 +188,8 @@ func (ni *NodeItems)NodeExist(pubKey encPubkey) bool {
     duration,ping/pong 的延时
     ok 是否收到了pong
     ch 回调，如果某个被selected的节点，ping/pong还是成功的，那么返回true，如果某个被selected的节点失败了，返回false
- */
-func (ni *NodeItems)DoPongResult(n *enode.Node,duration int64 , ok bool, ch chan bool )  {
+ * /
+func (ni *NodeItem)DoPongResult(n *enode.Node,duration int64 , ok bool, ch chan bool )  {
 	ni.mutex.Lock()
 	defer ni.mutex.Unlock()
 	pubkey := encodePubkey(n.Pubkey())
@@ -218,7 +218,7 @@ func (ni *NodeItems)DoPongResult(n *enode.Node,duration int64 , ok bool, ch chan
 
 }
 //在收到ping的时候，更新信息
-func (ni *NodeItems)OnPingReceived(n *enode.Node,ip net.IP,port uint16) error{
+func (ni *NodeItem)OnPingReceived(n *enode.Node,ip net.IP,port uint16) error{
 	ni.mutex.Lock()
 	defer ni.mutex.Unlock()
 	if ni.Id != n.ID() {
@@ -230,13 +230,13 @@ func (ni *NodeItems)OnPingReceived(n *enode.Node,ip net.IP,port uint16) error{
 	if node != nil {
 		newN.latency = node.latency
 		newN.addedAt = node.addedAt
-		newN.findAt = time.Now()
+		newN.findAt = node.findAt
 		newN.testAt = node.testAt
 
 	}else {
 		newN.latency = LatencyInvalid
 		newN.addedAt = time.Now()
-		newN.findAt = time.Now()
+		newN.findAt = TimeInvalid
 		newN.testAt = TimeInvalid
 	}
 	newN.Node.Set(enr.LocalIP(ip))
@@ -246,7 +246,7 @@ func (ni *NodeItems)OnPingReceived(n *enode.Node,ip net.IP,port uint16) error{
 }
 //发送ping后收到了pong回应,证明这个网络是通的
 //如果这个节点ping过存在，那么就返回nil，否则返回错误
-func (ni *NodeItems)onPongSuccess(n *node,latency int64) error{
+func (ni *NodeItem)onPongSuccess(n *node,latency int64) error{
 	if ni.Id != n.ID() {
 		return errors.New(fmt.Sprintf("unmatched node ID: %v != %v ",ni.Id,n.ID()))
 	}
@@ -264,7 +264,7 @@ func (ni *NodeItems)onPongSuccess(n *node,latency int64) error{
 
 //发送ping后收到了pong回应,证明这个网络是通的
 //如果这个节点ping过存在，那么就返回nil，否则返回错误
-func (ni *NodeItems)onPongFailed(n *node) error{
+func (ni *NodeItem)onPongFailed(n *node) error{
 	if ni.Id != n.ID() {
 		return errors.New(fmt.Sprintf("unmatched node ID: %v != %v ",ni.Id,n.ID()))
 	}
@@ -282,7 +282,7 @@ func (ni *NodeItems)onPongFailed(n *node) error{
 
 	return nil
 }
-func  (ni *NodeItems) RemoveNode(pubKey encPubkey) error {
+func  (ni *NodeItem) RemoveNode(pubKey encPubkey) error {
 	ni.mutex.Lock()
 	defer ni.mutex.Unlock()
 	if _,ok := ni.Items[pubKey]; ok {
@@ -292,27 +292,27 @@ func  (ni *NodeItems) RemoveNode(pubKey encPubkey) error {
 	}
 	return nil
 }
-func  (ni *NodeItems) SelectBest()*node {
+func  (ni *NodeItem) SelectBest()*node {
 	ni.mutex.Lock()
 	defer ni.mutex.Unlock()
 	node := ni.getPossibleNode()
 	if node != nil {
 		node.selected = true
 	}else {
-		log.Error("Error NodeItems","ID",ni.ID(),"items",len(ni.Items))
+		log.Error("Error NodeItem","ID",ni.ID(),"items",len(ni.Items))
 	}
 	return node
 }
 /**
 	获取最有可能的节点，要么是已经被选择的，要么是latency最短的，如果latency最短的都是LatencyInvalid，那么就返回一个nil
- */
-func  (ni *NodeItems) GetPossibleNode()*node {
+ * /
+func  (ni *NodeItem) GetPossibleNode()*node {
 	ni.mutex.Lock()
 	defer ni.mutex.Unlock()
 	return ni.getPossibleNode()
 }
 
-func  (ni *NodeItems) getPossibleNode()*node {
+func  (ni *NodeItem) getPossibleNode()*node {
 
 	if len(ni.Items) == 0 {
 		return nil
@@ -335,7 +335,7 @@ func  (ni *NodeItems) getPossibleNode()*node {
 
 	return result
 }
-
+*/
 type Table struct {
 	mutex   sync.Mutex        // protects buckets, bucket content, nursery, rand
 	buckets [nBuckets]*bucket // index of known nodes by distance
@@ -353,7 +353,8 @@ type Table struct {
 	closed    chan struct{}
 	notifyChannel    chan struct{}
 	nodeAddedHook func(*node) // for testing
-	//allNodes     map[enode.ID]*NodeItems
+	nodeByIp      map[string]map[enode.ID]*node
+	//allNodes     map[enode.ID]*NodeItem
 
 }
 type AttributeID uint8
@@ -376,16 +377,16 @@ type transport interface {
 	close()
 }
 type NodeQueue struct {
-	entries  []*NodeItems
-	exists   map[enode.ID]*NodeItems
+	entries  []*node
+	exists   map[enode.ID]*node
 	maxsize int
 	mutex   sync.Mutex
 }
 
 func NewNodeQueue(maxsize int) *NodeQueue{
 	return &NodeQueue{
-		entries:make([]*NodeItems,0),
-		exists:make(map[enode.ID]*NodeItems),
+		entries:make([]*node,0),
+		exists:make(map[enode.ID]*node),
 		maxsize:maxsize,
 	}
 }
@@ -397,11 +398,11 @@ type Attributes []*Attribute
 func (nq *NodeQueue)loadNodes(nodes []*node) {
 	nq.mutex.Lock()
 
-	nq.entries=make([]*NodeItems,0)
-	nq.exists=make(map[enode.ID]*NodeItems)
+	nq.entries=make([]*node,0)
+	nq.exists=make(map[enode.ID]*node)
 	nq.mutex.Unlock()
 	for _,anode := range nodes {
-		nq.AddNode(anode,false)
+		nq.AddNode(anode)
 	}
 }
 
@@ -410,7 +411,7 @@ func (nq *NodeQueue)getNodeByIndex(index int) *node{
 
 	nq.mutex.Unlock()
 	if len(nq.entries) > index {
-		return nq.entries[index].GetPossibleNode()
+		return nq.entries[index]
 	}
 	return nil
 }
@@ -429,7 +430,7 @@ func (nq *NodeQueue)hasDuplicated(nodeId enode.ID) bool {
 	return dup > 1
 }
 
-func (nq *NodeQueue)ReplaceNodeItems(anode *NodeItems, checkReplace func(nodeInEntries *NodeItems) bool) (bool,*NodeItems) {
+func (nq *NodeQueue)ReplaceNodeItem(anode *node, checkReplace func(nodeInEntries *node) bool) (bool,*node) {
 	nq.mutex.Lock()
 	defer nq.mutex.Unlock()
     //log.Info("1")
@@ -447,30 +448,18 @@ func (nq *NodeQueue)ReplaceNodeItems(anode *NodeItems, checkReplace func(nodeInE
 	return false,nil
 
 }
-func (nq *NodeQueue)AddNodeItems(anode *NodeItems,shouldUpdate bool) bool {
+func (nq *NodeQueue)AddNodeItem(anode *node,shouldUpdate bool) bool {
 	nq.mutex.Lock()
 	defer nq.mutex.Unlock()
-	return nq.doAddNodeItems(anode,shouldUpdate)
+	return nq.doAddNodeItem(anode)
 }
-func (nq *NodeQueue)doAddNodeItems(anode *NodeItems,shouldUpdate bool) bool{
+func (nq *NodeQueue)doAddNodeItem(anode *node) bool{
 
 	//log.Info("3")
 	//defer func(){log.Info("3.1")}()
 	_,ok := nq.exists[anode.ID()]
 	if ok {
-		if shouldUpdate {
-			for n,node := range nq.entries {
-				if node.ID() == anode.ID() {
-					nq.entries[n] = anode
-					nq.exists[anode.ID()] = anode
 
-					return true
-				}
-			}
-			log.Error("Error in nq.entries","nodeId",anode.ID(),"reason","node exist in exists,but not in entries")
-			delete(nq.exists,anode.ID())
-			return false //update failed, should not occur
-		}
 		return true
 	}else {
 		if len(nq.entries) >= nq.maxsize {
@@ -482,37 +471,27 @@ func (nq *NodeQueue)doAddNodeItems(anode *NodeItems,shouldUpdate bool) bool{
 		}
 	}
 }
-func (nq *NodeQueue)AddNode(anode *node,shouldUpdate bool) (bool, *NodeItems){
+func (nq *NodeQueue)AddNode(anode *node) (bool, *node){
 	nq.mutex.Lock()
 	defer nq.mutex.Unlock()
     //log.Info("3")
 	//defer func(){log.Info("3.1")}()
-	nodeItems,ok := nq.exists[anode.ID()]
+	NodeItem,ok := nq.exists[anode.ID()]
 	if ok {
-		nodeItems.AddNode(anode,shouldUpdate)
-		return true,nodeItems
+
+		return true,NodeItem
 	}else {
 		if  len (nq.entries) < nq.maxsize {
-			nodeItems = newNodeItem(anode)
 
-			nq.doAddNodeItems(nodeItems,shouldUpdate)
-			return true,nodeItems
+
+			nq.doAddNodeItem(anode)
+			return true,NodeItem
 		}
 		return false,nil
 	}
 }
-func (nq *NodeQueue)GetEntries() []*NodeItems{
-   // log.Info("4")
-	//defer func(){log.Info("4.1")}()
-	nq.mutex.Lock()
-	defer nq.mutex.Unlock()
-	result := make([]*NodeItems,len(nq.entries))
-	for i := 0; i < len(nq.entries); i++ {
-		result[i] = nq.entries[i]
-	}
-	return result
-}
-func (nq *NodeQueue)RemoveNodeItems(nodeId enode.ID) (bool,*NodeItems){
+
+func (nq *NodeQueue)RemoveNodeItem(nodeId enode.ID) (bool,*node){
 	nq.mutex.Lock()
 	defer nq.mutex.Unlock()
     //log.Info("5")
@@ -540,7 +519,7 @@ func (nq *NodeQueue)Contains(nodeId enode.ID) bool {
 	_,ok := nq.exists[nodeId]
 	return ok
 }
-func (nq *NodeQueue)Get(nodeId enode.ID) *NodeItems {
+func (nq *NodeQueue)Get(nodeId enode.ID) *node {
 	nq.mutex.Lock()
 	defer nq.mutex.Unlock()
     //log.Info("6")
@@ -560,7 +539,7 @@ func (nq *NodeQueue)MoveFront(nodeId enode.ID) bool {
 	for n,anode := range nq.entries {
 		if anode.ID() == nodeId {
 			nq.entries = append(nq.entries[:n],nq.entries[n+1:]...)
-			nq.entries = append([]*NodeItems{anode},nq.entries...)
+			nq.entries = append([]*node{anode},nq.entries...)
 			return true
 		}
 	}
@@ -612,7 +591,8 @@ func newTable(t transport, db *enode.DB, bootnodes []*enode.Node) (*Table, error
 		closed:     make(chan struct{}),
 		rand:       mrand.New(mrand.NewSource(0)),
 		ips:        netutil.DistinctNetSet{Subnet: tableSubnet, Limit: tableIPLimit},
-		//allNodes:   make(map[enode.ID]*NodeItems),
+		nodeByIp:   make( map[string]map[enode.ID]*node),
+		//allNodes:   make(map[enode.ID]*NodeItem),
 	}
 	if err := tab.setFallbackNodes(bootnodes); err != nil {
 		return nil, err
@@ -663,10 +643,10 @@ func (tab *Table) ReadRandomNodes(buf []*enode.Node) (n int) {
 	defer tab.mutex.Unlock()
 
 	// Find all non-empty buckets and get a fresh slice of their entries.
-	var buckets [][]*NodeItems
+	var buckets [][]*node
 	for _, b := range &tab.buckets {
 		if b.entries.Length() > 0 {
-			buckets = append(buckets, b.entries.GetEntries())
+			buckets = append(buckets, b.entries.entries)
 		}
 	}
 	if len(buckets) == 0 {
@@ -681,7 +661,7 @@ func (tab *Table) ReadRandomNodes(buf []*enode.Node) (n int) {
 	var i, j int
 	for ; i < len(buf); i, j = i+1, (j+1)%len(buckets) {
 		b := buckets[j]
-		buf[i] = unwrapNode(b[0].SelectBest())
+		buf[i] = unwrapNode(b[0])
 		buckets[j] = b[1:]
 		if len(b) == 1 {
 			buckets = append(buckets[:j], buckets[j+1:]...)
@@ -764,9 +744,9 @@ func (tab *Table) GetKnownNodesSorted() []*enode.Node{
 	//log.Debug("step 1")
 	for _,bucket := range tab.buckets {
 		bucketRet := make(SortableNode,0)
-		for _,nodeItems := range bucket.entries.GetEntries() {
-			node := nodeItems.SelectBest()
-			if !enode.IsLightNode(enode.NodeTypeOption(node.NodeType())) && !enode.IsBootNode(enode.NodeTypeOption(node.NodeType()) ) {
+		for _,NodeItem := range bucket.entries.entries {
+			node := NodeItem
+			if node.registered && !enode.IsLightNode(enode.NodeTypeOption(node.NodeType())) && !enode.IsBootNode(enode.NodeTypeOption(node.NodeType()) ) {
 				bucketRet = append(bucketRet,node)
 			}
 
@@ -867,7 +847,7 @@ func (tab *Table) lookup(targetKey encPubkey, refreshIfEmpty bool) []*node {
 				asked[n.ID()] = true
 				pendingQueries++
     			log.Trace("Find node:","id",n.ID(),"lastFind:",n.findAt,"new time:",time.Now())
-				n.findAt = time.Now()
+
 				
 				go tab.findnode(n, targetKey, reply)
 			}
@@ -896,35 +876,43 @@ func (tab *Table) findnode(n *node, targetKey encPubkey, reply chan<- []*node) {
     //log.Info("18")
 	//defer func(){log.Info("18.1")}()
 
-	fails := tab.db.FindFails(n.ID(), n.IP())
-	udpTarget := n.addr()
-	if !n.LIP().Equal(net.IP{}) {
-		udpTarget = &net.UDPAddr{IP:n.LIP(),Port:int(n.LUDP())}
-	}
-	r, err := tab.net.findnode(n.ID(),udpTarget , targetKey)
-	if err == errClosed {
-		// Avoid recording failures on shutdown.
-		reply <- nil
-		return
-	} else if err != nil || len(r) == 0 {
-		fails++
-		tab.db.UpdateFindFails(n.ID(), n.IP(), fails)
-		log.Trace("Findnode failed", "id", n.ID(), "failcount", fails, "err", err)
-		//by Aegon findnode在返回达不到16个的时候，就认为是错的，然后几次错误后就把这个节点给
-		/*if fails >= maxFindnodeFailures {
-    //log.Info("Too many findnode failures, dropping", "id", n.ID(), "failcount", fails)
-			tab.delete(n)
-		}*/
-	} else if fails > 0 {
-		tab.db.UpdateFindFails(n.ID(), n.IP(), fails-1)
+	if time.Since(n.findAt) > 30 * time.Second {
+		tab.mutex.Lock()
+		n.findAt = time.Now()
+		tab.mutex.Unlock()
+		fails := tab.db.FindFails(n.ID(), n.IP())
+		udpTarget := n.addr()
+		if !n.LIP().Equal(net.IP{}) {
+			udpTarget = &net.UDPAddr{IP:n.LIP(),Port:int(n.LUDP())}
+		}
+		r, err := tab.net.findnode(n.ID(),udpTarget , targetKey)
+		if err == errClosed {
+			// Avoid recording failures on shutdown.
+			reply <- nil
+			return
+		} else if err != nil || len(r) == 0 {
+			fails++
+			tab.db.UpdateFindFails(n.ID(), n.IP(), fails)
+			log.Trace("Findnode failed", "id", n.ID(), "failcount", fails, "err", err)
+			//by Aegon findnode在返回达不到16个的时候，就认为是错的，然后几次错误后就把这个节点给
+			/*if fails >= maxFindnodeFailures {
+		//log.Info("Too many findnode failures, dropping", "id", n.ID(), "failcount", fails)
+				tab.delete(n)
+			}*/
+		} else if fails > 0 {
+			tab.db.UpdateFindFails(n.ID(), n.IP(), fails-1)
+		}
+
+		// Grab as many nodes as possible. Some of them might not be alive anymore, but we'll
+		// just remove those again during revalidation.
+		for _, n := range r {
+			tab.addSeenNode(n)
+		}
+		reply <- r
+	} else{
+		reply <- []*node{}
 	}
 
-	// Grab as many nodes as possible. Some of them might not be alive anymore, but we'll
-	// just remove those again during revalidation.
-	for _, n := range r {
-		tab.addSeenNode(n)
-	}
-	reply <- r
 
 }
 
@@ -1080,40 +1068,42 @@ func (tab *Table)updateNodeStatus(nodeId enode.ID,b *bucket,alive bool ){
 	//defer func(){log.Info("33.1")}()
 	//b := tab.buckets[bi]
 
-	var anode  *NodeItems
-	anode = nil
+	var anode  *node = nil
+
 	//state 0 not found /1 in  connects /2 in entries /3 in replacement
 
 	if anode = b.entries.Get(nodeId); anode != nil {
 		if ! alive {
 			//移动到replacement的最后
-			_,items := b.entries.RemoveNodeItems(nodeId)
-			if b.replacements.Length() >0 && time.Since( b.replacements.GetEntries()[0].GetLastTestTime()) > RevalidateInterval{
-				ok,items := b.replacements.RemoveNodeItems(b.replacements.GetEntries()[0].ID())
+			_,items := b.entries.RemoveNodeItem(nodeId)
+			if b.replacements.Length() >0 && time.Since( b.replacements.entries[0].testAt) > RevalidateInterval{
+				ok,items := b.replacements.RemoveNodeItem(b.replacements.entries[0].ID())
 				if ok {
-					b.entries.AddNodeItems(items,false)
+					b.entries.AddNodeItem(items,false)
 				}
 
 			}
-			b.replacements.AddNodeItems(items,true)
+			b.replacements.AddNodeItem(items,true)
 		}else{
+			tab.sliceUnsedBranches(anode)
 			b.entries.MoveFront(nodeId)
-			if !anode.SelectBest().registered {
+			if !anode.registered {
 				if tab.nodeAddedHook != nil {
-					tab.nodeAddedHook(anode.SelectBest())
+					tab.nodeAddedHook(anode)
 				}
 			}
 		}
 
 	} else if anode = b.replacements.Get(nodeId); anode != nil {
 		if alive {
-			_,items := b.replacements.RemoveNodeItems(nodeId)
-			b.entries.AddNodeItems(items,true)
+			_,items := b.replacements.RemoveNodeItem(nodeId)
+			b.entries.AddNodeItem(items,true)
 			b.entries.MoveFront(items.ID())
 			if tab.nodeAddedHook != nil {
-				tab.nodeAddedHook(items.SelectBest())
+				tab.nodeAddedHook(items)
 			}
 
+			tab.sliceUnsedBranches(anode)
 		}else {
 			b.replacements.MoveBack(nodeId)
 		}
@@ -1124,24 +1114,7 @@ func (tab *Table)updateNodeStatus(nodeId enode.ID,b *bucket,alive bool ){
 
 
 }
-func (tab *Table)UpdateIPInfo(nodeId enode.ID,oldIP net.IP,newIP net.IP){
-	tab.mutex.Lock()
-	defer tab.mutex.Unlock()
-	b := tab.bucket(nodeId)
-	node := b.entries.Get(nodeId)
-	if node == nil  {
-		node = b.replacements.Get(nodeId)
-	}
 
-	if node != nil {
-		for _,n := range node.Items {
-			if n.IP().Equal(oldIP) {
-				n.Node.Record().Set(enr.IP(newIP))
-				break;
-			}
-		}
-	}
-}
 
 // doRevalidate checks that the last node in a random bucket is still live
 // and replaces or deletes the node if it isn't.
@@ -1149,19 +1122,18 @@ func (tab *Table) doReplacementCheck() {
 //	defer func() { done <- struct{}{} }()
     //log.Info("34")
 	//defer func(){log.Info("34.1")}()
-	last, bi := tab.replaceNodeToCheck()
+	last, _ := tab.replaceNodeToCheck()
 	if last == nil {
 		// No non-empty bucket found.
 		return
 	}
 
 	// Ping the selected node and wait for a pong.
-	ch := make(chan bool )
-	last.DoPing(tab.net,ch)
+
+	tab.DoPing(last,nil)
 	//如果测试成功了，移动到etnries的最前面
 
-	result := <-ch
-	tab.updateNodeStatus(last.ID(),tab.buckets[bi],result)
+
 }
 
 // doRevalidate checks that the last node in a random bucket is still live
@@ -1174,7 +1146,7 @@ func (tab *Table) doRevalidate( revalidate *time.Timer) {
 	//all connected is set to seen now
 	tab.mutex.Lock()
 
-	last, bi := tab.nodeToRevalidate()
+	last, _ := tab.nodeToRevalidate()
 	tab.mutex.Unlock()
 	if last == nil {
 		// No non-empty bucket found.
@@ -1183,23 +1155,20 @@ func (tab *Table) doRevalidate( revalidate *time.Timer) {
 
 	// Ping the selected node and wait for a pong. it will use processLive来进行结果处理
 	//tab.net.ping(last.ID(), last.addr())]
-	ch := make(chan bool )
-	last.DoPing(tab.net,ch)
-	//如果测试失败了，移动到replacement的最后面
-	result := <-ch
-	tab.updateNodeStatus(last.ID(),tab.buckets[bi],result)
+	tab.DoPing(last,nil)
+
 }
 
 // nodeToRevalidate returns the last node in a random, non-empty bucket.
-func (tab *Table) nodeToRevalidate() (n *NodeItems, bi int) {
+func (tab *Table) nodeToRevalidate() (n *node, bi int) {
 
     //log.Info("36")
 	//defer func(){log.Info("36.1")}()
 	for _, bi = range tab.rand.Perm(len(tab.buckets)) {
 		b := tab.buckets[bi]
 		if b.entries.Length() > 0 {
-			last := b.entries.GetEntries()[b.entries.Length()-1]
-			if time.Since(last.GetLastTestTime()) > 30 *time.Second {
+			last := b.entries.entries[b.entries.Length()-1]
+			if time.Since(last.testAt) > 30 *time.Second {
 				return last,bi
 			}else{
 				return nil,0
@@ -1209,15 +1178,15 @@ func (tab *Table) nodeToRevalidate() (n *NodeItems, bi int) {
 	return nil, 0
 }
 // nodeToRevalidate returns the last node in a random, non-empty bucket.
-func (tab *Table) replaceNodeToCheck() (n *NodeItems, bi int) {
+func (tab *Table) replaceNodeToCheck() (n *node, bi int) {
 
     //log.Info("37")
 	//defer func(){log.Info("37.1")}()
 	for _, bi = range tab.rand.Perm(len(tab.buckets)) {
 		b := tab.buckets[bi]
 		if b.entries.Length() < bucketSize && b.replacements.Length() > 0 {
-			last := b.replacements.GetEntries()[0]
-			if time.Since(last.GetLastTestTime()) > 30 *time.Second {
+			last := b.replacements.entries[0]
+			if time.Since(last.testAt) > 30 *time.Second {
 				return last, bi
 			}else{
 				return nil,0
@@ -1242,11 +1211,9 @@ func (tab *Table) copyLiveNodes() {
 	//defer func(){log.Info("39.1")}()
 	now := time.Now()
 	for _, b := range &tab.buckets {
-		for _, n := range b.entries.GetEntries() {
-			for _,node := range n.Items {
-				if now.Sub(node.addedAt) >= seedMinTableTime {
-					tab.db.UpdateNode(unwrapNode(node))
-				}
+		for _, n := range b.entries.entries {
+			if now.Sub(n.addedAt) >= seedMinTableTime {
+				tab.db.UpdateNode(unwrapNode(n))
 			}
 
 		}
@@ -1264,11 +1231,11 @@ func (tab *Table) closest(target enode.ID, nresults int) *nodesByDistance {
 	//defer func(){log.Info("40.1")}()
 	close := &nodesByDistance{target: target}
 	for _, b := range &tab.buckets {
-		for _, n := range b.entries.GetEntries() {
-			node := n.SelectBest()
+		for _, node := range b.entries.entries {
+
 			if node != nil {
 				if (node.testAt) != TimeInvalid{
-					close.push(n.SelectBest(), nresults)
+					close.push(node, nresults)
 				}
 			}
 
@@ -1280,7 +1247,7 @@ func (tab *Table) closest(target enode.ID, nresults int) *nodesByDistance {
 
 func (tab *Table) len() (n int) {
 	for _, b := range &tab.buckets {
-		n += len(b.entries.GetEntries())
+		n += len(b.entries.entries)
 	}
 	return n
 }
@@ -1298,42 +1265,71 @@ func (tab *Table) bucket(id enode.ID) *bucket {
 func (tab *Table) AddBootnode(n *enode.Node) {
 	tab.setFallbackNodes([]*enode.Node{n})
 }
+
+func (tab *Table) sliceUnsedBranches(n *node){
+
+	index := fmt.Sprintf("%v:%v",n.IP(),n.UDP())
+	nodes := tab.nodeByIp[index]
+	nodesToCut := make([]*node,0)
+	if nodes != nil {
+		for id,node := range nodes{
+			if id != n.ID(){
+				nodesToCut = append(nodesToCut,node)
+			}
+		}
+	}
+
+	for _,node := range nodesToCut {
+		tab.doRemoveUnusedNode(node)
+	}
+}
+
+func (tab *Table) doRemoveUnusedNode(n *node) {
+	//remove from buckets
+	b := tab.bucket(n.ID())
+
+	b.entries.RemoveNodeItem(n.ID())
+	b.replacements.RemoveNodeItem(n.ID())
+	index := fmt.Sprintf("%v:%v",n.IP(),n.UDP())
+	nodes := tab.nodeByIp[index]
+	if nodes != nil {
+		delete(nodes,n.ID())
+	}
+}
 // addSeenNode adds a node which may or may not be live to the end of a bucket. If the
 // bucket has space available, adding the node succeeds immediately. Otherwise, the node is
 // added to the replacements list.
 //
 // The caller must not hold tab.mutex.
 
-func (tab *Table) AddSeenNode(n *node) *NodeItems{
+func (tab *Table) AddSeenNode(n *node) *node{
 	tab.mutex.Lock()
 	defer tab.mutex.Unlock()
 	return tab.addSeenNode(n)
 }
-func (tab *Table) addSeenNode(n *node) *NodeItems{
+func (tab *Table) addSeenNode(n *node) *node{
     //log.Info("42")
 	//defer func(){log.Info("42.1")}()
 	if n.ID() == tab.self().ID() {
 		return nil
 	}
-
-
-
-
-	/*nodes,ok := tab.allNodes[n.ID()]
-	if !ok  {
-		nodes = newNodeItem(n.ID())
-		tab.allNodes[n.ID()] = nodes
+	index := fmt.Sprintf("%v:%v",n.IP().String(),n.UDP())
+	nodes,_ := tab.nodeByIp[index]
+	// there is another node in the same ip/port and send message to system
+	if nodes != nil {
+		for _,node := range nodes {
+			if !node.LIP().Equal(net.IP{}) {
+				return nil
+			}
+		}
 	}
-
-	nodes.AddNode(n,false)
-	*/
 	b := tab.bucket(n.ID())
 
 	//fmt.Println(fmt.Sprintf("add seen node,curent:%v,max:%v",b.entries.Length(),b.entries.maxsize))
 	if b.entries.Contains( n.ID()) {
 		// Already in bucket, don't add.
 		result := b.entries.Get(n.ID())
-		 result.AddNode(n,false)
+
 		return  result
 
 	}
@@ -1341,7 +1337,7 @@ func (tab *Table) addSeenNode(n *node) *NodeItems{
 
 	if b.replacements.Contains(n.ID()){
 		result :=b.replacements.Get(n.ID())
-		 result.AddNode(n,false)
+
 		return result
 
 	}
@@ -1350,27 +1346,27 @@ func (tab *Table) addSeenNode(n *node) *NodeItems{
 		return nil
 	}
 
-	var result *NodeItems
+	var result *node
 	if b.entries.Length() < b.entries.maxsize {
-		_,result = b.entries.AddNode(n,false)
+		_,result = b.entries.AddNode(n)
 	}else {
 		if n.testAt != TimeInvalid {
-			nodeItem := newNodeItem(n)
+			//NodeItem := newNodeItem(n)
 
-			ok,replaced := b.entries.ReplaceNodeItems(nodeItem, func(nodeInEntries *NodeItems) bool {
-				if nodeInEntries.GetLastTestTime() == TimeInvalid {
+			ok,replaced := b.entries.ReplaceNodeItem(n, func(nodeInEntries *node) bool {
+				if nodeInEntries.testAt == TimeInvalid {
 					return true
 				}
 				return false
 			})
 			if ok {
-				b.replacements.AddNodeItems( replaced,false)
+				b.replacements.AddNodeItem( replaced,false)
 				result = replaced
 			}
 		}else {
 
 			// Add to end of bucket:
-			_,result = b.replacements.AddNode( n,false)
+			_,result = b.replacements.AddNode( n)
 		}
 
 	}
@@ -1381,14 +1377,55 @@ func (tab *Table) addSeenNode(n *node) *NodeItems{
 
 }
 
-func (tab *Table) DoPing(n  *enode.Node) {
+func (n *node )OnPingReceived (ip net.IP,port uint16){
+	n.seenAt = time.Now()
+	n.Node.Set(enr.LocalIP(ip))
+	n.Node.Set(enr.LUDP(port))
+}
+func (tab *Table)RequestPing(node *enode.Node, ch chan bool) {
+	b := tab.bucket(node.ID())
+	n := b.entries.Get(node.ID())
+	if n != nil {
+		tab.DoPing(n,ch)
+	}else {
+		n = b.replacements.Get(node.ID())
+		if n != nil {
+			tab.DoPing(n,ch)
+		}else {
+			log.Warn("want to connect an unping node:","id",node.ID())
+			if ch != nil {
+				ch <- false
+			}
+		}
+	}
 
+}
+func (tab *Table) DoPing(n  *node,ch chan bool ) {
 
-	toTest := tab.AddSeenNode(wrapNode(n))
-	ch := make(chan bool)
-	toTest.DoPing(tab.net,ch)
-	result := <- ch
-	tab.updateNodeStatus(toTest.ID(),tab.bucket(toTest.ID()),result)
+	go func (){
+		n.testAt = time.Now()
+		var toAddr net.UDPAddr
+		lip := n.LIP()
+		if len(lip) == 0 || n.LUDP() == 0{
+			toAddr = net.UDPAddr{IP: n.IP(), Port: n.UDP()}
+		}else {
+			toAddr = net.UDPAddr{IP: lip, Port: int(n.LUDP())}
+		}
+		err,duration := tab.net.ping(n.ID(),&toAddr)
+
+		if err == nil {
+			n.latency = int64(duration)
+		}else {
+			n.latency = LatencyInvalid
+		}
+		tab.mutex.Lock()
+		tab.updateNodeStatus(n.ID(),tab.bucket(n.ID()),err == nil )
+		tab.mutex.Unlock()
+		if ch != nil {
+			ch <- err==nil
+		}
+	}()
+
 }
 func (tab *Table) OnPingReceived(n  *enode.Node,ip net.IP,port uint16) {
     //log.Info("43")
@@ -1406,9 +1443,9 @@ func (tab *Table) OnPingReceived(n  *enode.Node,ip net.IP,port uint16) {
 	if  b.entries.Contains( n.ID()) {
 
 		oldNode := b.entries.Get(n.ID())
-		oldNode.OnPingReceived(n,ip,port)
-		if !oldNode.SelectBest().registered {
-			go  tab.DoPing(&oldNode.SelectBest().Node)
+		oldNode.OnPingReceived(ip,port)
+		if !oldNode.registered {
+			tab.DoPing(oldNode,nil)
 			//log.Info("lock2","id",n.ID(),"value",1.1)
 		}else{
 			//log.Info("lock2","id",n.ID(),"value",1)
@@ -1418,23 +1455,16 @@ func (tab *Table) OnPingReceived(n  *enode.Node,ip net.IP,port uint16) {
 
 	} else if b.replacements.Contains(n.ID()) {
 		oldNode := b.replacements.Get(n.ID())
-		oldNode.OnPingReceived(n,ip,port)
-		ch := make(chan bool )
-		oldNode.DoPing(tab.net,ch)
-		//如果测试失败了，移动到replacement的最后面
-		result := <-ch
-		tab.updateNodeStatus(oldNode.ID(),tab.bucket(oldNode.ID()),result)
+		oldNode.OnPingReceived(ip,port)
+
+		tab.DoPing(oldNode,nil)
 
 
 	} else {
 
-		_,oldNode := b.replacements.AddNode(wrapNode(n),true)
-		if oldNode != nil {
-			ch := make(chan bool )
-			oldNode.DoPing(tab.net,ch)
-			//如果测试失败了，移动到replacement的最后面
-			result := <-ch
-			tab.updateNodeStatus(oldNode.ID(),tab.bucket(oldNode.ID()),result)
+		_,newnode := b.replacements.AddNode(wrapNode(n))
+		if newnode != nil {
+			tab.DoPing(newnode,nil)
 		}
 
 	}
@@ -1455,24 +1485,26 @@ func (tab *Table) DoPongResult(n *enode.Node,duration int64,ok bool)  {
 	b := tab.bucket(n.ID())
 
 
-	ch := make(chan bool )
+
 	if  b.entries.Contains( n.ID()) {
 
 		oldNode := b.entries.Get(n.ID())
-		oldNode.DoPongResult(n,duration,ok,ch)
+		oldNode.latency = duration
+
 
 	} else if b.replacements.Contains(n.ID()) {
 		oldNode := b.replacements.Get(n.ID())
-		oldNode.DoPongResult(n,duration,ok,ch)
+		oldNode.latency = duration
+
 
 	} else {
-		b.replacements.AddNode(wrapNode(n),true)
+		b.replacements.AddNode(wrapNode(n))
 		oldNode := b.replacements.Get(n.ID())
-		oldNode.DoPongResult(n,duration,ok,ch)
+		oldNode.latency = duration
 	}
-	result := <- ch
 
-	tab.updateNodeStatus(n.ID(),b,result)
+
+	tab.updateNodeStatus(n.ID(),b,ok)
 
 }
 /**
@@ -1491,7 +1523,7 @@ func (tab *Table) CanAddNode(n *enode.Node) (bool) {
 	defer tab.mutex.Unlock()
 	if  b.entries.Contains( n.ID()) {
 		nodes := b.entries.Get(n.ID())
-		return nodes.NodeExist(encodePubkey(n.Pubkey()))
+		return nodes != nil
 	}
 
 
