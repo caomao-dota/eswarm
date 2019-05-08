@@ -355,7 +355,9 @@ func (srv *Server) RemoveTrustedPeer(node *enode.Node) {
 	case <-srv.quit:
 	}
 }
-
+func (srv *Server) AddBootnode(n *enode.Node) {
+	srv.ntab.AddBootnode(n)
+}
 // SubscribePeers subscribes the given channel to peer events
 func (srv *Server) SubscribeEvents(ch chan *PeerEvent) event.Subscription {
 	return srv.peerFeed.Subscribe(ch)

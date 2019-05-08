@@ -95,6 +95,7 @@ type discoverTable interface {
 	DoPing(n  *enode.Node)
 	CanAddNode(n *enode.Node) bool
 	RemoveConnectedNode(nodeId enode.ID)
+	AddBootnode(n *enode.Node)
 	OnNodeChanged(chan struct{})
 	TargetBucketInfo(nodeId enode.ID) (bucketId int,entries,replacements *discover.NodeQueue)
 }

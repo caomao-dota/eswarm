@@ -158,13 +158,14 @@ func (h *Hive)refresh(){
 //refresh load peers and register to kad network
 func (h *Hive)doRefresh(){
 	//log.Debug("do Refresh")
-	h.refreshLock.Lock()
-	defer h.refreshLock.Unlock()
+
 	nodes := make([]*BzzAddr,0)
 	knownNodes := h.getKnowNodes()
 	for _,node := range  knownNodes{
 		nodes = append(nodes,NewAddr(node))
 	}
+	h.refreshLock.Lock()
+	defer h.refreshLock.Unlock()
 	h.Register(nodes...)
 
 }

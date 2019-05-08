@@ -286,7 +286,7 @@ func GetBootnodesInfo(uri string  ) (bootnodes []string, reportAddress string, e
 	// use httpClient to send request
 	response, err := client.Do(req)
 	if err != nil || response == nil || (response.StatusCode < 200 || response.StatusCode >= 300) {
-		log.Error("Error sending request to API endpoint", "error:", err)
+		log.Error("Error sending request to API endpoint", "error:", "get failed")
 		return []string{},"",err
 	} else {
 		// Close the connection to reuse it
