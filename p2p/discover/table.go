@@ -1085,7 +1085,7 @@ func (tab *Table)updateNodeStatus(nodeId enode.ID,b *bucket,alive bool ){
 			}
 			b.replacements.AddNodeItem(items,true)
 		}else{
-			tab.sliceUnsedBranches(anode)
+			tab.shrinkUnsedBranches(anode)
 			b.entries.MoveFront(nodeId)
 			if !anode.registered {
 				if tab.nodeAddedHook != nil {
@@ -1103,7 +1103,7 @@ func (tab *Table)updateNodeStatus(nodeId enode.ID,b *bucket,alive bool ){
 				tab.nodeAddedHook(items)
 			}
 
-			tab.sliceUnsedBranches(anode)
+			tab.shrinkUnsedBranches(anode)
 		}else {
 			b.replacements.MoveBack(nodeId)
 		}
@@ -1265,8 +1265,10 @@ func (tab *Table) bucket(id enode.ID) *bucket {
 func (tab *Table) AddBootnode(n *enode.Node) {
 	tab.setFallbackNodes([]*enode.Node{n})
 }
-
-func (tab *Table) sliceUnsedBranches(n *node){
+/**
+删除所有与node在同一IP和端口上的节点
+ */
+func (tab *Table) shrinkUnsedBranches(n *node){
 
 	index := fmt.Sprintf("%v:%v",n.IP(),n.UDP())
 	nodes := tab.nodeByIp[index]
