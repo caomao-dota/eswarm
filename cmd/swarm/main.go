@@ -325,55 +325,62 @@ func bzzd(ctx *cli.Context) error {
 		stack.Stop()
 	}()
 
-	ticker := time.NewTimer(30*time.Second)
-	quitC := make(chan struct{})
-	// add swarm bootnodes, because swarm doesn't use p2p package's discovery discv5
-	// By Aegon, discovery will use bootnode to find neighborhood
-	go func() {
-		s := stack.Server()
-		for {
-			select  {
+	if !ctx.GlobalIsSet(utils.BootnodesFlag.Name)  {
+		ticker := time.NewTimer(30*time.Second)
+		quitC := make(chan struct{})
+		// add swarm bootnodes, because swarm doesn't use p2p package's discovery discv5
+		// By Aegon, discovery will use bootnode to find neighborhood
+		go func() {
+			s := stack.Server()
+			for {
+				select  {
 
-			case <- ticker.C:
-				bootnodeAddrs := ctx.GlobalString(SwarmBootnodesAddrFlag.Name)
-				bootnodes := []string{}
-				bootnodeFound := false
-				if bootnodeAddrs != "" {
-					nodes,_,err := util.GetBootnodesInfo(bootnodeAddrs)
-					if err == nil {
-						if len(nodes) != 0 {
-							bootnodes = append(bootnodes,nodes...)
-							bootnodeFound = true
+				case <- ticker.C:
+					bootnodeAddrs := ctx.GlobalString(SwarmBootnodesAddrFlag.Name)
+					bootnodes := []string{}
+					bootnodeFound := false
+					if bootnodeAddrs != "" {
+						nodes,_,err := util.GetBootnodesInfo(bootnodeAddrs)
+						if err == nil {
+							if len(nodes) != 0 {
+								bootnodes = append(bootnodes,nodes...)
+								bootnodeFound = true
+							}
+						}
+						//暂不对serverAddr作处理
+						//bzzCfg.ServerAddr = reportUrl
+
+						for _, url := range bootnodes {
+							node, err := enode.ParseV4(url)
+							if err != nil {
+								log.Error("Bootstrap URL invalid", "enode", url, "err", err)
+							}
+							s.AddBootnode(node)
 						}
 					}
-					//暂不对serverAddr作处理
-					//bzzCfg.ServerAddr = reportUrl
-
-					for _, url := range bootnodes {
-						node, err := enode.ParseV4(url)
-						if err != nil {
-							log.Error("Bootstrap URL invalid", "enode", url, "err", err)
-						}
-						s.AddBootnode(node)
+					if bootnodeFound {
+						ticker.Reset(30*time.Minute)
+					}else {
+						ticker.Reset(30*time.Second)
 					}
+				case <- quitC:
+					break;
 				}
-				if bootnodeFound {
-					ticker.Reset(30*time.Minute)
-				}else {
-					ticker.Reset(30*time.Second)
-				}
-			case <- quitC:
-				break;
 			}
-		}
 
 
 
-	}()
+		}()
+
+
 
 	stack.Wait()
-	ticker.Stop()
-	quitC <- struct{}{}
+
+		ticker.Stop()
+		quitC <- struct{}{}
+	}else{
+		stack.Wait()
+	}
 	return nil
 }
 
