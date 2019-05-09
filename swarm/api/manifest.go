@@ -121,7 +121,12 @@ func (m *ManifestWriter) AddEntry(ctx context.Context, data io.Reader, e *Manife
 	entry := newManifestTrieEntry(e, nil)
 	if data != nil {
 		var wait func(context.Context) error
+		//log.Info("starting store ","file ",entry.Path,"time",time.Now().UnixNano() ,"size",entry.Size)
+
 		addr, wait, err = m.api.Store(ctx, data, e.Size, m.trie.encrypted)
+
+		//log.Info("store ok ","file ",entry.Path,"time",time.Now().UnixNano() ,"size",entry.Size)
+
 		if err != nil {
 			return nil, err
 		}
@@ -135,6 +140,8 @@ func (m *ManifestWriter) AddEntry(ctx context.Context, data io.Reader, e *Manife
 		return addr, errors.New("missing entry hash")
 	}
 	m.trie.addEntry(entry, m.quitC)
+	//log.Info("trie added ","file ",entry.Path,"time",time.Now().UnixNano() ,"size",entry.Size)
+
 	return addr, nil
 }
 
@@ -227,10 +234,10 @@ type manifestTrieEntry struct {
 }
 
 func loadManifest(ctx context.Context, fileStore *storage.FileStore, addr storage.Address, quitC chan bool, decrypt DecryptFunc) (trie *manifestTrie, err error) { // non-recursive, subtrees are downloaded on-demand
-	log.Trace("manifest lookup", "addr", addr)
+	//log.Trace("manifest lookup", "addr", addr)
 	// retrieve manifest via FileStore
 	manifestReader, isEncrypted := fileStore.Retrieve(ctx, addr)
-	log.Trace("reader retrieved", "addr", addr)
+	//log.Trace("reader retrieved", "addr", addr)
 	return readManifest(manifestReader, addr, fileStore, isEncrypted, quitC, decrypt)
 }
 
@@ -240,7 +247,7 @@ func readManifest(mr storage.LazySectionReader, addr storage.Address, fileStore 
 	size, err := mr.Size(mr.Context(), quitC)
 	if err != nil { // size == 0
 		// can't determine size means we don't have the root chunk
-		log.Trace("manifest not found", "addr", addr)
+	//	log.Trace("manifest not found", "addr", addr)
 		err = fmt.Errorf("Manifest not Found")
 		return
 	}
@@ -252,7 +259,7 @@ func readManifest(mr storage.LazySectionReader, addr storage.Address, fileStore 
 	manifestData := make([]byte, size)
 	read, err := mr.Read(manifestData)
 	if int64(read) < size {
-		log.Trace("manifest not found", "addr", addr)
+	//	log.Trace("manifest not found", "addr", addr)
 		if err == nil {
 			err = fmt.Errorf("Manifest retrieval cut short: read %v, expect %v", read, size)
 		}
@@ -266,11 +273,11 @@ func readManifest(mr storage.LazySectionReader, addr storage.Address, fileStore 
 	err = json.Unmarshal(manifestData, &man)
 	if err != nil {
 		err = fmt.Errorf("Manifest %v is malformed: %v", addr.Log(), err)
-		log.Trace("malformed manifest", "addr", addr)
+	//	log.Trace("malformed manifest", "addr", addr)
 		return
 	}
 
-	log.Trace("manifest entries", "addr", addr, "len", len(man.Entries))
+	//log.Trace("manifest entries", "addr", addr, "len", len(man.Entries))
 
 	trie = &manifestTrie{
 		fileStore: fileStore,

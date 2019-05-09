@@ -799,7 +799,7 @@ func (req *neighbors) preverify(t *udp, from *net.UDPAddr, fromID enode.ID, from
 }
 
 func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) {
-	log.Info("neighbours:","ip",len(req.Nodes),"nodes",req.Nodes)
+	log.Trace("neighbours:","ip",len(req.Nodes),"nodes",req.Nodes)
 }
 
 func (req *neighbors) name() string { return "NEIGHBORS/v4" }

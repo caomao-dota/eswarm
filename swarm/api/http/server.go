@@ -362,7 +362,7 @@ func (s *Server) HandlePostRaw(w http.ResponseWriter, r *http.Request) {
 // resulting manifest hash as a text/plain response
 func (s *Server) HandlePostFiles(w http.ResponseWriter, r *http.Request) {
 	ruid := GetRUID(r.Context())
-	log.Debug("handle.post.files", "ruid", ruid)
+	log.Info("handle.post.files", "ruid", ruid)
 	postFilesCount.Inc(1)
 
 	contentType, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
@@ -386,7 +386,7 @@ func (s *Server) HandlePostFiles(w http.ResponseWriter, r *http.Request) {
 			respondError(w, r, fmt.Sprintf("cannot resolve %s: %s", uri.Addr, err), http.StatusInternalServerError)
 			return
 		}
-		log.Debug("resolved key", "ruid", ruid, "key", addr)
+		log.Info("encrypted resolved key", "ruid", ruid, "key", addr)
 	} else {
 		addr, err = s.api.NewManifest(r.Context(), toEncrypt)
 		if err != nil {
@@ -394,10 +394,11 @@ func (s *Server) HandlePostFiles(w http.ResponseWriter, r *http.Request) {
 			respondError(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		log.Debug("new manifest", "ruid", ruid, "key", addr)
+		log.Info("new manifest", "ruid", ruid, "key", addr,"time",time.Now())
 	}
 
 	newAddr, err := s.api.UpdateManifest(r.Context(), addr, func(mw *api.ManifestWriter) error {
+		log.Info("manifest updated", "ruid", ruid, "key", addr,"time",time.Now())
 		switch contentType {
 		case "application/x-tar":
 			_, err := s.handleTarUpload(r, mw)
@@ -427,7 +428,7 @@ func (s *Server) HandlePostFiles(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleTarUpload(r *http.Request, mw *api.ManifestWriter) (storage.Address, error) {
-	log.Debug("handle.tar.upload", "ruid", GetRUID(r.Context()))
+	log.Info("handle.tar.upload", "ruid", GetRUID(r.Context()))
 
 	defaultPath := r.URL.Query().Get("defaultpath")
 

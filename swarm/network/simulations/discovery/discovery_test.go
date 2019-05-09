@@ -434,7 +434,7 @@ func discoveryPersistenceSimulation(nodes, conns int, adapter adapters.NodeAdapt
 		if err := client.Call(&healthy, "hive_getHealthInfo", ppmap[common.Bytes2Hex(id.Bytes())]); err != nil {
 			return false, fmt.Errorf("error getting node health: %s", err)
 		}
-		log.Info(fmt.Sprintf("node %4s healthy: got nearest neighbours: %v, know nearest neighbours: %v", id, healthy.ConnectNN, healthy.KnowNN))
+		log.Trace(fmt.Sprintf("node %4s healthy: got nearest neighbours: %v, know nearest neighbours: %v", id, healthy.ConnectNN, healthy.KnowNN))
 
 		return healthy.KnowNN && healthy.ConnectNN, nil
 	}

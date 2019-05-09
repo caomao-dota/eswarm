@@ -302,7 +302,7 @@ func (pc *PyramidChunker) loadTree(ctx context.Context) error {
 		return errLoadingTreeRootChunk
 	}
 	chunkSize := int64(chunkData.Size())
-	log.Trace("pyramid.chunker: root chunk", "chunk.Size", chunkSize, "pc.chunkSize", pc.chunkSize)
+//	log.Trace("pyramid.chunker: root chunk", "chunk.Size", chunkSize, "pc.chunkSize", pc.chunkSize)
 
 	//if data size is less than a chunk... add a parent with update as pending
 	if chunkSize <= pc.chunkSize {
