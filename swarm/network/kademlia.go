@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/plotozhu/MDCMainnet/p2p/enode"
-	"math/rand"
+	"math"
 	"strings"
 	"sync"
 	"time"
@@ -121,6 +121,7 @@ type entry struct {
 	seenAt  time.Time
 	retries int
 	lastRetry time.Time
+	connectedAt time.Time
 }
 
 // newEntry creates a kademlia peer from a *Peer
@@ -128,6 +129,7 @@ func newEntry(p *BzzAddr) *entry {
 	return &entry{
 		BzzAddr: p,
 		seenAt:  time.Now(),
+		connectedAt: time.Unix(0,0),
 	}
 }
 
@@ -441,6 +443,7 @@ func (k *Kademlia) On(p *Peer) (depth uint8, changed bool,err error) {
 		if ins  {
 			a := newEntry(p.BzzAddr)
 			a.conn = p
+			a.connectedAt = time.Now()
 			// insert new online peer into addrs
 			k.addrs, _, _, _ = pot.Swap(k.addrs, p, Pof, func(v pot.Val) pot.Val {
 				return a
@@ -713,22 +716,36 @@ func depthForPot(p *pot.Pot, neighbourhoodSize int, pivotAddr []byte) (depth int
 // callable decides if an address entry represents a callable peer
 func (k *Kademlia) callable(e *entry) bool {
 	// not callable if peer is live or exceeded maxRetries
+	if e.conn != nil && time.Since(e.connectedAt) > 2* time.Minute && e.retries != 0{
+		e.retries = 0
+	}
 	if e.conn != nil || e.retries > k.MaxRetries {
+		//log.Info(fmt.Sprintf("%08x:connected %v %v", k.BaseAddr()[:4], e, e.retries))
+
 		return false
 	}
 
 	// calculate the allowed number of retries based on time lapsed since last seen
-	timeElasped := int64(time.Since(e.seenAt))
-	div := int64(k.RetryExponent)
-	div += (150000 - rand.Int63n(300000)) * div / 1000000
-	var retries int
-	for delta := timeElasped; delta > k.RetryInterval; delta /= div {
-		retries++
+	timeElasped := int64(time.Since(e.seenAt))/int64(time.Millisecond)
+	//指数级增长，直到30分钟一次
+	div := int64(e.retries)
+	if div > 30{
+		div = 10
+	}else if div > 20 {
+		div = 8
+	}else  if div > 10 {
+		div = 5
 	}
+	 shouldWait := int64(0)
+	if e.retries > 0 {
+		shouldWait =  int64(time.Second) * int64(math.Pow(float64(k.RetryExponent),float64(div))) /int64(time.Millisecond)
+	}
+
+
 	// this is never called concurrently, so safe to increment
 	// peer can be retried again
-	if retries < e.retries {
-		log.Trace(fmt.Sprintf("%08x: %v long time since last try (at %v) needed before retry %v, wait only warrants %v", k.BaseAddr()[:4], e, timeElasped, e.retries, retries))
+	if timeElasped < shouldWait{
+		log.Trace(fmt.Sprintf("%08x: %v long time since last try (at %v) needed before retry %v, should wait for %v", k.BaseAddr()[:4], e, timeElasped, e.retries, shouldWait))
 		return false
 	}
 	// function to sanction or prevent suggesting a peer
@@ -737,6 +754,7 @@ func (k *Kademlia) callable(e *entry) bool {
 		return false
 	}
 	e.retries++
+	e.seenAt = time.Now()
 	log.Trace(fmt.Sprintf("%08x: peer %v is callable", k.BaseAddr()[:4], e))
 
 	return true
