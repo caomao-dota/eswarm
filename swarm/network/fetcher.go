@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	defaultSearchTimeout = 8 * time.Second
+	defaultSearchTimeout = 1 * time.Second
 	// maximum number of forwarded requests (hops), to make sure requests are not
 	// forwarded forever in peer loops
 	maxHopCount uint8 = 20

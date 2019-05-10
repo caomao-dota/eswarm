@@ -23,6 +23,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/golang-lru"
 	"net"
 	"sort"
 	"strconv"
@@ -192,9 +193,14 @@ type Server struct {
 	peerFeed      event.Feed
 	log           log.Logger
 
+	blacklist     *lru.Cache
+	FilterChain   *FilterChain
 	_addCheckFun  AddCheck
 }
-
+type BlackItem struct {
+	DiscTime  time.Time
+	DiscCount int
+}
 type peerOpFunc func(map[enode.ID]*Peer)
 
 type peerDrop struct {
@@ -420,6 +426,30 @@ func (s *sharedUDPConn) Close() error {
 	return nil
 }
 
+func (srv *Server) IsBlocked(id enode.ID) bool{
+
+	val,ok := srv.blacklist.Get(id)
+	if ok && time.Now().Before(val.(BlackItem).DiscTime) {
+		return true
+	}
+	return false
+}
+func (srv *Server) CanSendPing(id enode.ID) bool{
+	return true;
+}
+func (srv *Server) CanProcPing(id enode.ID) bool{
+	return true;
+}
+func (srv *Server) CanProcPong(id enode.ID) bool{
+	return true;
+}
+func (srv *Server) CanStartConnect(id enode.ID) bool{
+	return true;
+}
+func (srv *Server)ShouldAcceptConn(id enode.ID) bool{
+	return true;
+}
+
 // Start starts running the server.
 // Servers can not be re-used after stopping.
 func (srv *Server) Start() (err error) {
@@ -429,6 +459,9 @@ func (srv *Server) Start() (err error) {
 		return errors.New("server already running")
 	}
 	srv.running = true
+	srv.blacklist,_ = lru.New(1000)
+	srv.FilterChain = NewFilterChain()
+	srv.FilterChain.AddFilter(srv)
 	srv.log = srv.Config.Logger
 	if srv.log == nil {
 		srv.log = log.New()
@@ -568,6 +601,7 @@ func (srv *Server) setupDiscovery() error {
 		if err != nil {
 			return err
 		}
+		ntab.AddFilters(srv.FilterChain)
 		srv.ntab = ntab
 	}
 	// Discovery V5
@@ -781,6 +815,18 @@ running:
 			}
 		case pd := <-srv.delpeer:
 
+			val,exist :=srv.blacklist.Get(pd.ID())
+			item := BlackItem{time.Now().Add(30*time.Second),1}
+			if(exist) {
+				item = val.(BlackItem)
+				item.DiscTime = time.Now().Add( time.Duration(item.DiscCount* 30)*time.Second)
+				if item.DiscCount < 60 {
+					item.DiscCount++
+				}
+
+			}
+			srv.blacklist.Add(pd.ID(),item)
+			srv.ntab.RemoveConnectedNode(pd.ID(),item.DiscCount)
 			// A peer disconnected.
 			d := common.PrettyDuration(mclock.Now() - pd.created)
 			pd.log.Debug("Removing p2p peer", "duration", d, "peers", len(peers)-1, "req", pd.requested, "err", pd.err)
@@ -842,7 +888,11 @@ func (srv *Server) protoHandshakeChecks(peers map[enode.ID]*Peer, inboundCount i
 			return DiscTooManyPeers
 		case !c.is(trustedConn) && c.is(inboundConn) && !isLightNode && inboundCount >= srv.maxInboundConns():
 			return DiscTooManyPeers
+		case srv.FilterChain.IsBlocked(c.node.ID()):
+			return DiscBlockedPeer
+
 	}
+
 
 	bucketId,entries,_ := srv.ntab.TargetBucketInfo(c.node.ID())
 	log.Trace("bucketInfo:","id",c.node.ID(),"bucketIndex",bucketId," entries",entries.Length())
@@ -1089,7 +1139,7 @@ func (srv *Server) runPeer(p *Peer) {
 		Peer:  p.ID(),
 		Error: err.Error(),
 	})
-	srv.ntab.RemoveConnectedNode(p.Node().ID())
+	//srv.ntab.RemoveConnectedNode(p.Node().ID())
 	// Note: run waits for existing peers to be sent on srv.delpeer
 	// before returning, so this send should not select on srv.quit.
 	srv.delpeer <- peerDrop{p, err, remoteRequested}

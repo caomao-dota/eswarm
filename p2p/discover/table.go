@@ -26,7 +26,6 @@ import (
 	"crypto/ecdsa"
 	crand "crypto/rand"
 	"encoding/binary"
-
 	"fmt"
 	"github.com/plotozhu/MDCMainnet/p2p/enr"
 	mrand "math/rand"
@@ -66,7 +65,23 @@ const (
 	seedMaxAge          = 5 * 24 * time.Hour
 )
 
-
+type FiterItem   interface {
+	IsBlocked(id enode.ID) bool
+	CanSendPing(id enode.ID) bool
+	CanProcPing(id enode.ID) bool
+	CanProcPong(id enode.ID) bool
+	CanStartConnect(id enode.ID) bool
+	ShouldAcceptConn(id enode.ID) bool
+}
+type FiterItemChain   interface {
+	IsBlocked(id enode.ID) bool
+	CanSendPing(id enode.ID) bool
+	CanProcPing(id enode.ID) bool
+	CanProcPong(id enode.ID) bool
+	CanStartConnect(id enode.ID) bool
+	ShouldAcceptConn(id enode.ID) bool
+    AddFilter(ft FiterItem)
+}
 
 /*
 type NodeItem struct {
@@ -336,6 +351,7 @@ func  (ni *NodeItem) getPossibleNode()*node {
 	return result
 }
 */
+
 type Table struct {
 	mutex   sync.Mutex        // protects buckets, bucket content, nursery, rand
 	buckets [nBuckets]*bucket // index of known nodes by distance
@@ -356,6 +372,7 @@ type Table struct {
 	nodeByIp      map[string]map[enode.ID]*node
 	//allNodes     map[enode.ID]*NodeItem
 	onTesting    bool
+	filters      FiterItemChain
 }
 type AttributeID uint8
 
@@ -595,6 +612,7 @@ func newTable(t transport, db *enode.DB, bootnodes []*enode.Node,onTest bool ) (
 		//allNodes:   make(map[enode.ID]*NodeItem),
 		onTesting:  onTest,
 	}
+
 	if err := tab.setFallbackNodes(bootnodes); err != nil {
 		return nil, err
 	}
@@ -621,7 +639,10 @@ func newTable(t transport, db *enode.DB, bootnodes []*enode.Node,onTest bool ) (
 
 	return tab, nil
 }
-
+func (tab *Table)AddFilters(chain FiterItemChain){
+	tab.filters = chain
+	tab.filters.AddFilter(tab)
+}
 func (tab *Table) self() *enode.Node {
 	return tab.net.self()
 }
@@ -735,7 +756,25 @@ func (c SortableNode) Swap(i, j int) {
 func (c SortableNode) Less(i, j int) bool {
 	return c[i].latency < c[j].latency
 }
+func (srv *Table) IsBlocked(id enode.ID) bool{
 
+	return false
+}
+func (tab *Table) CanSendPing(id enode.ID) bool{
+	return true;
+}
+func (tab *Table) CanProcPing(id enode.ID) bool{
+	return true;
+}
+func (tab *Table) CanProcPong(id enode.ID) bool{
+	return true;
+}
+func (tab *Table) CanStartConnect(id enode.ID) bool{
+	return true;
+}
+func (tab *Table)ShouldAcceptConn(id enode.ID) bool{
+	return true;
+}
 
 
 //按延时从小到大的顺序排好
@@ -750,7 +789,7 @@ func (tab *Table) GetKnownNodesSorted() []*enode.Node{
 		bucketRet := make(SortableNode,0)
 		for _,NodeItem := range bucket.entries.entries {
 			node := NodeItem
-			if node.registered && !enode.IsLightNode(enode.NodeTypeOption(node.NodeType())) && !enode.IsBootNode(enode.NodeTypeOption(node.NodeType()) ) {
+			if node.registered && time.Now().After(node.testAt) && !enode.IsLightNode(enode.NodeTypeOption(node.NodeType())) && !enode.IsBootNode(enode.NodeTypeOption(node.NodeType()) ) {
 				bucketRet = append(bucketRet,node)
 			}
 
@@ -1061,7 +1100,10 @@ func (tab *Table) loadSeedNodes() {
 		seed.latency =tab.db.GetNodeLatency(seed.ID(),seed.IP())
 		age := log.Lazy{Fn: func() interface{} { return time.Since(tab.db.LastPongReceived(seed.ID(), seed.IP())) }}
 		log.Trace("Found seed node in database", "id", seed.ID(), "addr", seed.addr(), "age", age,"latency",seed.latency)
-		tab.addSeenNode(seed)
+		if tab.filters == nil || !tab.filters.IsBlocked(seed.ID()) {
+			tab.addSeenNode(seed)
+		}
+
 	}
 }
 const (
@@ -1069,7 +1111,7 @@ const (
 	StateEntries =1
 	StateReplace = 2
 )
-func (tab *Table)updateNodeStatus(nodeId enode.ID,b *bucket,alive bool ){
+func (tab *Table)updateNodeStatus(nodeId enode.ID,b *bucket,alive bool, nextTimeToTest time.Time ){
     //log.Info("33")
 	//defer func(){log.Info("33.1")}()
 	//b := tab.buckets[bi]
@@ -1079,16 +1121,22 @@ func (tab *Table)updateNodeStatus(nodeId enode.ID,b *bucket,alive bool ){
 	//state 0 not found /1 in  connects /2 in entries /3 in replacement
 
 	if anode = b.entries.Get(nodeId); anode != nil {
+		if !time.Now().After(anode.testAt) {
+			return
+		}
+		anode.testAt = nextTimeToTest
+
 		if ! alive {
 			//移动到replacement的最后
 			_,items := b.entries.RemoveNodeItem(nodeId)
-			if b.replacements.Length() >0 && time.Since( b.replacements.entries[0].testAt) > RevalidateInterval{
+			if b.replacements.Length() >0 && time.Now().After( b.replacements.entries[0].testAt){
 				ok,items := b.replacements.RemoveNodeItem(b.replacements.entries[0].ID())
 				if ok {
 					b.entries.AddNodeItem(items,false)
 				}
 
 			}
+
 			b.replacements.AddNodeItem(items,true)
 		}else{
 			tab.shrinkUnsedBranches(anode)
@@ -1101,6 +1149,10 @@ func (tab *Table)updateNodeStatus(nodeId enode.ID,b *bucket,alive bool ){
 		}
 
 	} else if anode = b.replacements.Get(nodeId); anode != nil {
+		if !time.Now().After(anode.testAt) {
+			return
+		}
+		anode.testAt = nextTimeToTest
 		if alive {
 			_,items := b.replacements.RemoveNodeItem(nodeId)
 			b.entries.AddNodeItem(items,true)
@@ -1174,7 +1226,7 @@ func (tab *Table) nodeToRevalidate() (n *node, bi int) {
 		b := tab.buckets[bi]
 		if b.entries.Length() > 0 {
 			last := b.entries.entries[b.entries.Length()-1]
-			if time.Since(last.testAt) > 30 *time.Second {
+			if time.Now().After(last.testAt)  {
 				return last,bi
 			}else{
 				return nil,0
@@ -1192,7 +1244,7 @@ func (tab *Table) replaceNodeToCheck() (n *node, bi int) {
 		b := tab.buckets[bi]
 		if b.entries.Length() < bucketSize && b.replacements.Length() > 0 {
 			last := b.replacements.entries[0]
-			if time.Since(last.testAt) > 30 *time.Second {
+			if time.Now().After(last.testAt) {
 				return last, bi
 			}else{
 				return nil,0
@@ -1398,6 +1450,7 @@ func (n *node )OnPingReceived (ip net.IP,port uint16){
 	n.Node.Set(enr.LocalIP(ip))
 	n.Node.Set(enr.LUDP(port))
 }
+
 func (tab *Table)RequestPing(node *enode.Node, ch chan *enode.Node) {
 	b := tab.bucket(node.ID())
 	n := b.entries.Get(node.ID())
@@ -1409,9 +1462,9 @@ func (tab *Table)RequestPing(node *enode.Node, ch chan *enode.Node) {
 			tab.DoPing(n,ch)
 		}else {
 			log.Warn("want to connect an unping node:","id",node.ID())
-			if ch != nil {
-				ch <- nil
-			}
+			n:=wrapNode(node)
+			tab.addSeenNode(n)
+			tab.DoPing(n,ch)
 		}
 	}
 
@@ -1419,27 +1472,37 @@ func (tab *Table)RequestPing(node *enode.Node, ch chan *enode.Node) {
 func (tab *Table) DoPing(n  *node,ch chan *enode.Node ) {
 
 	go func (){
-		n.testAt = time.Now()
-		var toAddr net.UDPAddr
-		lip := n.LIP()
-		if len(lip) == 0 || n.LUDP() == 0{
-			toAddr = net.UDPAddr{IP: n.IP(), Port: n.UDP()}
-		}else {
-			toAddr = net.UDPAddr{IP: lip, Port: int(n.LUDP())}
-		}
-		err,duration := tab.net.ping(n.ID(),&toAddr)
 
-		if err == nil {
-			n.latency = int64(duration)
+		if tab.filters.IsBlocked(n.ID()){
+			tab.mutex.Lock()
+			tab.updateNodeStatus(n.ID(),tab.bucket(n.ID()),false ,time.Now().Add( 30*time.Second) )
+			tab.mutex.Unlock()
+			if ch != nil {
+				ch <- &n.Node
+			}
 		}else {
-			n.latency = LatencyInvalid
+			var toAddr net.UDPAddr
+			lip := n.LIP()
+			if len(lip) == 0 || n.LUDP() == 0{
+				toAddr = net.UDPAddr{IP: n.IP(), Port: n.UDP()}
+			}else {
+				toAddr = net.UDPAddr{IP: lip, Port: int(n.LUDP())}
+			}
+			err,duration := tab.net.ping(n.ID(),&toAddr)
+
+			if err == nil {
+				n.latency = int64(duration)
+			}else {
+				n.latency = LatencyInvalid
+			}
+			tab.mutex.Lock()
+			tab.updateNodeStatus(n.ID(),tab.bucket(n.ID()),err == nil ,time.Now().Add( 30*time.Second) )
+			tab.mutex.Unlock()
+			if ch != nil {
+				ch <- &n.Node
+			}
 		}
-		tab.mutex.Lock()
-		tab.updateNodeStatus(n.ID(),tab.bucket(n.ID()),err == nil )
-		tab.mutex.Unlock()
-		if ch != nil {
-			ch <- &n.Node
-		}
+
 	}()
 
 }
@@ -1520,7 +1583,7 @@ func (tab *Table) DoPongResult(n *enode.Node,duration int64,ok bool)  {
 	}
 
 
-	tab.updateNodeStatus(n.ID(),b,ok)
+	tab.updateNodeStatus(n.ID(),b,ok,time.Now().Add(30*time.Second))
 
 }
 /**
@@ -1562,7 +1625,7 @@ func (tab *Table) TargetBucketInfo(nodeId enode.ID) (bucketId int,entries,replac
 	return bucketIndex,bucket.entries,bucket.replacements
 }
 
-func (tab *Table) RemoveConnectedNode(nodeId enode.ID) {
+func (tab *Table) RemoveConnectedNode(nodeId enode.ID,discCount int ) {
     log.Info("Node Disconnected:","id",nodeId)
 	//defer func(){log.Info("45.1")}()
 	tab.mutex.Lock()
@@ -1575,7 +1638,7 @@ func (tab *Table) RemoveConnectedNode(nodeId enode.ID) {
 
 
 	b := tab.bucket(nodeId)
-	tab.updateNodeStatus(nodeId,b,false)
+	tab.updateNodeStatus(nodeId,b,false,time.Now().Add(time.Duration(discCount * 30) *time.Second))
 
 	//前面anode在rlpx的时候，已经进行了一次不对称加密，所以是无法模仿出其他节点进来，因此判定一次IP只是冗余判定
 

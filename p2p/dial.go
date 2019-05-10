@@ -94,7 +94,7 @@ type discoverTable interface {
 	GetKnownNodesSorted()[]*enode.Node
 	RequestPing(n  *enode.Node,ch chan *enode.Node )
 	CanAddNode(n *enode.Node) bool
-	RemoveConnectedNode(nodeId enode.ID)
+	RemoveConnectedNode(nodeId enode.ID,discCount int)
 	AddBootnode(n *enode.Node)
 	OnNodeChanged(chan struct{})
 	TargetBucketInfo(nodeId enode.ID) (bucketId int,entries,replacements *discover.NodeQueue)

@@ -114,6 +114,8 @@ func (h *Hive) Start(server *p2p.Server) error {
 	h.ticker = time.NewTicker(h.KeepAliveInterval)
 	h.refreshTicker = time.NewTicker(h.RefreshPeers)
 	server.SetNotificationChan(h.newNodeDiscov)
+
+	h.Kademlia.SetFilter(server.FilterChain)
 	//server.SetNodeAddChecker(h.CheckNode)
 	// this loop is doing bootstrapping and maintains a healthy table
 	h.doRefresh()
@@ -169,7 +171,7 @@ func (h *Hive)doRefresh(){
 	h.refreshLock.Lock()
 
 	defer h.refreshLock.Unlock()
-	h.Register(nodes...)
+	h.Register(true,nodes...)
 
 }
 // Stop terminates the updateloop and saves the peers
@@ -311,7 +313,7 @@ func (h *Hive) loadPeers() error {
 	}
 	log.Info(fmt.Sprintf("hive %08x: peers loaded", h.BaseAddr()[:4]))
 
-	return h.Register(as...)
+	return h.Register(true, as...)
 }
 
 // savePeers, savePeer implement persistence callback/

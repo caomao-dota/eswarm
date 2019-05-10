@@ -207,19 +207,19 @@ func NewRegistry(localID enode.ID, delivery *Delivery, syncChunkStore storage.Sy
 					select {
 					case <-maxTimer.C:
 						// force syncing update when a hard timeout is reached
-						log.Trace("Sync subscriptions update on hard timeout")
+						log.Info("Sync subscriptions update on hard timeout")
 						// request for syncing subscription to new peers
 						streamer.updateSyncing(nil)
 						break loop
 					case <-timer.C:
 						// start syncing as no new peers has been added to kademlia
 						// for some time
-						log.Trace("Sync subscriptions update")
+						log.Info("Sync subscriptions update")
 						// request for syncing subscription to new peers
 						streamer.updateSyncing(nil)
 						break loop
 					case size := <-addressBookSizeC:
-						log.Trace("Kademlia address book size changed on depth change", "size", size)
+						log.Info("Kademlia address book size changed on depth change", "size", size)
 						// new peers has been added to kademlia,
 						// reset the timer to prevent early sync subscriptions
 						if !timer.Stop() {
@@ -325,11 +325,11 @@ func (r *Registry) RequestSubscription(peerId enode.ID, s Stream, h *Range, prio
 
 // Subscribe initiates the streamer
 func (r *Registry) Subscribe(peerId enode.ID, s Stream, h *Range, priority uint8) error {
-	/*if h == nil {
+	if h == nil {
 		log.Info("Subscribe","id",peerId,"stream:",s.Name,"range:","no")
 	}else {
 		log.Info("Subscribe","id",peerId,"stream:",s.Name,"range:",h.String())
-	}*/
+	}
 
 	// check if the stream is registered
 	if _, err := r.GetClientFunc(s.Name); err != nil {
@@ -380,7 +380,7 @@ func (r *Registry) Subscribe(peerId enode.ID, s Stream, h *Range, priority uint8
 		History:  h,
 		Priority: priority,
 	}
-	log.Debug("Subscribe ", "peer", peerId, "stream", s, "history", h)
+	//log.Info("Subscribe ", "peer", peerId, "stream", s, "history", h)
 
 	return peer.SendPriority(context.TODO(), msg, priority)
 }
@@ -498,7 +498,10 @@ func (r *Registry) updateSyncing(peers map[enode.ID]*Peer) {
 	if peers == nil  {
 		peers = r.peers
 	}
-	for id, peer := range r.peers {
+	if len(peers) == 0 {
+		return
+	}
+	for id, peer := range peers {
 		peer.serverMu.RLock()
 		for stream := range peer.servers {
 			if stream.Name == "SYNC" {

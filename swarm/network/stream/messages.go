@@ -300,7 +300,7 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 		log.Debug("Sync finished", "peer", p.ID(), "stream", req.Stream, "from", from, "to", to, "addr", p.streamer.addr)
 		return nil
 	}
-	timeDelay := 3*time.Since(p.lastHashTime)
+	/*timeDelay := 10*time.Since(p.lastHashTime)
 	if timeDelay > 5*time.Second {
 		timeDelay = 5*time.Second
 	}
@@ -309,7 +309,7 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 	select {
 	case <-delay.C:
 	}
-	p.lastHashTime = time.Now()
+	p.lastHashTime = time.Now()*/
 	//注意，from/to变成新的了，Want应该对应的旧的，这个的意思是就同时发送上一次的wantedhash和下一次的	from/to，这个在下面的处理函数里得到了验证要
 	msg := &WantedHashesMsg{
 		Stream: req.Stream,
