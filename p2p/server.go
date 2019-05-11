@@ -819,6 +819,7 @@ running:
 			item := BlackItem{time.Now().Add(30*time.Second),1}
 			if(exist) {
 				item = val.(BlackItem)
+
 				item.DiscTime = time.Now().Add( time.Duration(item.DiscCount* 30)*time.Second)
 				if item.DiscCount < 60 {
 					item.DiscCount++
@@ -1010,6 +1011,9 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 	srv.lock.Unlock()
 	if !running {
 		return errServerStopped
+	}
+	if dialDest!= nil && srv.FilterChain.IsBlocked(dialDest.ID()){
+		return DiscBlockedPeer
 	}
 	// If dialing, figure out the remote public key.
 	var dialPubkey *ecdsa.PublicKey

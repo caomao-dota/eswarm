@@ -272,6 +272,7 @@ var (
 func (s *dialstate) checkDial(n *enode.Node, peers map[enode.ID]*Peer) error {
 	_, dialing := s.dialing[n.ID()]
 	switch {
+
 	case dialing:
 		return errAlreadyDialing
 	case peers[n.ID()] != nil:

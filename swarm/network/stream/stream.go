@@ -498,9 +498,7 @@ func (r *Registry) updateSyncing(peers map[enode.ID]*Peer) {
 	if peers == nil  {
 		peers = r.peers
 	}
-	if len(peers) == 0 {
-		return
-	}
+
 	for id, peer := range peers {
 		peer.serverMu.RLock()
 		for stream := range peer.servers {

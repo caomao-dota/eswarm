@@ -1474,6 +1474,7 @@ func (tab *Table) DoPing(n  *node,ch chan *enode.Node ) {
 	go func (){
 
 		if tab.filters.IsBlocked(n.ID()){
+			log.Info("do blocked:","id",n.ID(),"addr",n.String())
 			tab.mutex.Lock()
 			tab.updateNodeStatus(n.ID(),tab.bucket(n.ID()),false ,time.Now().Add( 30*time.Second) )
 			tab.mutex.Unlock()
@@ -1496,6 +1497,7 @@ func (tab *Table) DoPing(n  *node,ch chan *enode.Node ) {
 				n.latency = LatencyInvalid
 			}
 			tab.mutex.Lock()
+			log.Info("ok to update","id",n.ID(),"err",err)
 			tab.updateNodeStatus(n.ID(),tab.bucket(n.ID()),err == nil ,time.Now().Add( 30*time.Second) )
 			tab.mutex.Unlock()
 			if ch != nil {
@@ -1598,15 +1600,19 @@ func (tab *Table) CanAddNode(n *enode.Node) (bool) {
 	b := tab.bucket(n.ID())
 
 	//tab.OnPingReceived(n)
-	tab.mutex.Lock()
-	defer tab.mutex.Unlock()
+	//tab.mutex.Lock()
+	//defer tab.mutex.Unlock()
 	if  b.entries.Contains( n.ID()) {
 		nodes := b.entries.Get(n.ID())
 		return nodes != nil
 	}
 
-
-	return false
+	//fmt.Println(".....start")
+	ch := make (chan *enode.Node)
+	tab.RequestPing(n,ch)
+	result := <-ch
+	//fmt.Println(".....end")
+	return result != nil
 
 }
 func (tab *Table) TargetBucketInfo(nodeId enode.ID) (bucketId int,entries,replacements *NodeQueue){
