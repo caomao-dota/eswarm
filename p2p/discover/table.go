@@ -1497,7 +1497,7 @@ func (tab *Table) DoPing(n  *node,ch chan *enode.Node ) {
 				n.latency = LatencyInvalid
 			}
 			tab.mutex.Lock()
-			log.Info("ok to update","id",n.ID(),"err",err)
+			//log.Info("ok to update","id",n.ID(),"err",err)
 			tab.updateNodeStatus(n.ID(),tab.bucket(n.ID()),err == nil ,time.Now().Add( 30*time.Second) )
 			tab.mutex.Unlock()
 			if ch != nil {

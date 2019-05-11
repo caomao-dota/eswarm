@@ -189,6 +189,7 @@ func NewRegistry(localID enode.ID, delivery *Delivery, syncChunkStore storage.Sy
 				return
 			}
 
+			fmt.Println("do Update")
 			// initial requests for syncing subscription to peers
 			streamer.updateSyncing(nil)
 
@@ -498,7 +499,7 @@ func (r *Registry) updateSyncing(peers map[enode.ID]*Peer) {
 	if peers == nil  {
 		peers = r.peers
 	}
-
+	log.Info("update syncing")
 	for id, peer := range peers {
 		peer.serverMu.RLock()
 		for stream := range peer.servers {
@@ -563,6 +564,7 @@ func (r *Registry) requestPeerSubscriptions(kad *network.Kademlia, subs map[enod
 		// nodes that do not provide stream protocol
 		// should not be subscribed, e.g. bootnodes
 		if !p.HasCap("stream") {
+			log.Info("peer has no Stream:","Id",p.ID(),"addr",p.String())
 			return true
 		}
 	/*	//如果bucket中有轻节点，就跳过，这个是保护措施，其实bucket中不应该有轻节
@@ -600,7 +602,7 @@ func (r *Registry) requestPeerSubscriptions(kad *network.Kademlia, subs map[enod
 
 // doRequestSubscription sends the actual RequestSubscription to the peer
 func doRequestSubscription(r *Registry, p *network.Peer, bin uint8, subs map[enode.ID]map[Stream]struct{}) bool {
-	log.Debug("Requesting subscription by registry:", "registry", r.addr, "peer", p.ID(), "bin", bin)
+	log.Info("Requesting subscription by registry:", "registry", r.addr, "peer", p.ID(), "bin", bin)
 	// bin is always less then 256 and it is safe to convert it to type uint8
 	stream := NewStream("SYNC", FormatSyncBinKey(bin), true)
 	if streams, ok := subs[p.ID()]; ok {
@@ -610,8 +612,10 @@ func doRequestSubscription(r *Registry, p *network.Peer, bin uint8, subs map[eno
 	}
 	err := r.RequestSubscription(p.ID(), stream, NewRange(0, 0), High)
 	if err != nil {
-		log.Debug("Request subscription", "err", err, "peer", p.ID(), "stream", stream)
+		log.Info("Request subscription", "err", err, "peer", p.ID(), "stream", stream)
 		return false
+	}else{
+		log.Info("Request subscription ok", "peer", p.ID(), "stream", stream)
 	}
 	return true
 }

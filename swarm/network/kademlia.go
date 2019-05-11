@@ -118,6 +118,7 @@ func NewKademlia(addr []byte, params *KadParams) *Kademlia {
 		lconns:    pot.NewPot(nil, 0),
 		peers:     make(map[string]bool),
 		blacklist:blacklist,
+		nDepth:   -1,
 
 	}
 }
@@ -247,7 +248,7 @@ func (k *Kademlia) Register(toRegister bool,peers ...*BzzAddr ) error {
 		k.addrCountC <- k.addrs.Size()
 	}
 
-	k.sendNeighbourhoodDepthChange()
+	//k.sendNeighbourhoodDepthChange()
 	return nil
 }
 func (k *Kademlia)GetIntendBinInfo(anode enode.ID) (int,int){
@@ -572,9 +573,11 @@ func (k *Kademlia) sendNeighbourhoodDepthChange() {
 	// It provides signaling of neighbourhood depth change.
 	// This part of the code is sending new neighbourhood depth to nDepthC if that condition is met.
 	if k.nDepthC != nil {
+
 		nDepth := depthForPot(k.conns, k.NeighbourhoodSize, k.base)
 		if nDepth != k.nDepth {
 			k.nDepth = nDepth
+			log.Info("new neighbor","depth",nDepth)
 			k.nDepthC <- nDepth
 		}
 	}
