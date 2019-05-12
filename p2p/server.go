@@ -1061,14 +1061,15 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 		return DiscUnexpectedIdentity
 	}
 	c.caps, c.name = phs.Caps, phs.Name
+
+	if !srv.ntab.CanAddNode(c.node) {
+		log.Info(" unable to add node to kad network","id",c.node.String(),"ip",c.node.IP(), "port",c.node.TCP())
+		return errors.New("break peer and waiting for ping/pong first")
+	}
 	err = srv.checkpoint(c, srv.addpeer)
 	if err != nil {
 		clog.Trace("Rejected peer", "err", err)
 		return err
-	}
-	if !srv.ntab.CanAddNode(c.node) {
-		log.Info(" unable to add node to kad network","id",c.node.String(),"ip",c.node.IP(), "port",c.node.TCP())
-		return errors.New("break peer and waiting for ping/pong first")
 	}
 	if srv._addCheckFun != nil  {
 		if  !srv._addCheckFun(c.node){
