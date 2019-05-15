@@ -237,9 +237,9 @@ func (p *Peer) Account() [20]byte {
 // resulting in disconnection
 func (p *Peer) Run(handler func(ctx context.Context, msg interface{}) error) error {
 	for {
-		fmt.Println("1")
+
 		if err := p.handleIncoming(handler); err != nil {
-			fmt.Println("2")
+
 			if err != io.EOF {
 				metrics.GetOrRegisterCounter("peer.handleincoming.error", nil).Inc(1)
 				log.Error("peer.handleIncoming", "err", err)
@@ -249,7 +249,7 @@ func (p *Peer) Run(handler func(ctx context.Context, msg interface{}) error) err
 			}
 
 		}
-		fmt.Println("3")
+
 	}
 }
 
@@ -328,7 +328,6 @@ func (p *Peer) Send(ctx context.Context, msg interface{}) error {
 func (p *Peer) handleIncoming(handle func(ctx context.Context, msg interface{}) error) error {
 
 	msg, err := p.rw.ReadMsg()
-	fmt.Println("1.1")
 	if err != nil {
 		return err
 	}
