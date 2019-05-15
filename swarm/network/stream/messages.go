@@ -26,7 +26,6 @@ import (
 	"github.com/plotozhu/MDCMainnet/swarm/log"
 	bv "github.com/plotozhu/MDCMainnet/swarm/network/bitvector"
 	"github.com/plotozhu/MDCMainnet/swarm/spancontext"
-	"github.com/plotozhu/MDCMainnet/swarm/storage"
 )
 
 var syncBatchTimeout = 30 * time.Second
@@ -75,7 +74,7 @@ type RequestSubscriptionMsg struct {
 }
 
 func (p *Peer) handleRequestSubscription(ctx context.Context, req *RequestSubscriptionMsg) (err error) {
-	log.Debug(fmt.Sprintf("handleRequestSubscription: streamer %s to subscribe to %s with stream %s", p.streamer.addr, p.ID(), req.Stream))
+	log.Info(fmt.Sprintf("handleRequestSubscription: streamer %s to subscribe to %s with stream %s", p.streamer.addr, p.ID(), req.Stream))
 	if err = p.streamer.Subscribe(p.ID(), req.Stream, req.History, req.Priority); err != nil {
 		// The error will be sent as a subscribe error message
 		// and will not be returned as it will prevent any new message
@@ -103,23 +102,28 @@ func (p *Peer) handleSubscribeMsg(ctx context.Context, req *SubscribeMsg) (err e
 		}
 	}()
 
-	log.Debug("received subscription", "from", p.streamer.addr, "peer", p.ID(), "stream", req.Stream, "history", req.History)
+	log.Info("received subscription", "from", p.streamer.addr, "peer", p.ID(), "stream", req.Stream, "history", req.History)
 
 	f, err := p.streamer.GetServerFunc(req.Stream.Name)
 	if err != nil {
-		return err
+		//return err
 	}
 
 	//分析获取相应的streamer
 	s, err := f(p, req.Stream.Key, req.Stream.Live)
 	if err != nil {
-		return err
+		//return err
 	}
 	//配置流化器
 	os, err := p.setServer(req.Stream, s, req.Priority)
 	if err != nil {
-		return err
+		//return err
 	}
+
+	os.stm.OnSubscribe(req)
+	//不需要做什么，因为
+	/*p.DoSubscribe(s,req.History,req.Priority)
+
 
 	//准备需要读取的范围，如果有，那么就从历史记录那里开始
 	var from uint64
@@ -155,7 +159,7 @@ func (p *Peer) handleSubscribeMsg(ctx context.Context, req *SubscribeMsg) (err e
 
 		}()
 	}
-
+*/
 	return nil
 }
 
@@ -203,11 +207,10 @@ func (m OfferedHashesMsg) String() string {
 // 本函数处理收到的offeredHash,其简单的过程就是检查这些hash,看看哪些应该自己存储但是还没有的，通过	bitvector（wantedHash）来汇报给对方，
 // 汇报的时候，直接汇报当前需要的哈希和下一次的哈希的范围
 // 这里面只是汇报自身所需的哈希，获取的过程是由对方发送过来的，那么：
+// TODO 调研
 // 1.设备刚初始化的时候，是不是会占用大量的带宽
 // 2.如果某个哈希没有取到（对方因为磁盘空间原因删除了），这个哈希是否就不管了，还是需要到别的地方去取
 func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg) error {
-	metrics.GetOrRegisterCounter("peer.handleofferedhashes", nil).Inc(1)
-
 	log.Debug("Received offered batch","peer", p.ID(), "stream", req.Stream, "from", req.From, "to", req.To)
 	var sp opentracing.Span
 	ctx, sp = spancontext.StartSpan(
@@ -215,145 +218,160 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 		"handle.offered.hashes")
 	defer sp.Finish()
 
-	c, _, err := p.getOrSetClient(req.Stream, req.From, req.To)
+	c, _, err := p.getOrSetClient(req.Stream, req.From, req.To,0)
+	if err != nil {
+		return err
+	}
+	//p.procOfferedHashes(c,ctx,req)
+	return  c.stm.OnOfferedHashes(req)
+}
+func (p *Peer) procOfferedHashes(c* client,ctx context.Context, req *OfferedHashesMsg) (error,bool ) {
+	metrics.GetOrRegisterCounter("peer.handleofferedhashes", nil).Inc(1)
+
+
 	var c_live *client
 	if !req.Stream.Live {
 		c_live,_ = p.clients[Stream{req.Stream.Name,req.Stream.Key,true}]
 	}
 
-	if err != nil {
-		return err
-	}
+
 
 	hashes := req.Hashes
 	lenHashes := len(hashes)
-	if lenHashes%HashSize != 0 {
-		return fmt.Errorf("error invalid hashes length (len: %v)", lenHashes)
+	if lenHashes % HashSize != 0 {
+		return fmt.Errorf("error invalid hashes length (len: %v)", lenHashes),false
 	}
 
-	want, err := bv.New(lenHashes / HashSize)
-	if err != nil {
-		return fmt.Errorf("error initiaising bitvector of length %v: %v", lenHashes/HashSize, err)
-	}
-
-	ctr := 0
-	errC := make(chan error)
-	ctx, cancel := context.WithTimeout(ctx, syncBatchTimeout)
-
-	ctx = context.WithValue(ctx, "source", p.ID().String())
-	for i := 0; i < lenHashes; i += HashSize {
-		hash := hashes[i : i+HashSize]
-		//wait是一个函数，要么是一个fetcher函数，要么是nil(数据已经取了）
-		if wait := c.NeedData(ctx, hash); wait != nil {
-			ctr++
-			want.Set(i/HashSize, true)
-			// create request and wait until the chunk data arrives and is stored
-			go func(w func(context.Context) error) {
-				select {
-				case errC <- w(ctx): // 	fetcher函数，从对方去取数据
-				case <-ctx.Done(): //
-				}
-			}(wait)
+	if lenHashes != 0 {
+		want, err := bv.New(lenHashes / HashSize)
+		if err != nil {
+			return fmt.Errorf("error initiaising bitvector of length %v: %v", lenHashes/HashSize, err),false
 		}
-	}
 
-	//重新建立了一个线程，管理所有的等待事宜
-	go func() {
-		defer cancel()
-		//需要和ctr对应个数的回应
-		for i := 0; i < ctr; i++ {
-			select {
-			case err := <-errC:
-				if err != nil {
-					log.Debug("client.handleOfferedHashesMsg() error waiting for chunk, dropping peer", "peer", p.ID(), "err", err)
-					//p.Drop(err)
-					//return
+		ctr := 0
+		errC := make(chan error)
+		ctx, cancel := context.WithTimeout(ctx, syncBatchTimeout)
+
+		ctx = context.WithValue(ctx, "source", p.ID().String())
+		for i := 0; i < lenHashes; i += HashSize {
+			hash := hashes[i : i+HashSize]
+			//wait是一个函数，要么是一个fetcher函数，要么是nil(数据已经取了）
+			if wait := c.NeedData(ctx, hash); wait != nil {
+				ctr++
+				want.Set(i/HashSize, true)
+				// create request and wait until the chunk data arrives and is stored
+				go func(w func(context.Context) error) {
+					select {
+					case errC <- w(ctx): // 	fetcher函数，从对方去取数据
+					case <-ctx.Done(): //
+					}
+				}(wait)
+			}
+		}
+
+		//重新建立了一个线程，管理所有的等待事宜
+		go func() {
+			defer cancel()
+			//需要和ctr对应个数的回应
+			for i := 0; i < ctr; i++ {
+				select {
+				case err := <-errC:
+					if err != nil {
+						log.Debug("client.handleOfferedHashesMsg() error waiting for chunk, dropping peer", "peer", p.ID(), "err", err)
+						//p.Drop(err)
+						//return
+					}
+				case <-ctx.Done():
+					log.Debug("client.handleOfferedHashesMsg() context done", "ctx.Err()", ctx.Err())
+					break
+				case <-c.quit:
+					log.Debug("client.handleOfferedHashesMsg() quit")
+					return
 				}
+			}
+			//没有return出去，说明所有的都正常了(只有errC为0的才是正常的)
+			select {
+			case c.next <- c.batchDone(p, req, hashes): //这个是正常的退出
+			case <-c.quit:
+				log.Debug("client.handleOfferedHashesMsg() quit")
 			case <-ctx.Done():
 				log.Debug("client.handleOfferedHashesMsg() context done", "ctx.Err()", ctx.Err())
-				break
+			}
+		}()
+		// only send wantedKeysMsg if all missing chunks of the previous batch arrived
+		// except
+		if c.stream.Live {
+			c.sessionAt = req.From
+		}
+		//看看还有没有,因为不知道会不会还有，所以总是要发
+		from, to := c.nextBatch(req.To + 1,c_live)
+
+
+		log.Debug("set next batch", "peer", p.ID(), "stream", req.Stream, "from", req.From, "to", req.To, "addr", p.streamer.addr)
+		if from == to {
+			log.Debug("Sync finished", "peer", p.ID(), "stream", req.Stream, "from", from, "to", to, "addr", p.streamer.addr)
+			return nil,true
+		}
+
+		//注意，from/to变成新的了，Want应该对应的旧的，这个的意思是就同时发送上一次的wantedhash和下一次的	from/to，这个在下面的处理函数里得到了验证要
+		msg := &WantedHashesMsg{
+			Stream: req.Stream,
+			//		Want:   want.Bytes(),
+			From:   from,
+			To:     to,
+		}
+		go func() {
+			timeDelay := 10*time.Since(p.lastHashTime)
+			if timeDelay > 5*time.Second {
+				timeDelay = 5*time.Second
+			}
+			delay := time.NewTimer(timeDelay)
+			//log.Info("Delayed Sync:","delayed",timeDelay)
+			select {
+			case <-delay.C:
+			}
+			p.lastHashTime = time.Now()
+			//		log.Debug("waiting for sending want batch", "peer", p.ID(), "stream", msg.Stream, "from", msg.From, "to", msg.To)
+			select {
+			case err := <-c.next:
+				if err != nil {
+					log.Warn("c.next error dropping peer", "err", err)
+					//p.Drop(err)
+					return
+				}
 			case <-c.quit:
 				log.Debug("client.handleOfferedHashesMsg() quit")
 				return
-			}
-		}
-		//没有return出去，说明所有的都正常了(只有errC为0的才是正常的)
-		select {
-		case c.next <- c.batchDone(p, req, hashes): //这个是正常的退出
-		case <-c.quit:
-			log.Debug("client.handleOfferedHashesMsg() quit")
-		case <-ctx.Done():
-			log.Debug("client.handleOfferedHashesMsg() context done", "ctx.Err()", ctx.Err())
-		}
-	}()
-	// only send wantedKeysMsg if all missing chunks of the previous batch arrived
-	// except
-	if c.stream.Live {
-		c.sessionAt = req.From
-	}
-	//看看还有没有,因为不知道会不会还有，所以总是要发
-	from, to := c.nextBatch(req.To + 1,c_live)
-
-
-	log.Debug("set next batch", "peer", p.ID(), "stream", req.Stream, "from", req.From, "to", req.To, "addr", p.streamer.addr)
-	if from == to {
-		log.Debug("Sync finished", "peer", p.ID(), "stream", req.Stream, "from", from, "to", to, "addr", p.streamer.addr)
-		return nil
-	}
-
-	//注意，from/to变成新的了，Want应该对应的旧的，这个的意思是就同时发送上一次的wantedhash和下一次的	from/to，这个在下面的处理函数里得到了验证要
-	msg := &WantedHashesMsg{
-		Stream: req.Stream,
-		Want:   want.Bytes(),
-		From:   from,
-		To:     to,
-	}
-	go func() {
-		timeDelay := 10*time.Since(p.lastHashTime)
-		if timeDelay > 5*time.Second {
-			timeDelay = 5*time.Second
-		}
-		delay := time.NewTimer(timeDelay)
-		//log.Info("Delayed Sync:","delayed",timeDelay)
-		select {
-		case <-delay.C:
-		}
-		p.lastHashTime = time.Now()
-//		log.Debug("waiting for sending want batch", "peer", p.ID(), "stream", msg.Stream, "from", msg.From, "to", msg.To)
-		select {
-		case err := <-c.next:
-			if err != nil {
-				log.Warn("c.next error dropping peer", "err", err)
-				//p.Drop(err)
+			case <-ctx.Done():
+				log.Debug("client.handleOfferedHashesMsg() context done", "ctx.Err()", ctx.Err())
 				return
 			}
-		case <-c.quit:
-			log.Debug("client.handleOfferedHashesMsg() quit")
-			return
-		case <-ctx.Done():
-			log.Debug("client.handleOfferedHashesMsg() context done", "ctx.Err()", ctx.Err())
-			return
-		}
-		log.Debug("Sent wanted batch", "peer", p.ID(), "stream", msg.Stream, "from", msg.From, "to", msg.To)
-		err := p.SendPriority(ctx, msg, c.priority)
-		if err != nil {
-			log.Warn("SendPriority error", "err", err)
-		}
-	}()
-	return nil
+			log.Debug("Sent wanted batch", "peer", p.ID(), "stream", msg.Stream, "from", msg.From, "to", msg.To)
+			err := p.SendPriority(ctx, msg, c.priority)
+			if err != nil {
+				log.Warn("SendPriority error", "err", err)
+			}
+		}()
+		return nil,false
+	}else {
+		return nil,true
+	}
+
+
 }
 
 // WantedHashesMsg is the protocol msg data for signaling which hashes
 // offered in OfferedHashesMsg downstream peer actually wants sent over
 type WantedHashesMsg struct {
 	Stream   Stream
-	Want     []byte // bitvector indicating which keys of the batch needed  当前想要的哈希的位映射表
+
+	//Want     []byte // bitvector indicating which keys of the batch needed  当前想要的哈希的位映射表
 	From, To uint64 // next interval offset - empty if not to be continued  下一个要检查的区域
 }
 
 // String pretty prints WantedHashesMsg
 func (m WantedHashesMsg) String() string {
-	return fmt.Sprintf("Stream '%v', Want: %x, Next: [%v-%v]", m.Stream, m.Want, m.From, m.To)
+	return fmt.Sprintf("Stream '%v', Next: [%v-%v]", m.Stream,  m.From, m.To)
 }
 
 // handleWantedHashesMsg protocol msg handler
@@ -367,9 +385,6 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 	if err != nil {
 		return err
 	}
-
-	//currentBatch，是当前还没有提供给对端的所有哈希（上一次提供的）
-	hashes := s.currentBatch
 	// launch in go routine since GetBatch blocks until new hashes arrive
 	go func() {
 
@@ -377,6 +392,16 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 			log.Warn("SendOfferedHashes error", "peer", p.ID().TerminalString(), "err", err)
 		}
 	}()
+	// totally unnecessary,procOfferedHashes routine in client has tried to retrieve data from server, why we nned
+	/*var hashes []byte
+	if req.CurrentFrom == s.currentFrom {
+		//currentBatch，是当前还没有提供给对端的所有哈希（上一次提供的）
+		hashes = s.currentBatch
+	}else {
+		hashes, from, to, proof, err := s.setNextBatch(req.CurrentFrom, req.From+1)
+	}
+
+
 	// go p.SendOfferedHashes(s, req.From, req.To)
 	l := len(hashes) / HashSize
 
@@ -406,6 +431,7 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 
 		}
 	}
+	*/
 	return nil
 }
 

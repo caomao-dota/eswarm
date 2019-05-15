@@ -308,28 +308,16 @@ func (r *Registry) RequestSubscription(peerId enode.ID, s Stream, h *Range, prio
 		return fmt.Errorf("peer not found %v", peerId)
 	}
 
-	if _, err := peer.getServer(s); err != nil {
-		if e, ok := err.(*notFoundError); ok && e.t == "server" {
-			// request subscription only if the server for this stream is not created
-			log.Trace("RequestSubscription", "peer", peerId, "stream", s, "history", h)
-			return peer.Send(context.TODO(), &RequestSubscriptionMsg{
-				Stream:   s,
-				History:  h,
-				Priority: prio,
-			})
-		}
-		return err
-	}
-	log.Trace("RequestSubscription: already subscribed", "peer", peerId, "stream", s, "history", h)
+	peer.CreateServerStm(s,h,prio)
 	return nil
 }
 
 // Subscribe initiates the streamer
 func (r *Registry) Subscribe(peerId enode.ID, s Stream, h *Range, priority uint8) error {
 	if h == nil {
-		log.Info("Subscribe","id",peerId,"stream:",s.Name,"range:","no")
+		log.Info("Subscribe","id",peerId,"stream:",s.String(),"range:","no")
 	}else {
-		log.Info("Subscribe","id",peerId,"stream:",s.Name,"range:",h.String())
+		log.Info("Subscribe","id",peerId,"stream:",s.String(),"range:",h.String())
 	}
 
 	// check if the stream is registered
@@ -341,49 +329,17 @@ func (r *Registry) Subscribe(peerId enode.ID, s Stream, h *Range, priority uint8
 	if peer == nil {
 		return fmt.Errorf("peer not found %v", peerId)
 	}
-
-	var to uint64
-	if !s.Live && h != nil {
-		to = h.To
-	}
-
-	//log.Info("Set client param 1","id",peerId)
-	err := peer.setClientParams(s, newClientParams(priority, to))
-	if err != nil {
-		return err
-	}
-	if s.Live && h != nil {
-		//.Info("Set client param 2","id",peerId)
-		if err := peer.setClientParams(
-			getHistoryStream(s),
-			newClientParams(getHistoryPriority(priority), h.To),
-		); err != nil {
-			return err
-		}
-	}
-	/*var f,t uint64
 	if h == nil {
-		f=0
-		t=0
-	}else {
-		f = h.From
-		t = h.To
-	}
-	c, _, err := peer.getOrSetClient(s, f, t)
+		peer.CreateClientStm(s,NewRange(0,uint64(0xFFFFFFFFFFFFFFFF)),priority).OnSubscriptionReq(0,uint64(0xFFFFFFFFFFFFFFFF))
 
-	f,t,err = c.NextInterval()
-	if err == nil && h != nil {
-		h.From = f
-		h.To = t
-	}*/
-	msg := &SubscribeMsg{
-		Stream:   s,
-		History:  h,
-		Priority: priority,
+	}else{
+		peer.CreateClientStm(s,h,priority).OnSubscriptionReq(h.From,h.To)
 	}
-	//log.Info("Subscribe ", "peer", peerId, "stream", s, "history", h)
 
-	return peer.SendPriority(context.TODO(), msg, priority)
+
+
+	return nil
+
 }
 
 func (r *Registry) Unsubscribe(peerId enode.ID, s Stream) error {
@@ -508,6 +464,7 @@ func (r *Registry) updateSyncing(peers map[enode.ID]*Peer) {
 					subs[id] = make(map[Stream]struct{})
 				}
 				subs[id][stream] = struct{}{}
+				//log.Info(" new subs:","id",id,"stream",stream.Name,"key",stream.Key,"live",stream.Live)
 			}
 		}
 		peer.serverMu.RUnlock()
@@ -613,10 +570,21 @@ func doRequestSubscription(r *Registry, p *network.Peer, bin uint8, subs map[eno
 	err := r.RequestSubscription(p.ID(), stream, NewRange(0, 0), High)
 	if err != nil {
 		log.Info("Request subscription", "err", err, "peer", p.ID(), "stream", stream)
-		return false
+		//return false
 	}else{
 		log.Info("Request subscription ok", "peer", p.ID(), "stream", stream)
 	}
+//	if stream.Name != swarmChunkServerStreamName {
+		stream = getHistoryStream(stream)
+		err = r.RequestSubscription(p.ID(), stream, NewRange(0, 0), High)
+		if err != nil {
+			log.Info("Request subscription", "err", err, "peer", p.ID(), "stream", stream)
+			//return false
+		}else{
+			log.Info("Request subscription ok", "peer", p.ID(), "stream", stream)
+		}
+//	}
+
 	return true
 }
 
@@ -691,8 +659,10 @@ type server struct {
 	Server
 	stream       Stream
 	priority     uint8
+	currentFrom  uint64
 	currentBatch []byte
 	sessionIndex uint64
+	stm			 *stm
 }
 
 // setNextBatch adjusts passed interval based on session index and whether
@@ -737,7 +707,7 @@ type client struct {
 	to        uint64
 	next      chan error
 	quit      chan struct{}
-
+	stm		  *stm
 	intervalsKey   string
 	intervalsStore state.Store
 }

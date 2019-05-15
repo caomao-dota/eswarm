@@ -67,6 +67,9 @@ type Peer struct {
 	clientParams map[Stream]*clientParams
 	quit         chan struct{}
 	lastHashTime  time.Time
+	serverStms    sync.Map
+	clientStms    sync.Map
+
 }
 
 type WrappedPriorityMsg struct {
@@ -85,7 +88,7 @@ func NewPeer(peer *protocols.Peer, streamer *Registry) *Peer {
 		clients:      make(map[Stream]*client),
 		clientParams: make(map[Stream]*clientParams),
 		quit:         make(chan struct{}),
-		lastHashTime: time.Unix(0,0),
+
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	go p.pq.Run(ctx, func(i interface{}) {
@@ -124,9 +127,32 @@ func NewPeer(peer *protocols.Peer, streamer *Registry) *Peer {
 		}
 	}(p.pq)
 
-	go func() {
-		<-p.quit
 
+	go func() {
+		ticker := time.NewTicker(100*time.Millisecond)
+		go func (){
+			log.Info("Start ticker")
+			for range ticker.C {
+
+
+				p.serverStms.Range(func(key,val interface{})bool {
+					go val.(*stm).OnTicker()
+					return true
+				})
+
+				p.clientStms.Range(func(key,val interface{})bool {
+					go val.(*stm).OnTicker()
+					return true
+				})
+
+
+			}
+			log.Info("Stop ticker")
+		}()
+
+		<-p.quit
+		log.Info("quit ticker")
+		ticker.Stop()
 		cancel()
 	}()
 	return p
@@ -177,9 +203,44 @@ func (p *Peer) SendPriority(ctx context.Context, msg interface{}, priority uint8
 	}
 	return err
 }
+func (peer *Peer)DoRequestSubscription(s Stream,h *Range, prio uint8) error{
+	if h != nil  {
+		log.Info("send Request subscription","id",peer.ID(),"stream",s.String(),"range",h.String())
+	}else {
+		log.Info("send Request subscription","id",peer.ID(),"stream",s.String(),"range","no")
+	}
+
+	return peer.Send(context.TODO(), &RequestSubscriptionMsg{
+		Stream:   s,
+		History:  h,
+		Priority: prio,
+	})
+}
+func (peer *Peer)DoSubscribe(s Stream,h *Range, priority uint8) error{
+	log.Info("prepare Subscribe ", "peer", peer.ID(), "stream", s, "history", h)
+	var to uint64
+	if !s.Live && h != nil {
+		to = h.To
+	}
+
+	//log.Info("Set client param 1","id",peerId)
+	peer.setClientParams(s, newClientParams(priority, to))
+
+
+	//创建client和stm,从而实现subscribe消息的超时重发
+	peer.getOrSetClient(s, h.From, h.To,priority)
+	msg := &SubscribeMsg{
+		Stream:   s,
+		History:  h,
+		Priority: priority,
+	}
+	log.Info("Subscribe sent", "peer", peer.ID(), "stream", s, "history", h)
+
+	return peer.SendPriority(context.TODO(), msg, priority)
+}
 
 // SendOfferedHashes sends OfferedHashesMsg protocol msg
-func (p *Peer) SendOfferedHashes(s *server, f, t uint64) error {
+func (p *Peer) SendOfferedHashes(s *server, f, t uint64) (error) {
 	var sp opentracing.Span
 	ctx, sp := spancontext.StartSpan(
 		context.TODO(),
@@ -187,32 +248,59 @@ func (p *Peer) SendOfferedHashes(s *server, f, t uint64) error {
 	)
 	defer sp.Finish()
 
-	hashes, from, to, proof, err := s.setNextBatch(f, t)
-	if err != nil {
-		return err
-	}
-	// true only when quitting
-	if len(hashes) == 0 {
-		log.Debug("Send Offered batch finished", "peer", p.ID(), "stream", s.stream, "len", len(hashes), "from", from, "to", to)
-		return nil
-	}
-	if proof == nil {
-		proof = &HandoverProof{
-			Handover: &Handover{},
+	timer := time.NewTicker(1 * time.Second)
+	nextBatch := make(chan struct{})
+	go func(){
+		//获取下一段哈希 from/to有可能是0(历史数据同步完成），to有可能是最大的uint64，如果是实时流而且已经同步完成了，此处会阻塞
+		hashes, from, to, proof, err := s.setNextBatch(f, t)
+		nextBatch <- struct{}{}
+		if err != nil {
+			//return err
+			log.Info("Error in setNextBatch","stream",s.stream.String(),"from",f,"to",t)
 		}
-	}
-	s.currentBatch = hashes
-	msg := &OfferedHashesMsg{
-		HandoverProof: proof,
-		Hashes:        hashes,
-		From:          from,
-		To:            to,
-		Stream:        s.stream,
-	}
-	//log.Trace
-	log.Debug("Send Offered batch", "peer", p.ID(), "stream", s.stream, "len", len(hashes), "from", from, "to", to)
-	ctx = context.WithValue(ctx, "stream_send_tag", "send.offered.hashes")
-	return p.SendPriority(ctx, msg, s.priority)
+		// true only when quitting，改变：即使hashes长度是0，也需要发送一次，这样客户端才能明确不是丢失的
+		/*if len(hashes) == 0 {
+			log.Debug("Send Offered batch finished", "peer", p.ID(), "stream", s.stream, "len", len(hashes), "from", from, "to", to)
+			return nil,true
+		}*/
+		if proof == nil {
+			proof = &HandoverProof{
+				Handover: &Handover{},
+			}
+		}
+
+		msg := &OfferedHashesMsg{
+			HandoverProof: proof,
+			Hashes:        hashes,
+			From:          from,
+			To:            to,
+			Stream:        s.stream,
+		}
+		//log.Trace
+		log.Info("Send Offered batch", "peer", p.ID(), "stream", s.stream, "len", len(hashes), "from", from, "to", to)
+		ctx = context.WithValue(ctx, "stream_send_tag", "send.offered.hashes")
+		p.SendPriority(ctx, msg, s.priority)
+	}()
+	go func(){
+		select {
+		case <- timer.C:
+			msg := &OfferedHashesMsg{
+				HandoverProof: &HandoverProof{
+					Handover: &Handover{},
+				},
+				Hashes:        []byte{},
+				From:          f,
+				To:            t,
+				Stream:        s.stream,
+			}
+			log.Info("Send Offered batch", "peer", p.ID(), "stream", s.stream, "len", 0, "from", f, "to", t)
+			ctx = context.WithValue(ctx, "stream_send_tag", "send.offered.hashes")
+			p.SendPriority(ctx, msg, s.priority)
+		case <- nextBatch:
+			timer.Stop()
+		}
+	}()
+	return nil
 }
 
 func (p *Peer) getServer(s Stream) (*server, error) {
@@ -225,17 +313,41 @@ func (p *Peer) getServer(s Stream) (*server, error) {
 	}
 	return server, nil
 }
+func (p *Peer) CreateClientStm(s Stream, h *Range, prio uint8) *stm{
 
+	val,ok := p.clientStms.Load(s)
+	if!ok  {
+		result := CreateClientStm(p,s,h,prio)
+		p.clientStms.Store(s,result)
+		return result
+	}
+
+	return val.(*stm)
+}
+func (p *Peer) CreateServerStm(s Stream, h *Range, prio uint8) *stm{
+
+
+	val,ok := p.serverStms.Load(s)
+	if!ok  {
+		result := CreateServerStm(p,s,h,prio)
+		result.EnterState(StateS1)
+		p.serverStms.Store(s,result)
+
+		return result
+	}
+
+	return val.(*stm)
+}
 func (p *Peer) setServer(s Stream, o Server, priority uint8) (*server, error) {
 	p.serverMu.Lock()
 	defer p.serverMu.Unlock()
 
 	if p.servers[s] != nil {
-		return nil, fmt.Errorf("server %s already registered", s)
+		return p.servers[s], fmt.Errorf("server %s already registered", s)
 	}
 
 	if p.streamer.maxPeerServers > 0 && len(p.servers) >= p.streamer.maxPeerServers {
-		return nil, ErrMaxPeerServers
+		return p.servers[s], ErrMaxPeerServers
 	}
 
 	sessionIndex, err := o.SessionIndex()
@@ -247,6 +359,7 @@ func (p *Peer) setServer(s Stream, o Server, priority uint8) (*server, error) {
 		stream:       s,
 		priority:     priority,
 		sessionIndex: sessionIndex,
+		stm:		 p.CreateServerStm(s,NewRange(0, 0),priority),
 	}
 	p.servers[s] = os
 	return os, nil
@@ -255,7 +368,7 @@ func (p *Peer) setServer(s Stream, o Server, priority uint8) (*server, error) {
 func (p *Peer) removeServer(s Stream) error {
 	p.serverMu.Lock()
 	defer p.serverMu.Unlock()
-
+	p.serverStms.Delete(s)
 	server, ok := p.servers[s]
 	if !ok {
 		return newNotFoundError("server", s)
@@ -298,7 +411,7 @@ func (p *Peer) getClient(ctx context.Context, s Stream) (c *client, err error) {
 	return nil, newNotFoundError("client", s)
 }
 
-func (p *Peer) getOrSetClient(s Stream, from, to uint64) (c *client, created bool, err error) {
+func (p *Peer) getOrSetClient(s Stream, from, to uint64,prio uint8) (c *client, created bool, err error) {
 	p.clientMu.Lock()
 	defer p.clientMu.Unlock()
 
@@ -371,6 +484,7 @@ func (p *Peer) getOrSetClient(s Stream, from, to uint64) (c *client, created boo
 		quit:           make(chan struct{}),
 		intervalsStore: p.streamer.intervalsStore,
 		intervalsKey:   intervalsKey,
+		stm:	p.CreateClientStm(s,NewRange(from,to),prio),
 	}
 	p.clients[s] = c
 	cp.clientCreated() // unblock all possible getClient calls that are waiting
@@ -382,6 +496,7 @@ func (p *Peer) removeClient(s Stream) error {
 	p.clientMu.Lock()
 	defer p.clientMu.Unlock()
 
+	p.clientStms.Delete(s)
 	client, ok := p.clients[s]
 	if !ok {
 		return newNotFoundError("client", s)
