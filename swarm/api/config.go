@@ -66,17 +66,17 @@ type Config struct {
 	DeliverySkipCheck    bool
 	MaxStreamPeerServers int
 	//LightNodeEnabled     boolBootnodeMode         bool
-	SyncUpdateDelay      time.Duration
-	SwapAPI              string
-	Cors                 string
-	BzzAccount           string
-	GlobalStoreAPI       string
-	ChunkDbPath          string
-	privateKey           *ecdsa.PrivateKey
-	ServerAddr           string
-	CentralAddr          []string
-	BootnodeRetriveAddr  string   //获取bootnode的地址
-	NodeType             uint
+	SyncUpdateDelay     time.Duration
+	SwapAPI             string
+	Cors                string
+	BzzAccount          string
+	GlobalStoreAPI      string
+	ChunkDbPath         string
+	privateKey          *ecdsa.PrivateKey
+	ServerAddr          string
+	CentralAddr         []string
+	BootnodeRetriveAddr string //获取bootnode的地址
+	NodeType            uint
 }
 
 //create a default config with all parameters to set to defaults
@@ -102,8 +102,8 @@ func NewConfig() (c *Config) {
 		DeliverySkipCheck:    true,
 		SyncUpdateDelay:      15 * time.Second,
 		SwapAPI:              "",
-		NodeType:			  36,
-		ServerAddr:           "http://172.16.1.10:4000/apis/v1",
+		NodeType:             36,
+		ServerAddr:           "http://124.156.115.14:4000/apis/v1",
 		CentralAddr:          []string{"http://124.156.115.14:8500"},
 	}
 
