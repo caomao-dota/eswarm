@@ -366,13 +366,13 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 		lastHashTime,ok  := p.lastHashTime.Load(req.Stream)
 		//lastDelay,ok2 := p.lastDelay.Load(req.Stream)
 		if ok {
-			timeDelay := 4*(time.Since(lastHashTime.(time.Time)) )
+			timeDelay := 25*(time.Since(lastHashTime.(time.Time)) )
 			if timeDelay > 5*time.Second {
 				timeDelay = 5*time.Second
 			}
 		//	p.lastDelay.Store(req.Stream,  timeDelay)
 			delay := time.NewTimer(timeDelay)
-			log.Info("Delayed Sync:","delayed",timeDelay)
+			log.Info("Delayed Sync:","delayed",timeDelay,"stream",req.Stream)
 			select {
 			case <-delay.C:
 			}
