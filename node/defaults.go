@@ -49,6 +49,7 @@ var DefaultConfig = Config{
 		ListenAddr: ":30303",
 		MaxPeers:   25,
 		NAT:        nat.Any(),
+		NodeType:  36,
 	},
 }
 
