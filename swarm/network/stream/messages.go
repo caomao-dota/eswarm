@@ -87,6 +87,7 @@ func (p *Peer) handleRequestSubscription(ctx context.Context, req *RequestSubscr
 	}
 	return err
 }
+
 //处理订阅消息
 func (p *Peer) handleSubscribeMsg(ctx context.Context, req *SubscribeMsg) (err error) {
 	metrics.GetOrRegisterCounter("peer.handlesubscribemsg", nil).Inc(1)
@@ -133,7 +134,6 @@ func (p *Peer) handleSubscribeMsg(ctx context.Context, req *SubscribeMsg) (err e
 		if err := p.SendOfferedHashes(os, from, to); err != nil {
 			log.Warn("SendOfferedHashes error", "peer", p.ID().TerminalString(), "err", err)
 		}
-
 
 	}()
 
@@ -208,7 +208,7 @@ func (m OfferedHashesMsg) String() string {
 func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg) error {
 	metrics.GetOrRegisterCounter("peer.handleofferedhashes", nil).Inc(1)
 
-	log.Debug("Received offered batch","peer", p.ID(), "stream", req.Stream, "from", req.From, "to", req.To)
+	log.Debug("Received offered batch", "peer", p.ID(), "stream", req.Stream, "from", req.From, "to", req.To)
 	var sp opentracing.Span
 	ctx, sp = spancontext.StartSpan(
 		ctx,
@@ -218,7 +218,7 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 	c, _, err := p.getOrSetClient(req.Stream, req.From, req.To)
 	var c_live *client
 	if !req.Stream.Live {
-		c_live,_ = p.clients[Stream{req.Stream.Name,req.Stream.Key,true}]
+		c_live, _ = p.clients[Stream{req.Stream.Name, req.Stream.Key, true}]
 	}
 
 	if err != nil {
@@ -292,8 +292,7 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 		c.sessionAt = req.From
 	}
 	//看看还有没有,因为不知道会不会还有，所以总是要发
-	from, to := c.nextBatch(req.To + 1,c_live)
-
+	from, to := c.nextBatch(req.To+1, c_live)
 
 	log.Debug("set next batch", "peer", p.ID(), "stream", req.Stream, "from", req.From, "to", req.To, "addr", p.streamer.addr)
 	if from == to {
@@ -310,7 +309,7 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 	}
 	go func() {
 
-//		log.Debug("waiting for sending want batch", "peer", p.ID(), "stream", msg.Stream, "from", msg.From, "to", msg.To)
+		//		log.Debug("waiting for sending want batch", "peer", p.ID(), "stream", msg.Stream, "from", msg.From, "to", msg.To)
 		select {
 		case err := <-c.next:
 			if err != nil {
@@ -363,23 +362,22 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 	hashes := s.currentBatch
 	// launch in go routine since GetBatch blocks until new hashes arrive
 	go func() {
-		lastHashTime,ok  := p.lastHashTime.Load(req.Stream)
+		lastHashTime, ok := p.lastHashTime.Load(req.Stream)
 		//lastDelay,ok2 := p.lastDelay.Load(req.Stream)
 		if ok {
-			timeDelay := 25*(time.Since(lastHashTime.(time.Time)) )
-			if timeDelay > 5*time.Second {
-				timeDelay = 5*time.Second
+			timeDelay := 5 * (time.Since(lastHashTime.(time.Time)))
+			if timeDelay > 25*time.Second {
+				timeDelay = 25 * time.Second
 			}
-		//	p.lastDelay.Store(req.Stream,  timeDelay)
+			//	p.lastDelay.Store(req.Stream,  timeDelay)
 			delay := time.NewTimer(timeDelay)
-			log.Info("Delayed Sync:","delayed",timeDelay,"stream",req.Stream)
+			log.Info("Delayed Sync:", "delayed", timeDelay, "stream", req.Stream)
 			select {
 			case <-delay.C:
 			}
-		}else{
+		} else {
 
 		}
-
 
 		p.lastHashTime.Store(req.Stream, time.Now())
 
@@ -391,33 +389,32 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 	l := len(hashes) / HashSize
 
 	log.Info("wanted batch length", "peer", p.ID(), "stream", req.Stream, "from", req.From, "to", req.To, "lenhashes", len(hashes), "l", l)
-		want, err := bv.NewFromBytes(req.Want, l)
-		if err != nil {
-			return fmt.Errorf("error initiaising bitvector of length %v: %v", l, err)
-		}
-		//针对所有的HASH，读取数据后，通过Deliver函数发给对方
-		for i := 0; i < l; i++ {
-			if want.Get(i) {
-				metrics.GetOrRegisterCounter("peer.handlewantedhashesmsg.actualget", nil).Inc(1)
+	want, err := bv.NewFromBytes(req.Want, l)
+	if err != nil {
+		return fmt.Errorf("error initiaising bitvector of length %v: %v", l, err)
+	}
+	//针对所有的HASH，读取数据后，通过Deliver函数发给对方
+	for i := 0; i < l; i++ {
+		if want.Get(i) {
+			metrics.GetOrRegisterCounter("peer.handlewantedhashesmsg.actualget", nil).Inc(1)
 
-				hash := hashes[i*HashSize : (i+1)*HashSize]
-				newCtx := ctx;// ,_ := context.WithTimeout(ctx,20*time.Second)
-				data, err := s.GetData(newCtx, hash)
-				if err == nil {
-					//TODO Aegon 重新考虑一下，是否需要继续读取
-					chunk := storage.NewChunk(hash, data)
-					syncing := true
-					if err := p.Deliver(newCtx, chunk, s.priority, syncing); err != nil {
+			hash := hashes[i*HashSize : (i+1)*HashSize]
+			newCtx := ctx // ,_ := context.WithTimeout(ctx,20*time.Second)
+			data, err := s.GetData(newCtx, hash)
+			if err == nil {
+				//TODO Aegon 重新考虑一下，是否需要继续读取
+				chunk := storage.NewChunk(hash, data)
+				syncing := true
+				if err := p.Deliver(newCtx, chunk, s.priority, syncing); err != nil {
 
-						log.Error("Send deliver data error:","addr",hash,"error",err)
-					}
-				}else{
-					log.Error("Retrieve deliver data error:","addr",hash,"error",err)
+					log.Error("Send deliver data error:", "addr", hash, "error", err)
 				}
-
-
+			} else {
+				log.Error("Retrieve deliver data error:", "addr", hash, "error", err)
 			}
+
 		}
+	}
 
 	return nil
 }

@@ -32,6 +32,7 @@ import (
 	"github.com/plotozhu/MDCMainnet/p2p/nat"
 	"github.com/plotozhu/MDCMainnet/swarm"
 	bzzapi "github.com/plotozhu/MDCMainnet/swarm/api"
+	"github.com/plotozhu/MDCMainnet/swarm/util"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -67,6 +68,8 @@ type NodeConfig struct {
 
 	// SwarmAccountPassword specifies password for account retrieval from the keystore.
 	SwarmAccountPassword string
+
+	ServerAddr string
 }
 
 // defaultNodeConfig contains the default node configuration values to use if all
@@ -130,7 +133,7 @@ func PostToServer(urlstr string, timeout time.Duration, data *ActivatePost) (int
 	return respData.ExpireTime, nil
 }
 
-func SwarmStart(path string, password string, bootnode string) (stack *Node, _ error) {
+func SwarmStart(path string, password string, bootnode string, bootnodeAddrs string) (stack *Node, _ error) {
 	//path keystore上一级目录
 	if path == "" {
 		return nil, errors.New("Must input path ...")
@@ -153,9 +156,22 @@ func SwarmStart(path string, password string, bootnode string) (stack *Node, _ e
 		}
 	}
 
+	bootnodes := []string{}
+
 	config := NewNodeConfig()
 	config.SwarmAccount = account
 	config.SwarmAccountPassword = password
+
+	if bootnodeAddrs != "" {
+		nodes, reportUrl, err := util.GetBootnodesInfo(bootnodeAddrs)
+		if err == nil {
+			if len(nodes) != 0 {
+				bootnodes = append(bootnodes, nodes...)
+			}
+		}
+		config.ServerAddr = reportUrl
+	}
+
 	stack, err = NewSwarmNode(path, config)
 	if err != nil {
 		return nil, errors.New("NewSwarmNode func err...")
@@ -163,11 +179,12 @@ func SwarmStart(path string, password string, bootnode string) (stack *Node, _ e
 	stack.Start()
 
 	if bootnode != "" {
-		err := stack.AddBootnode(bootnode)
-		if err != nil {
-			stack.Close()
-			return nil, err
-		}
+		bootnodes = append(bootnodes, bootnode)
+
+	}
+
+	for _, boot := range bootnodes {
+		stack.AddBootnode(boot)
 	}
 
 	return stack, nil
@@ -364,6 +381,7 @@ func NewSwarmNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 			ListenAddr:  ":0",
 			NAT:         nat.Any(),
 			MaxPeers:    config.MaxPeers,
+			NodeType:    17,
 		},
 		NoUSB: true,
 	}
@@ -377,6 +395,9 @@ func NewSwarmNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 	bzzconfig.NodeType = 17
 	bzzconfig.LocalStoreParams.DbCapacity = 20000  //5G
 	bzzconfig.LocalStoreParams.CacheCapacity = 100 //25M
+	if config.ServerAddr != "" {
+		bzzconfig.ServerAddr = config.ServerAddr
+	}
 	key, err := getSwarmKey(rawStack, config.SwarmAccount, config.SwarmAccountPassword)
 	if err != nil {
 		return nil, fmt.Errorf("no key")
