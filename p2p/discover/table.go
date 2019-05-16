@@ -1105,6 +1105,7 @@ func (tab *Table) loadSeedNodes() {
 			tab.addSeenNode(seed)
 		}
 	*/
+		tab.addSeenNode(seed)
 
 	}
 }
