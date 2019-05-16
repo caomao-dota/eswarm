@@ -155,10 +155,15 @@ func (k *Kademlia) SetFilter(chain *p2p.FilterChain )  {
 	k.filter = chain
 	k.filter.AddFilter(k)
 }
-func (k *Kademlia) IsBlocked(id enode.ID) bool{
-	val,ok := k.blacklist.Get(id)
-	if ok && !time.Now().After(val.(p2p.BlackItem).DiscTime) {
+func (k *Kademlia) IsBlocked(id enode.ID,inbound bool) bool{
+	 idStr := fmt.Sprintf("%v-%v",id,inbound)
+	val,ok := k.blacklist.Get(idStr)
+	if ok && !inbound && !time.Now().After(val.(p2p.BlackItem).DiscTime) {
 		return true
+	} else if inbound{
+		bin_size,bin := k.GetIntendBinInfo(id)
+		log.Info("inbound peer:","id",id,"bin size",bin_size,"bin",bin)
+		return bin_size > k.MaxBinSize
 	}
 	return false
 }
@@ -177,11 +182,14 @@ func (k *Kademlia) CanStartConnect(id enode.ID) bool{
 func (k *Kademlia)ShouldAcceptConn(id enode.ID) bool{
 	return true;
 }
-func (k *Kademlia)ClearDelay(id enode.ID){
-	k.blacklist.Remove(id)
+
+func (k *Kademlia)ClearDelay(id enode.ID,inbound bool){
+
+	k.blacklist.Remove(fmt.Sprintf("%v-%v",id,inbound))
 }
-func (k *Kademlia)SetDelay(id enode.ID) {
-	val,exist :=k.blacklist.Get(id)
+func (k *Kademlia)SetDelay(id enode.ID,inbound bool ) {
+	idStr := fmt.Sprintf("%v-%v",id,inbound)
+	val,exist :=k.blacklist.Get(idStr)
 	item := p2p.BlackItem{time.Now().Add(30*time.Second),1}
 	if exist {
 		item = val.(p2p.BlackItem)
@@ -191,18 +199,21 @@ func (k *Kademlia)SetDelay(id enode.ID) {
 		}
 
 	}
-	k.blacklist.Add(id,item)
+	log.Info("block peer","peer",idStr,"time to",item.DiscTime)
+
+
+	k.blacklist.Add(idStr,item)
 
 }
 // Register enters each address as kademlia peer record into the
 // database of known peer addresses
-func (k *Kademlia) Register(toRegister bool,peers ...*BzzAddr ) error {
+func (k *Kademlia) Register(peers ...*BzzAddr ) error {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	var known, size int
 
 	for _, p := range peers {
-		log.Info("kad register","id",p.ID(),"register/unregister",toRegister,"Uaddr:",p.String())
+		//log.Info("kad register","id",p.ID(),"register/unregister",toRegister,"Uaddr:",p.String())
 		//log.Trace("kademlia trying to register", "addr", p)
 		// error if self received, peer should know better
 		// and should be punished for this
@@ -215,12 +226,12 @@ func (k *Kademlia) Register(toRegister bool,peers ...*BzzAddr ) error {
 			if v == nil {
 				log.Trace("registering new peer", "addr", p)
 				// insert new offline peer into conns
-				if toRegister {
+
 					return newEntry(p)
-				}
+
 
 			}
-			if toRegister {
+
 				e := v.(*entry)
 
 				// if underlay address is different, still add
@@ -233,9 +244,7 @@ func (k *Kademlia) Register(toRegister bool,peers ...*BzzAddr ) error {
 				//	log.Trace("found among known peers, underlay addr is same, do nothing", "new", p, "old", e.BzzAddr)
 
 				return v
-			}else {
-				return nil
-			}
+
 
 		})
 		if found {
@@ -448,7 +457,7 @@ func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, c
 			// stop if found
 			f(func(val pot.Val) bool {
 				e := val.(*entry)
-				ok := k.filter == nil || !k.filter.IsBlocked(e.ID())
+				ok := k.filter == nil || !k.filter.IsBlocked(e.ID(),false)
 				if k.callable(e) &&  ok{
 					targetPO = po
 
@@ -615,7 +624,7 @@ func (k *Kademlia) Off(p *Peer) {
 	defer k.lock.Unlock()
 	var del bool
 	delete (k.peers,string(p.UAddr))
-	k.SetDelay(p.ID())
+	k.SetDelay(p.ID(),false)
 	if p.NodeType() != enode.NodeTypeLight {
 		k.addrs, _, _, _ = pot.Swap(k.addrs, p, Pof, func(v pot.Val) pot.Val {
 			// v cannot be nil, must check otherwise we overwrite entry
@@ -781,7 +790,7 @@ func (k *Kademlia) callable(e *entry) bool {
 	// not callable if peer is live or exceeded maxRetries
 	if e.conn != nil && time.Since(e.connectedAt) > 2* time.Minute && e.retries != 0{
 		e.retries = 0
-		k.ClearDelay(e.ID())
+		k.ClearDelay(e.ID(),false)
 	}
 	if e.conn != nil || e.retries > k.MaxRetries {
 		//log.Info(fmt.Sprintf("%08x:connected %v %v", k.BaseAddr()[:4], e, e.retries))

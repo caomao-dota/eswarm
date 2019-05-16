@@ -334,6 +334,7 @@ func (srv *Server) AddPeer(node *enode.Node) {
 
 // RemovePeer disconnects from the given node
 func (srv *Server) RemovePeer(node *enode.Node) {
+	log.Info("Remove Peer","id",node.ID())
 	select {
 	case srv.removestatic <- node:
 	case <-srv.quit:
@@ -426,14 +427,6 @@ func (s *sharedUDPConn) Close() error {
 	return nil
 }
 
-func (srv *Server) IsBlocked(id enode.ID) bool{
-
-	val,ok := srv.blacklist.Get(id)
-	if ok && time.Now().Before(val.(BlackItem).DiscTime) {
-		return true
-	}
-	return false
-}
 func (srv *Server) CanSendPing(id enode.ID) bool{
 	return true;
 }
@@ -461,7 +454,7 @@ func (srv *Server) Start() (err error) {
 	srv.running = true
 	srv.blacklist,_ = lru.New(1000)
 	srv.FilterChain = NewFilterChain()
-	srv.FilterChain.AddFilter(srv)
+
 	srv.log = srv.Config.Logger
 	if srv.log == nil {
 		srv.log = log.New()
@@ -601,7 +594,7 @@ func (srv *Server) setupDiscovery() error {
 		if err != nil {
 			return err
 		}
-		ntab.AddFilters(srv.FilterChain)
+
 		srv.ntab = ntab
 	}
 	// Discovery V5
@@ -889,7 +882,7 @@ func (srv *Server) protoHandshakeChecks(peers map[enode.ID]*Peer, inboundCount i
 			return DiscTooManyPeers
 		case !c.is(trustedConn) && c.is(inboundConn) && !isLightNode && inboundCount >= srv.maxInboundConns():
 			return DiscTooManyPeers
-		case srv.FilterChain.IsBlocked(c.node.ID()):
+		case srv.FilterChain.IsBlocked(c.node.ID(),c.is(inboundConn)):
 			return DiscBlockedPeer
 
 	}
@@ -1012,7 +1005,7 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 	if !running {
 		return errServerStopped
 	}
-	if dialDest!= nil && srv.FilterChain.IsBlocked(dialDest.ID()){
+	if dialDest!= nil && srv.FilterChain.IsBlocked(dialDest.ID(),dialDest == nil){
 		return DiscBlockedPeer
 	}
 	// If dialing, figure out the remote public key.

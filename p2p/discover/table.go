@@ -64,7 +64,7 @@ const (
 	seedCount           = 30
 	seedMaxAge          = 5 * 24 * time.Hour
 )
-
+/*
 type FiterItem   interface {
 	IsBlocked(id enode.ID) bool
 	CanSendPing(id enode.ID) bool
@@ -81,7 +81,7 @@ type FiterItemChain   interface {
 	CanStartConnect(id enode.ID) bool
 	ShouldAcceptConn(id enode.ID) bool
     AddFilter(ft FiterItem)
-}
+}*/
 
 /*
 type NodeItem struct {
@@ -372,7 +372,7 @@ type Table struct {
 	nodeByIp      map[string]map[enode.ID]*node
 	//allNodes     map[enode.ID]*NodeItem
 	onTesting    bool
-	filters      FiterItemChain
+	//filters      FiterItemChain
 }
 type AttributeID uint8
 
@@ -639,10 +639,11 @@ func newTable(t transport, db *enode.DB, bootnodes []*enode.Node,onTest bool ) (
 
 	return tab, nil
 }
-func (tab *Table)AddFilters(chain FiterItemChain){
+/*func (tab *Table)AddFilters(chain FiterItemChain){
 	tab.filters = chain
 	tab.filters.AddFilter(tab)
 }
+*/
 func (tab *Table) self() *enode.Node {
 	return tab.net.self()
 }
@@ -1100,9 +1101,10 @@ func (tab *Table) loadSeedNodes() {
 		seed.latency =tab.db.GetNodeLatency(seed.ID(),seed.IP())
 		age := log.Lazy{Fn: func() interface{} { return time.Since(tab.db.LastPongReceived(seed.ID(), seed.IP())) }}
 		log.Trace("Found seed node in database", "id", seed.ID(), "addr", seed.addr(), "age", age,"latency",seed.latency)
-		if tab.filters == nil || !tab.filters.IsBlocked(seed.ID()) {
+	/*	if tab.filters == nil || !tab.filters.IsBlocked(seed.ID()) {
 			tab.addSeenNode(seed)
 		}
+	*/
 
 	}
 }
@@ -1473,36 +1475,26 @@ func (tab *Table) DoPing(n  *node,ch chan *enode.Node ) {
 
 	go func (){
 
-		if tab.filters.IsBlocked(n.ID()){
-			log.Info("do blocked:","id",n.ID(),"addr",n.String())
-			tab.mutex.Lock()
-			tab.updateNodeStatus(n.ID(),tab.bucket(n.ID()),false ,time.Now().Add( 30*time.Second) )
-			tab.mutex.Unlock()
-			if ch != nil {
-				ch <- &n.Node
-			}
+		var toAddr net.UDPAddr
+		lip := n.LIP()
+		if len(lip) == 0 || n.LUDP() == 0{
+			toAddr = net.UDPAddr{IP: n.IP(), Port: n.UDP()}
 		}else {
-			var toAddr net.UDPAddr
-			lip := n.LIP()
-			if len(lip) == 0 || n.LUDP() == 0{
-				toAddr = net.UDPAddr{IP: n.IP(), Port: n.UDP()}
-			}else {
-				toAddr = net.UDPAddr{IP: lip, Port: int(n.LUDP())}
-			}
-			err,duration := tab.net.ping(n.ID(),&toAddr)
+			toAddr = net.UDPAddr{IP: lip, Port: int(n.LUDP())}
+		}
+		err,duration := tab.net.ping(n.ID(),&toAddr)
 
-			if err == nil {
-				n.latency = int64(duration)
-			}else {
-				n.latency = LatencyInvalid
-			}
-			tab.mutex.Lock()
-			//log.Info("ok to update","id",n.ID(),"err",err)
-			tab.updateNodeStatus(n.ID(),tab.bucket(n.ID()),err == nil ,time.Now().Add( 30*time.Second) )
-			tab.mutex.Unlock()
-			if ch != nil {
-				ch <- &n.Node
-			}
+		if err == nil {
+			n.latency = int64(duration)
+		}else {
+			n.latency = LatencyInvalid
+		}
+		tab.mutex.Lock()
+		//log.Info("ok to update","id",n.ID(),"err",err)
+		tab.updateNodeStatus(n.ID(),tab.bucket(n.ID()),err == nil ,time.Now().Add( 30*time.Second) )
+		tab.mutex.Unlock()
+		if ch != nil {
+			ch <- &n.Node
 		}
 
 	}()

@@ -67,6 +67,7 @@ type Hive struct {
 	addPeer     func(*enode.Node) // server callback to connect to a peer
 	getKnowNodes func()[]*enode.Node
 	addNode      func(node *enode.Node)
+	removePeer   func(node *enode.Node)
 	// bookkeeping
 	lock   sync.Mutex
 	refreshLock sync.Mutex
@@ -109,6 +110,7 @@ func (h *Hive) Start(server *p2p.Server) error {
 	}*/
 	// assigns the p2p.Server#AddPeer function to connect to peers
 	h.addPeer = server.AddPeer
+	h.removePeer = server.RemovePeer
 	h.getKnowNodes = server.GetKnownNodesSorted
 	// ticker to keep the hive alive
 	h.ticker = time.NewTicker(h.KeepAliveInterval)
@@ -171,7 +173,7 @@ func (h *Hive)doRefresh(){
 	h.refreshLock.Lock()
 
 	defer h.refreshLock.Unlock()
-	h.Register(true,nodes...)
+	h.Register(nodes...)
 
 }
 // Stop terminates the updateloop and saves the peers
@@ -270,6 +272,7 @@ func (h *Hive) trackPeer(p *BzzPeer) {
 
 func (h *Hive) untrackPeer(p *BzzPeer) {
 	h.lock.Lock()
+	h.removePeer(p.Node())
 	delete(h.peers, p.ID())
 	h.lock.Unlock()
 }
@@ -313,7 +316,7 @@ func (h *Hive) loadPeers() error {
 	}
 	log.Info(fmt.Sprintf("hive %08x: peers loaded", h.BaseAddr()[:4]))
 
-	return h.Register(true, as...)
+	return h.Register( as...)
 }
 
 // savePeers, savePeer implement persistence callback/

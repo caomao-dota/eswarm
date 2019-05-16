@@ -152,7 +152,7 @@ func (d *Peer) handlePeersMsg(msg *peersMsg) error {
 		d.seen(a)
 		NotifyPeer(a, d.kad)
 	}
-	return d.kad.Register(true,msg.Peers...)
+	return d.kad.Register(msg.Peers...)
 }
 
 // subPeers msg is communicating the depth of the overlay table of a peer

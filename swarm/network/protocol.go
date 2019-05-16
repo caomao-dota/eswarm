@@ -194,6 +194,9 @@ func (b *Bzz) RunProtocol(spec *protocols.Spec, run func(*BzzPeer) error) func(*
 			return fmt.Errorf("%08x: %s protocol timeout waiting for handshake on %08x", b.BaseAddr()[:4], spec.Name, p.ID().Bytes()[:4])
 		}
 		if handshake.err != nil {
+			b.Kademlia.SetDelay(p.ID(),true)
+
+			b.Kademlia.SetDelay(p.ID(),false)
 			return fmt.Errorf("%08x: %s protocol closed: %v", b.BaseAddr()[:4], spec.Name, handshake.err)
 		}
 		//修改C记录
