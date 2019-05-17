@@ -120,7 +120,7 @@ func (ls *LocalStore) Put(ctx context.Context, chunk Chunk) error {
 		return ErrChunkInvalid
 	}
 
-	log.Trace("localstore.put", "key", chunk.Address())
+	//log.Trace("localstore.put", "key", chunk.Address())
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
 

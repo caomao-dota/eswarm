@@ -770,10 +770,10 @@ func (c *client) nextBatch(from uint64,live_Stream *client) (nextFrom uint64, ne
 	if nextTo > live_Stream.sessionAt {
 		nextTo = live_Stream.sessionAt
 	}
-/*	if nextTo == 0 {
+	if nextTo == 0 {
 		nextTo = live_Stream.sessionAt
 	}
-*/
+
 	return
 }
 
