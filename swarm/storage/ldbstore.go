@@ -383,7 +383,7 @@ func (s *LDBStore) collectGarbage() error {
 			s.delete(s.gc.batch.Batch, index, keyIdx, po)
 			singleIterationCount++
 			s.gc.count++
-			log.Trace("garbage collect enqueued chunk for deletion", "key", hash)
+//			log.Trace("garbage collect enqueued chunk for deletion", "key", hash)
 
 			// break if target is not on max garbage batch boundary
 			if s.gc.count >= s.gc.target {
@@ -392,7 +392,7 @@ func (s *LDBStore) collectGarbage() error {
 		}
 
 		s.writeBatch(s.gc.batch, wEntryCnt)
-		log.Trace("garbage collect batch done", "batch", singleIterationCount, "total", s.gc.count)
+//		log.Trace("garbage collect batch done", "batch", singleIterationCount, "total", s.gc.count)
 		s.lock.Unlock()
 		it.Release()
 	}
@@ -425,7 +425,7 @@ func (s *LDBStore) Export(out io.Writer) (int64, error) {
 		decodeIndex(it.Value(), &index)
 		po := s.po(hash)
 		datakey := getDataKey(index.Idx, po)
-		log.Trace("store.export", "dkey", fmt.Sprintf("%x", datakey), "dataidx", index.Idx, "po", po)
+//		log.Trace("store.export", "dkey", fmt.Sprintf("%x", datakey), "dataidx", index.Idx, "po", po)
 		data, err := s.db.Get(datakey)
 		if err != nil {
 			log.Warn(fmt.Sprintf("Chunk %x found but could not be accessed: %v", key, err))
@@ -577,7 +577,7 @@ func (s *LDBStore) Cleanup(f func(Chunk) bool) {
 		sdata := c.Data()
 
 		cs := int64(binary.LittleEndian.Uint64(sdata[:8]))
-		log.Trace("chunk", "key", fmt.Sprintf("%x", key), "ck", fmt.Sprintf("%x", ck), "dkey", fmt.Sprintf("%x", datakey), "dataidx", index.Idx, "po", po, "len data", len(data), "len sdata", len(sdata), "size", cs)
+//		log.Trace("chunk", "key", fmt.Sprintf("%x", key), "ck", fmt.Sprintf("%x", ck), "dkey", fmt.Sprintf("%x", datakey), "dataidx", index.Idx, "po", po, "len data", len(data), "len sdata", len(sdata), "size", cs)
 
 		// if chunk is to be removed
 		if f(c) {
@@ -775,7 +775,7 @@ func (s *LDBStore) deleteNow(idx *dpaDBIndex, idxKey []byte, po uint8) error {
 // if called directly, decrements entrycount regardless if the chunk exists upon deletion. Risk of wrap to max uint64
 func (s *LDBStore) delete(batch *leveldb.Batch, idx *dpaDBIndex, idxKey []byte, po uint8) {
 	metrics.GetOrRegisterCounter("ldbstore.delete", nil).Inc(1)
-	log.Info("delete chunk info","index key",idxKey)
+//	log.Info("delete chunk info","index key",idxKey)
 	gcIdxKey := getGCIdxKey(idx)
 	batch.Delete(gcIdxKey)
 	dataKey := getDataKey(idx.Idx, po)
@@ -808,7 +808,7 @@ func (s *LDBStore) BinIndex(po uint8) uint64 {
 // Is thread safe
 func (s *LDBStore) Put(ctx context.Context, chunk Chunk) error {
 	metrics.GetOrRegisterCounter("ldbstore.put", nil).Inc(1)
-	log.Trace("ldbstore.put", "key", chunk.Address())
+//	log.Trace("ldbstore.put", "key", chunk.Address())
 
 	ikey := getIndexKey(chunk.Address())
 	var index dpaDBIndex
@@ -824,7 +824,7 @@ func (s *LDBStore) Put(ctx context.Context, chunk Chunk) error {
 	}
 	batch := s.batch
 
-	log.Trace("ldbstore.put: s.db.Get", "key", chunk.Address(), "ikey", fmt.Sprintf("%x", ikey))
+//	log.Trace("ldbstore.put: s.db.Get", "key", chunk.Address(), "ikey", fmt.Sprintf("%x", ikey))
 	orgData, err := s.db.Get(ikey)
 	if err != nil {
 		s.doPut(chunk, &index, po)
@@ -924,11 +924,11 @@ func (s *LDBStore) writeBatch(b *dbBatch, wFlag uint8) error {
 	if wFlag&wAccessCnt > 0 {
 		b.Put(keyAccessCnt, U64ToBytes(s.accessCnt))
 	}
-	l := b.Len()
+	//l := b.Len()
 	if err := s.db.Write(b.Batch); err != nil {
 		return fmt.Errorf("unable to write batch: %v", err)
 	}
-	log.Trace(fmt.Sprintf("batch write (%d entries)", l))
+//	log.Trace(fmt.Sprintf("batch write (%d entries)", l))
 	return nil
 }
 
@@ -1003,7 +1003,7 @@ func (s *LDBStore) PutSchema(schema string) error {
 // Updates access count and is thread safe
 func (s *LDBStore) Get(_ context.Context, addr Address) (chunk Chunk, err error) {
 	metrics.GetOrRegisterCounter("ldbstore.get", nil).Inc(1)
-	log.Trace("ldbstore.get", "key", addr)
+//	log.Trace("ldbstore.get", "key", addr)
 
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -1058,7 +1058,7 @@ func (s *LDBStore) get(addr Address) (chunk Chunk, err error) {
 		var data []byte
 		if s.getDataFunc != nil {
 			// if getDataFunc is defined, use it to retrieve the chunk data
-			log.Trace("ldbstore.get retrieve with getDataFunc", "key", addr)
+	//		log.Trace("ldbstore.get retrieve with getDataFunc", "key", addr)
 			data, err = s.getDataFunc(addr)
 			if err != nil {
 				return
@@ -1070,9 +1070,9 @@ func (s *LDBStore) get(addr Address) (chunk Chunk, err error) {
 			if len(data) == 32 {
 				err = ErrChunkInvalid
 			}
-			log.Trace("ldbstore.get retrieve", "key", addr, "indexkey", index.Idx, "datakey", fmt.Sprintf("%x", datakey), "proximity", proximity)
+//			log.Trace("ldbstore.get retrieve", "key", addr, "indexkey", index.Idx, "datakey", fmt.Sprintf("%x", datakey), "proximity", proximity)
 			if err != nil {
-				log.Trace("ldbstore.get chunk found but could not be accessed", "key", addr, "err", err)
+//				log.Trace("ldbstore.get chunk found but could not be accessed", "key", addr, "err", err)
 				s.deleteNow(index, getIndexKey(addr), s.po(addr))
 				return
 			}

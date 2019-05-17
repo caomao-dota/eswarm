@@ -95,7 +95,7 @@ type Kademlia struct {
 	depth      uint8    // stores the last current depth of saturation
 	nDepth     int      // stores the last neighbourhood depth
 	nDepthC    chan int // returned by DepthC function to signal neighbourhood depth change
-	addrCountC chan int // returned by AddrCountC function to signal peer count change
+	peerChangedC chan int // returned by AddrCountC function to signal peer count change
 	peers      map[string]bool
 	filter     *p2p.FilterChain
 	blacklist  *lru.Cache
@@ -251,11 +251,6 @@ func (k *Kademlia) Register(peers ...*BzzAddr ) error {
 			known++
 		}
 		size++
-	}
-	// send new address count value only if there are new addresses
-	log.Info("With known address:","size",k.addrs.Size(),"channel",k.addrCountC != nil, " difference",size-known)
-	if k.addrCountC != nil && size-known > 0 {
-		k.addrCountC <- k.addrs.Size()
 	}
 
 	//k.sendNeighbourhoodDepthChange()
@@ -519,15 +514,15 @@ func (k *Kademlia) On(p *Peer) (depth uint8, changed bool,err error) {
 				return a
 			})
 			// send new address count value only if the peer is inserted
-			log.Info("Update addr counts","size", k.addrs.Size(),"channel",k.addrCountC != nil)
-			if k.addrCountC != nil {
-				k.addrCountC <- k.addrs.Size()
+			log.Info("Update addr counts","size", k.addrs.Size(),"channel",k.peerChangedC != nil)
+			if k.peerChangedC != nil {
+				k.peerChangedC <- k.conns.Size()
 			}
 		}
 
 		log.Trace(k.string())
 		// calculate if depth of saturation changed
-		depth := uint8(k.saturation())
+		depth := uint8(k.Saturation())
 
 		if depth != k.depth {
 			changed = true
@@ -598,14 +593,14 @@ func (k *Kademlia) sendNeighbourhoodDepthChange() {
 // address count value on each change.
 // Not receiving from the returned channel will block Register function
 // when address count value changes.
-func (k *Kademlia) AddrCountC() <-chan int {
+func (k *Kademlia) PeerChangedC() <-chan int {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 
-	if k.addrCountC == nil {
-		k.addrCountC = make(chan int)
+	if k.peerChangedC == nil {
+		k.peerChangedC = make(chan int)
 	}
-	return k.addrCountC
+	return k.peerChangedC
 }
 
 // CloseAddrCountC closes the channel returned by
@@ -614,9 +609,9 @@ func (k *Kademlia) CloseAddrCountC() {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 
-	if k.addrCountC != nil {
-		close(k.addrCountC)
-		k.addrCountC = nil
+	if k.peerChangedC != nil {
+		close(k.peerChangedC)
+		k.peerChangedC = nil
 	}
 }
 
@@ -643,8 +638,8 @@ func (k *Kademlia) Off(p *Peer) {
 				return nil
 			})
 			// send new address count value only if the peer is deleted
-			if k.addrCountC != nil {
-				k.addrCountC <- k.addrs.Size()
+			if k.peerChangedC != nil {
+				k.peerChangedC <- k.conns.Size()
 			}
 			k.sendNeighbourhoodDepthChange()
 		}
@@ -1020,7 +1015,7 @@ func NewPeerPotMap(neighbourhoodSize int, addrs [][]byte) map[string]*PeerPot {
 
 // saturation returns the smallest po value in which the node has less than MinBinSize peers
 // if the iterator reaches neighbourhood radius, then the last bin + 1 is returned
-func (k *Kademlia) saturation() int {
+func (k *Kademlia) Saturation() int {
 	prev := -1
 	radius := neighbourhoodRadiusForPot(k.conns, k.NeighbourhoodSize, k.base)
 	k.conns.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {

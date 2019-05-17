@@ -177,64 +177,36 @@ func NewRegistry(localID enode.ID, delivery *Delivery, syncChunkStore storage.Sy
 		// get notification channels from Kademlia before returning
 		// from this function to avoid race with Close method and
 		// the goroutine created below
-		depthC := latestIntC(kad.NeighbourhoodDepthC())
-		addressBookSizeC := latestIntC(kad.AddrCountC())
+		//depthC := latestIntC(kad.NeighbourhoodDepthC())
+		peerChangedC := latestIntC(kad.PeerChangedC())
 
 		go func() {
-			// wait for kademlia table to be healthy
-			// but return if Registry is closed before
-			select {
-			case <-time.After(options.SyncUpdateDelay):
-			case <-quit:
-				return
-			}
 
-			fmt.Println("do Update")
-			// initial requests for syncing subscription to peers
-			streamer.updateSyncing(nil)
+			timer := time.NewTimer(options.SyncUpdateDelay)
+			for {
+				select {
+				case <-timer.C:
+					// force syncing update when a hard timeout is reached
+					log.Info("Sync subscriptions update on timeout")
+					// request for syncing subscription to new peers
+					streamer.updateSyncing(nil)
 
-			for depth := range depthC {
-				log.Debug("Kademlia neighbourhood depth change", "depth", depth)
-
-				// Prevent too early sync subscriptions by waiting until there are no
-				// new peers connecting. Sync streams updating will be done after no
-				// peers are connected for at least SyncUpdateDelay period.
-				timer := time.NewTimer(options.SyncUpdateDelay)
-				// Hard limit to sync update delay, preventing long delays
-				// on a very dynamic network
-				maxTimer := time.NewTimer(3 * time.Minute)
-			loop:
-				for {
-					select {
-					case <-maxTimer.C:
-						// force syncing update when a hard timeout is reached
-						log.Info("Sync subscriptions update on hard timeout")
-						// request for syncing subscription to new peers
-						streamer.updateSyncing(nil)
-						break loop
-					case <-timer.C:
-						// start syncing as no new peers has been added to kademlia
-						// for some time
-						log.Info("Sync subscriptions update")
-						// request for syncing subscription to new peers
-						streamer.updateSyncing(nil)
-						break loop
-					case size := <-addressBookSizeC:
-						log.Info("Kademlia address book size changed on depth change", "size", size)
-						// new peers has been added to kademlia,
-						// reset the timer to prevent early sync subscriptions
-						if !timer.Stop() {
-							<-timer.C
-						}
-						timer.Reset(options.SyncUpdateDelay)
-					case <-quit:
-						break loop
-					}
+				case size := <-peerChangedC:
+					log.Info("Kademlia address book size changed on depth change", "size", size)
+					// new peers has been added to kademlia,
+					// reset the timer to prevent early sync subscriptions
+					log.Info("rest timer:", "size", size)
+					timer.Reset(options.SyncUpdateDelay)
+				case <-quit:
+					log.Info("quited")
+					break;
 				}
-				timer.Stop()
-				maxTimer.Stop()
 			}
-		}()
+
+			log.Info("quited 2")
+			timer.Stop()
+
+			}()
 	}
 
 	return streamer
@@ -556,7 +528,7 @@ func (r *Registry) requestPeerSubscriptions(kad *network.Kademlia, subs map[enod
 	var ok bool
 
 	// kademlia's depth
-	kadDepth := kad.NeighbourhoodDepth()
+	kadDepth := kad.Saturation()
 	// request subscriptions for all nodes and bins
 	// nil as base takes the node's base; we need to pass 255 as `EachConn` runs
 	// from deepest bins backwards

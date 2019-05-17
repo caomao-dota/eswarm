@@ -202,7 +202,7 @@ func (f *Fetcher) run(peers *sync.Map) {
 
 		// incoming offer
 		case source := <-f.offerC:
-			log.Trace("new source", "peer addr", source, "request addr", f.addr)
+			//log.Trace("new source", "peer addr", source, "request addr", f.addr)
 			// 1) the chunk is offered by a syncing peer
 			// add to known sources
 			sources = append(sources, source)
@@ -211,7 +211,7 @@ func (f *Fetcher) run(peers *sync.Map) {
 
 		// incoming request
 		case hopCount = <-f.requestC:
-			log.Trace("new request", "request addr", f.addr)
+			//log.Trace("new request", "request addr", f.addr)
 			// 2) chunk is requested, set requested flag
 			// launch a request iff none been launched yet
 			doRequest = !requested
@@ -220,19 +220,19 @@ func (f *Fetcher) run(peers *sync.Map) {
 			// peer we requested from is gone. fall back to another
 			// and remove the peer from the peers map
 		case id := <-gone:
-			log.Trace("peer gone", "peer id", id.String(), "request addr", f.addr)
+			//log.Trace("peer gone", "peer id", id.String(), "request addr", f.addr)
 			peers.Delete(id.String())
 			doRequest = requested
 
 		// search timeout: too much time passed since the last request,
 		// extend the search to a new peer if we can find one
 		case <-waitC:
-			log.Trace("search timed out: requesting", "request addr", f.addr)
+			//log.Trace("search timed out: requesting", "request addr", f.addr)
 			doRequest = requested
 
 			// all Fetcher context closed, can quit
 		case <-f.ctx.Done():
-			log.Trace("terminate fetcher", "request addr", f.addr)
+		//	log.Trace("terminate fetcher", "request addr", f.addr)
 			// TODO: send cancellations to all peers left over in peers map (i.e., those we requested from)
 			//fmt.Print("fetcher end:",f.addr)
 			return

@@ -19,6 +19,7 @@ package stream
 
 import (
 	"context"
+	"github.com/pkg/errors"
 	"strconv"
 	"time"
 
@@ -102,7 +103,7 @@ func (s *SwarmSyncerServer) SetNextBatch(from, to uint64) ([]byte, uint64, uint6
 			select {
 			case <-ticker.C:
 			case <-s.quit:
-				return nil, 0, 0, nil, nil
+				return nil, 0, 0, nil, errors.New("Stream Closed")
 			}
 		}
 

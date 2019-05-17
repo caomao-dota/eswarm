@@ -194,7 +194,7 @@ func (p *Peer) SendOfferedHashes(s *server, f, t uint64) error {
 	}
 	// true only when quitting
 	if len(hashes) == 0 {
-		log.Debug("Send Offered batch finished", "peer", p.ID(), "stream", s.stream, "len", len(hashes), "from", from, "to", to)
+		log.Debug("Send Offered batch finished", "peer", p.ID(), "stream", s.stream, "len", len(hashes), "from", from, "to", to,"origin from",f,"origin to ",t)
 		return nil
 	}
 	if proof == nil {
