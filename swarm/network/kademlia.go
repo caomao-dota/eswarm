@@ -253,6 +253,7 @@ func (k *Kademlia) Register(peers ...*BzzAddr ) error {
 		size++
 	}
 	// send new address count value only if there are new addresses
+	log.Info("With known address:","size",k.addrs.Size(),"channel",k.addrCountC != nil, " difference",size-known)
 	if k.addrCountC != nil && size-known > 0 {
 		k.addrCountC <- k.addrs.Size()
 	}
@@ -518,6 +519,7 @@ func (k *Kademlia) On(p *Peer) (depth uint8, changed bool,err error) {
 				return a
 			})
 			// send new address count value only if the peer is inserted
+			log.Info("Update addr counts","size", k.addrs.Size(),"channel",k.addrCountC != nil)
 			if k.addrCountC != nil {
 				k.addrCountC <- k.addrs.Size()
 			}
