@@ -24,6 +24,7 @@ import (
 	"github.com/plotozhu/MDCMainnet/p2p"
 	"github.com/plotozhu/MDCMainnet/p2p/enode"
 	"math"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -163,15 +164,20 @@ func (k *Kademlia) IsBlocked(id enode.ID,inbound bool) bool{
 	} else if inbound{
 		bucketFull := false
 		k.conns.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
-			e := val.(*entry)
+			if !reflect.ValueOf(val).IsNil() {
+				e := val.(*entry)
 
-			if e.ID() == id {
-				log.Info(" test for bucket","id",id,"bucket",po,"size",size)
-				bucketFull = size >= k.MaxBinSize
-				return false
-			} else { //桶里连接满了，找下一个po吧
+				if e.ID() == id {
+					log.Info(" test for bucket","id",id,"bucket",po,"size",size)
+					bucketFull = size >= k.MaxBinSize
+					return false
+				} else { //桶里连接满了，找下一个po吧
+					return true
+				}
+			}else{
 				return true
 			}
+
 		})
 	}
 	return false
