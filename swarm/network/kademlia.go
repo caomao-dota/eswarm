@@ -164,7 +164,7 @@ func (k *Kademlia) IsBlocked(id enode.ID,inbound bool) bool{
 	} else if inbound{
 		bucketFull := false
 		k.conns.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
-			if !reflect.ValueOf(val).IsNil() {
+			if val != nil && !reflect.ValueOf(val).IsNil() {
 				e := val.(*entry)
 
 				if e.ID() == id {
