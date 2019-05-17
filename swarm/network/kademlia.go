@@ -161,9 +161,18 @@ func (k *Kademlia) IsBlocked(id enode.ID,inbound bool) bool{
 	if ok && !inbound && !time.Now().After(val.(p2p.BlackItem).DiscTime) {
 		return true
 	} else if inbound{
-		bin_size,bin := k.GetIntendBinInfo(id)
-		log.Info("inbound peer:","id",id,"bin size",bin_size,"bin",bin)
-		return bin_size > k.MaxBinSize
+		bucketFull := false
+		k.conns.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
+			e := val.(*entry)
+
+			if e.ID() == id {
+				log.Info(" test for bucket","id",id,"bucket",po,"size",size)
+				bucketFull = size >= k.MaxBinSize
+				return false
+			} else { //桶里连接满了，找下一个po吧
+				return true
+			}
+		})
 	}
 	return false
 }
@@ -256,9 +265,9 @@ func (k *Kademlia) Register(peers ...*BzzAddr ) error {
 	//k.sendNeighbourhoodDepthChange()
 	return nil
 }
-func (k *Kademlia)GetIntendBinInfo(anode enode.ID) (int,int){
+func (k *Kademlia)GetIntendBinInfo(nodeAddr *BzzAddr) (int,int){
 
-	bin,_ := Pof(anode[:],k.base,0)
+	bin,_ := Pof(k.conns,nodeAddr,0)
 //	bin = int(math.Log2(float64(bin)))
 	return k.conns.SizeOfBin(bin),bin
 

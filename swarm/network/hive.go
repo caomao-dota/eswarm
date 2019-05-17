@@ -101,13 +101,13 @@ func NewHive(params *HiveParams, kad *Kademlia, store state.Store) *Hive {
 func (h *Hive) Start(server *p2p.Server) error {
 	log.Info("Starting Hive", "BaseAddr", fmt.Sprintf("%x", h.BaseAddr()[:4]))
 	// if state store is specified, load peers to prepopulate the overlay address book
-	/*if h.Store != nil {
+	if h.Store != nil {
 		log.Info("Detected an existing store. trying to load peers")
 		if err := h.loadPeers(); err != nil {
 			log.Error(fmt.Sprintf("%08x hive encoutered an error trying to load peers", h.BaseAddr()[:4]))
 			return err
 		}
-	}*/
+	}
 	// assigns the p2p.Server#AddPeer function to connect to peers
 	h.addPeer = server.AddPeer
 	h.removePeer = server.RemovePeer
