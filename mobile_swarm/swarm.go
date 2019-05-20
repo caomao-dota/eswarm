@@ -134,7 +134,7 @@ func PostToServer(urlstr string, timeout time.Duration, data *ActivatePost) (int
 	return respData.ExpireTime, nil
 }
 
-func SwarmStart(path string, password string, bootnodeAddrs string, bootnode string) (stack *Node, _ error) {
+func Start(path string, password string, bootnodeAddrs string, bootnode string) (stack *Node, _ error) {
 	//path keystore上一级目录
 	if path == "" {
 		return nil, errors.New("Must input path ...")
