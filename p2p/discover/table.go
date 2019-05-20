@@ -1476,27 +1476,38 @@ func (tab *Table) DoPing(n  *node,ch chan *enode.Node ) {
 
 	go func (){
 
-		var toAddr net.UDPAddr
-		lip := n.LIP()
-		if len(lip) == 0 || n.LUDP() == 0{
-			toAddr = net.UDPAddr{IP: n.IP(), Port: n.UDP()}
-		}else {
-			toAddr = net.UDPAddr{IP: lip, Port: int(n.LUDP())}
-		}
-		err,duration := tab.net.ping(n.ID(),&toAddr)
+		if( time.Now().After(n.testAt)){
+			var toAddr net.UDPAddr
+			lip := n.LIP()
+			if len(lip) == 0 || n.LUDP() == 0{
+				toAddr = net.UDPAddr{IP: n.IP(), Port: n.UDP()}
+			}else {
+				toAddr = net.UDPAddr{IP: lip, Port: int(n.LUDP())}
+			}
+			err,duration := tab.net.ping(n.ID(),&toAddr)
 
-		if err == nil {
-			n.latency = int64(duration)
-		}else {
-			n.latency = LatencyInvalid
+			if err == nil {
+				n.latency = int64(duration)
+			}else {
+				n.latency = LatencyInvalid
+			}
+			tab.mutex.Lock()
+			//log.Info("ok to update","id",n.ID(),"err",err)
+			tab.updateNodeStatus(n.ID(),tab.bucket(n.ID()),err == nil ,time.Now().Add( 30*time.Second) )
+			tab.mutex.Unlock()
+			if ch != nil {
+				ch <- &n.Node
+			}
+		}else{
+			tab.mutex.Lock()
+			//log.Info("ok to update","id",n.ID(),"err",err)
+			tab.updateNodeStatus(n.ID(),tab.bucket(n.ID()),n.latency != LatencyInvalid ,n.testAt )
+			tab.mutex.Unlock()
+			if ch != nil {
+				ch <- &n.Node
+			}
 		}
-		tab.mutex.Lock()
-		//log.Info("ok to update","id",n.ID(),"err",err)
-		tab.updateNodeStatus(n.ID(),tab.bucket(n.ID()),err == nil ,time.Now().Add( 30*time.Second) )
-		tab.mutex.Unlock()
-		if ch != nil {
-			ch <- &n.Node
-		}
+
 
 	}()
 
