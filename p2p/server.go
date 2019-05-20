@@ -878,7 +878,7 @@ func (srv *Server) protoHandshakeChecks(peers map[enode.ID]*Peer, inboundCount i
 		case len(srv.Protocols) > 0 && countMatchingProtocols(srv.Protocols, c.caps) == 0:
 			return DiscUselessPeer
 
-		case !c.is(trustedConn|staticDialedConn) && (fullPeerCnt >= srv.MaxPeers && !isLightNode) || (lightPeerCnt >= srv.MaxPeers && isLightNode):
+		case !c.is(trustedConn) && (fullPeerCnt >= srv.MaxPeers && !isLightNode) || (lightPeerCnt >= srv.MaxPeers && isLightNode):
 			return DiscTooManyPeers
 		case !c.is(trustedConn) && c.is(inboundConn) && !isLightNode && inboundCount >= srv.maxInboundConns():
 			return DiscTooManyPeers
