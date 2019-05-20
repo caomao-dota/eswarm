@@ -890,7 +890,7 @@ func (tab *Table) lookup(targetKey encPubkey, refreshIfEmpty bool) []*node {
 			if !asked[n.ID()] && ( !enode.IsLightNode(nodeType) ) && time.Since(n.findAt)> 10*time.Second{
 				asked[n.ID()] = true
 				pendingQueries++
-    			log.Trace("Find node:","id",n.ID(),"lastFind:",n.findAt,"new time:",time.Now())
+
 
 				
 				go tab.findnode(n, targetKey, reply)
@@ -921,9 +921,11 @@ func (tab *Table) findnode(n *node, targetKey encPubkey, reply chan<- []*node) {
 	//defer func(){log.Info("18.1")}()
 
 	if time.Since(n.findAt) > 30 * time.Second && n.latency != LatencyInvalid{
+		log.Trace("Find node:","id",n.ID(),"lastFind:",n.findAt,"new time:",time.Now())
 		tab.mutex.Lock()
 		n.findAt = time.Now()
 		tab.mutex.Unlock()
+
 		fails := tab.db.FindFails(n.ID(), n.IP())
 		udpTarget := n.addr()
 		if !n.LIP().Equal(net.IP{}) {
