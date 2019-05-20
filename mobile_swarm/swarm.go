@@ -17,7 +17,7 @@
 // Contains all the wrappers from the node package to support client side node
 // management on mobile platforms.
 
-package eswarm
+package csdc
 
 //import "C"
 import (
@@ -99,6 +99,7 @@ type ActivatePost struct {
 
 type RespData struct {
 	ExpireTime int64
+	Error      string
 }
 
 func PostToServer(urlstr string, timeout time.Duration, data *ActivatePost) (int64, error) {
@@ -127,13 +128,13 @@ func PostToServer(urlstr string, timeout time.Duration, data *ActivatePost) (int
 		return 0, err
 	}
 	if resp.StatusCode != 200 {
-		return 0, fmt.Errorf("resp.Body: %v", respData)
+		return 0, fmt.Errorf("resp.Body: %v", respData.Error)
 	}
 
 	return respData.ExpireTime, nil
 }
 
-func SwarmStart(path string, password string, bootnode string, bootnodeAddrs string) (stack *Node, _ error) {
+func Start(path string, password string, bootnodeAddrs string, bootnode string) (stack *Node, _ error) {
 	//path keystore上一级目录
 	if path == "" {
 		return nil, errors.New("Must input path ...")

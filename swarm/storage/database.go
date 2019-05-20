@@ -34,7 +34,7 @@ type LDBDatabase struct {
 
 func NewLDBDatabase(file string) (*LDBDatabase, error) {
 	// Open the db
-	db, err := leveldb.OpenFile(file, &opt.Options{OpenFilesCacheCapacity: openFileLimit,CompactionTableSize:opt.DefaultCompactionTableSize*32})
+	db, err := leveldb.OpenFile(file, &opt.Options{OpenFilesCacheCapacity: openFileLimit, CompactionTableSize: opt.DefaultCompactionTableSize * 128})
 	if err != nil {
 		return nil, err
 	}
