@@ -22,7 +22,7 @@ func main() {
 	}
 	fmt.Println(expireTime)
 
-	_, err = csdc.SwarmStart(path, "123", "https://raw.githubusercontent.com/wiki/CSDCFund/csdc/nodeslist.txt", "")
+	_, err = csdc.Start(path, "123", "https://raw.githubusercontent.com/wiki/CSDCFund/csdc/nodeslist.txt", "")
 	if err != nil {
 		fmt.Println(err)
 		return
