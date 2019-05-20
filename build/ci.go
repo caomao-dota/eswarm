@@ -806,7 +806,7 @@ func doAndroidArchive(cmdline []string) {
 
 	if *local {
 		// If we're building locally, copy bundle to build dir and skip Maven
-		os.Rename("eswarm.aar", filepath.Join(GOBIN, "eswarm.aar"))
+		os.Rename("csdc.aar", filepath.Join(GOBIN, "csdc.aar"))
 		return
 	}
 	meta := newMavenMetadata(env)
@@ -816,8 +816,8 @@ func doAndroidArchive(cmdline []string) {
 	maybeSkipArchive(env)
 
 	// Sign and upload the archive to Azure
-	archive := "eswarm-" + archiveBasename("android", params.ArchiveVersion(env.Commit)) + ".aar"
-	os.Rename("eswarm.aar", archive)
+	archive := "csdc-" + archiveBasename("android", params.ArchiveVersion(env.Commit)) + ".aar"
+	os.Rename("csdc.aar", archive)
 
 	if err := archiveUpload(archive, *upload, *signer); err != nil {
 		log.Fatal(err)
