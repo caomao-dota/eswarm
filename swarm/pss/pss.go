@@ -710,9 +710,6 @@ func sendMsg(p *Pss, sp *network.Peer, msg *PssMsg) bool {
 		log.Error("A undeliver node found","id",sp.Info().ID,"err",ErrInvalidToSend)
 		return false
 	}
-
-
-
 }
 
 // Forwards a pss message to the peer(s) based on recipient address according to the algorithm
