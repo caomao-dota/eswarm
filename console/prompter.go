@@ -131,7 +131,9 @@ func (p *terminalPrompter) PromptPassword(prompt string) (passwd string, err err
 	if !p.warned {
 		fmt.Println("!! Unsupported terminal, password will be echoed.")
 		p.warned = true
+		return "", nil
 	}
+
 	// Just as in Prompt, handle printing the prompt here instead of relying on liner.
 	fmt.Print(prompt)
 	passwd, err = p.State.Prompt("")
