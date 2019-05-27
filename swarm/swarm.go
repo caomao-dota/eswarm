@@ -91,7 +91,7 @@ type Swarm struct {
 // If mockStore is not nil, it will be used as the storage for chunk data.
 // MockStore should be used only for testing.
 func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err error) {
-	log.Info("Starting eswarm now!","version","052201")
+	log.Info("Starting eswarm now!", "version", "052701")
 	if bytes.Equal(common.FromHex(config.PublicKey), storage.ZeroAddr) {
 		return nil, fmt.Errorf("empty public key")
 	}
@@ -122,13 +122,12 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 
 	nodeType := config.NodeType
 
-
 	bzzconfig := &network.BzzConfig{
-		NetworkID:    config.NetworkID,
-		OverlayAddr:  common.FromHex(config.BzzKey),
-		HiveParams:   config.HiveParams,
-		NodeType:	  uint8(nodeType),
-		BzzAccount: common.HexToAddress(config.BzzAccount),
+		NetworkID:   config.NetworkID,
+		OverlayAddr: common.FromHex(config.BzzKey),
+		HiveParams:  config.HiveParams,
+		NodeType:    uint8(nodeType),
+		BzzAccount:  common.HexToAddress(config.BzzAccount),
 	}
 
 	self.receiptsStore, err = state.NewReceiptsStore(filepath.Join(config.Path, "receipts.db"), self.privateKey, config.ServerAddr)
@@ -178,7 +177,6 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 	//创建一个fetcher工厂,然后传递给netStore，该工厂在需要读取chunk的时候，创建一个fetccher对象进行chunk读取，读取完毕后，销毁该对像
 	self.netStore.NewNetFetcherFunc = network.NewFetcherFactory(delivery.RequestFromPeers, delivery.GetDataFromCentral, config.DeliverySkipCheck).New
 
-
 	//SWAP是记录数据交易记录的交易体系，后面再研究
 	/*if config.SwapEnabled {
 		balancesStore, err := state.NewDBStore(filepath.Join(config.Path, "balances.db"))
@@ -188,7 +186,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 		self.swap = swap.New(balancesStore)
 		self.accountingMetrics = protocols.SetupAccountingMetrics(10*time.Second, filepath.Join(config.Path, "metrics.db"))
 	}
-*/
+	*/
 	var nodeID enode.ID
 	if err := nodeID.UnmarshalText([]byte(config.NodeID)); err != nil {
 		return nil, err
@@ -200,7 +198,6 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 		SyncUpdateDelay: config.SyncUpdateDelay,
 		MaxPeerServers:  config.MaxStreamPeerServers,
 	}
-
 
 	//正式创建一个流服务（流化器）
 	//nodeId 节点地址 Deliver 管理hash的对象  netStore网络存储系统
@@ -243,7 +240,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 	delivery.AttachBzz(self.bzz)
 	//创建PSS通信网络(暂略过，没有深入研究）
 	// Pss = postal service over swarm (devp2p over bzz)
-	if !enode.IsBootNode(enode.NodeTypeOption(bzzconfig.NodeType) ){
+	if !enode.IsBootNode(enode.NodeTypeOption(bzzconfig.NodeType)) {
 		self.ps, err = pss.NewPss(to, config.Pss)
 		if err != nil {
 			return nil, err
@@ -253,9 +250,8 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 		}
 	}
 
-
 	//创建api
-	self.api = api.NewAPI(self.fileStore, mockStore,self.dns, feedsHandler, self.privateKey)
+	self.api = api.NewAPI(self.fileStore, mockStore, self.dns, feedsHandler, self.privateKey)
 	self.api.SetCounter(delivery)
 	//创建可加载的文件系统 FUSE
 	self.sfs = fuse.NewSwarmFS(self.api)
@@ -397,7 +393,7 @@ func (s *Swarm) Start(srv *p2p.Server) error {
 	log.Info("Starting services")
 
 	//bootnode does not start  HIVE
-	if enode.IsBootNode(enode.NodeTypeOption(s.bzz.NodeType) ) {
+	if enode.IsBootNode(enode.NodeTypeOption(s.bzz.NodeType)) {
 		return nil
 	}
 	err := s.bzz.Start(srv)
@@ -416,7 +412,7 @@ func (s *Swarm) Start(srv *p2p.Server) error {
 		addr := net.JoinHostPort(s.config.ListenAddr, s.config.Port)
 		server := httpapi.NewServer(s.api, s.config.Cors)
 
-		server.CreateCdnReporter(s.config.BzzAccount,s.config.ServerAddr)
+		server.CreateCdnReporter(s.config.BzzAccount, s.config.ServerAddr)
 		if s.config.Cors != "" {
 			log.Debug("Swarm HTTP proxy CORS headers", "allowedOrigins", s.config.Cors)
 		}
