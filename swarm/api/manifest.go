@@ -38,7 +38,7 @@ const (
 	ManifestType    = "application/bzz-manifest+json"
 	FeedContentType = "application/bzz-feed"
 
-	manifestSizeLimit = 5 * 1024 * 1024
+	manifestSizeLimit = 50 * 1024 * 1024
 )
 
 // Manifest represents a swarm manifest
@@ -183,10 +183,10 @@ type WalkFn func(entry *ManifestEntry) error
 // Walk recursively walks the manifest calling walkFn for each entry in the
 // manifest, including submanifests
 func (m *ManifestWalker) Walk(ctx context.Context, walkFn WalkFn) error {
-	return m.walk(ctx,m.trie, "", walkFn)
+	return m.walk(ctx, m.trie, "", walkFn)
 }
 
-func (m *ManifestWalker) walk(ctx context.Context,  trie *manifestTrie, prefix string, walkFn WalkFn) error {
+func (m *ManifestWalker) walk(ctx context.Context, trie *manifestTrie, prefix string, walkFn WalkFn) error {
 	for _, entry := range &trie.entries {
 		if entry == nil {
 			continue
@@ -205,7 +205,7 @@ func (m *ManifestWalker) walk(ctx context.Context,  trie *manifestTrie, prefix s
 		if err := trie.loadSubTrie(ctx, entry, nil); err != nil {
 			return err
 		}
-		if err := m.walk(ctx,entry.subtrie, entry.Path, walkFn); err != nil {
+		if err := m.walk(ctx, entry.subtrie, entry.Path, walkFn); err != nil {
 			return err
 		}
 	}
@@ -247,7 +247,7 @@ func readManifest(mr storage.LazySectionReader, addr storage.Address, fileStore 
 	size, err := mr.Size(mr.Context(), quitC)
 	if err != nil { // size == 0
 		// can't determine size means we don't have the root chunk
-	//	log.Trace("manifest not found", "addr", addr)
+		//	log.Trace("manifest not found", "addr", addr)
 		err = fmt.Errorf("Manifest not Found")
 		return
 	}
@@ -259,7 +259,7 @@ func readManifest(mr storage.LazySectionReader, addr storage.Address, fileStore 
 	manifestData := make([]byte, size)
 	read, err := mr.Read(manifestData)
 	if int64(read) < size {
-	//	log.Trace("manifest not found", "addr", addr)
+		//	log.Trace("manifest not found", "addr", addr)
 		if err == nil {
 			err = fmt.Errorf("Manifest retrieval cut short: read %v, expect %v", read, size)
 		}
@@ -273,7 +273,7 @@ func readManifest(mr storage.LazySectionReader, addr storage.Address, fileStore 
 	err = json.Unmarshal(manifestData, &man)
 	if err != nil {
 		err = fmt.Errorf("Manifest %v is malformed: %v", addr.Log(), err)
-	//	log.Trace("malformed manifest", "addr", addr)
+		//	log.Trace("malformed manifest", "addr", addr)
 		return
 	}
 
@@ -325,7 +325,7 @@ func (mt *manifestTrie) addEntry(entry *manifestTrieEntry, quitC chan bool) erro
 	}
 
 	if (oldentry.ContentType == ManifestType) && (cpl == len(oldentry.Path)) {
-		if mt.loadSubTrie(context.TODO(),oldentry, quitC) != nil {
+		if mt.loadSubTrie(context.TODO(), oldentry, quitC) != nil {
 			return nil
 		}
 		entry.Path = entry.Path[cpl:]
@@ -382,7 +382,7 @@ func (mt *manifestTrie) deleteEntry(path string, quitC chan bool) {
 
 	epl := len(entry.Path)
 	if (entry.ContentType == ManifestType) && (len(path) >= epl) && (path[:epl] == entry.Path) {
-		if mt.loadSubTrie(context.TODO(),entry, quitC) != nil {
+		if mt.loadSubTrie(context.TODO(), entry, quitC) != nil {
 			return
 		}
 		entry.subtrie.deleteEntry(path[epl:], quitC)
@@ -483,11 +483,11 @@ func (mt *manifestTrie) listWithPrefixInt(ctx context.Context, prefix, rp string
 					l = epl
 				}
 				if prefix[:l] == entry.Path[:l] {
-					err := mt.loadSubTrie(ctx,entry, quitC)
+					err := mt.loadSubTrie(ctx, entry, quitC)
 					if err != nil {
 						return err
 					}
-					err = entry.subtrie.listWithPrefixInt(ctx,prefix[l:], rp+entry.Path[l:], quitC, cb)
+					err = entry.subtrie.listWithPrefixInt(ctx, prefix[l:], rp+entry.Path[l:], quitC, cb)
 					if err != nil {
 						return err
 					}
@@ -546,11 +546,11 @@ func (mt *manifestTrie) findPrefixOf(ctx context.Context, path string, quitC cha
 		log.Trace(fmt.Sprintf("entry.ContentType = %v", entry.ContentType))
 		//the subentry is a manifest, load subtrie
 		if entry.ContentType == ManifestType && (strings.Contains(entry.Path, path) || strings.Contains(path, entry.Path)) {
-			err := mt.loadSubTrie(ctx,entry, quitC)
+			err := mt.loadSubTrie(ctx, entry, quitC)
 			if err != nil {
 				return nil, 0
 			}
-			sub, pos := entry.subtrie.findPrefixOf(ctx,path[epl:], quitC)
+			sub, pos := entry.subtrie.findPrefixOf(ctx, path[epl:], quitC)
 			if sub != nil {
 				entry = sub
 				pos += epl
@@ -587,6 +587,6 @@ func (mt *manifestTrie) getEntry(ctx context.Context, spath string) (entry *mani
 	path := RegularSlashes(spath)
 	var pos int
 	quitC := make(chan bool)
-	entry, pos = mt.findPrefixOf(ctx,path, quitC)
+	entry, pos = mt.findPrefixOf(ctx, path, quitC)
 	return entry, path[:pos]
 }
