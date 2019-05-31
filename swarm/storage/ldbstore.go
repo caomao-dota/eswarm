@@ -30,6 +30,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/boltdb/bolt"
 	"github.com/plotozhu/MDCMainnet/rlp"
 	"io"
 	"io/ioutil"
@@ -43,7 +44,7 @@ import (
 
 const (
 	defaultGCRatio    = 10
-	defaultMaxGCRound = 10000
+	defaultMaxGCRound = 1000000
 	defaultMaxGCBatch = 5000
 
 	wEntryCnt  = 1 << 0
@@ -104,7 +105,7 @@ type LDBStore struct {
 	accessCnt uint64 // ever-accumulating number increased every time we read/access an entry
 	dataIdx   uint64 // similar to entryCnt, but we only increment it
 	capacity  uint64
-	bucketCnt []uint64     //每个桶里的dataIdex的最大值
+	bucketCnt []uint64 //每个桶里的dataIdex的最大值
 
 	hashfunc SwarmHasher
 	po       func(Address) uint8 //从地址计算属于哪个PO
@@ -116,6 +117,7 @@ type LDBStore struct {
 	quit     chan struct{}
 	gc       *garbage
 
+	chunkDb *bolt.DB
 	// Functions encodeDataFunc is used to bypass
 	// the default functionality of DbStore with
 	// mock.NodeStore for testing purposes.
@@ -157,8 +159,8 @@ func NewLDBStore(params *LDBStoreParams) (s *LDBStore, err error) {
 		return nil, err
 	}
 	// associate encodeData with default functionality
-	s.encodeDataFunc = encodeData
-/*	db, err := bolt.Open(params.Path+"/rawchunk", 0644, nil)
+	//s.encodeDataFunc = encodeData
+	db, err := bolt.Open(params.Path+"/rawchunk", 0644, nil)
 
 	if err != nil {
 		return nil, err
@@ -166,12 +168,11 @@ func NewLDBStore(params *LDBStoreParams) (s *LDBStore, err error) {
 
 	s.chunkDb = db
 	s.encodeDataFunc = newBoltDbEncodeDataFunc(db)
-	s.getDataFunc    = newBoltDbGetDataFunc(db)
+	s.getDataFunc = newBoltDbGetDataFunc(db)
 	s.deleteChunkFunc = newBoltDbDeleteDataFunc(db)
-*/
+
 	s.po = params.Po
 	s.setCapacity(params.DbCapacity)
-
 
 	s.bucketCnt = make([]uint64, 0x100)
 	for i := 0; i < 0x100; i++ {
@@ -200,7 +201,6 @@ func NewLDBStore(params *LDBStoreParams) (s *LDBStore, err error) {
 
 	return s, nil
 }
-
 
 //func (s *LDBStore) GetChunkFromDb()
 // MarkAccessed increments the access counter as a best effort for a chunk, so
@@ -244,7 +244,7 @@ func NewMockDbStore(params *LDBStoreParams, mockStore *mock.NodeStore) (s *LDBSt
 	if mockStore != nil {
 		s.encodeDataFunc = newMockEncodeDataFunc(mockStore)
 		s.getDataFunc = newMockGetDataFunc(mockStore)
-		s.deleteChunkFunc = nil   //delete func is not need here
+		s.deleteChunkFunc = nil //delete func is not need here
 	}
 
 	return
@@ -355,7 +355,7 @@ func (s *LDBStore) collectGarbage() error {
 
 	// calculate the amount of chunks to collect and reset counter
 	s.startGC(int(entryCnt))
-	log.Debug("collectGarbage", "target", s.gc.target, "entryCnt", entryCnt)
+	log.Info("collectGarbage", "target", s.gc.target, "entryCnt", entryCnt)
 
 	for s.gc.count < s.gc.target {
 		it := s.db.NewIterator()
@@ -383,7 +383,7 @@ func (s *LDBStore) collectGarbage() error {
 			s.delete(s.gc.batch.Batch, index, keyIdx, po)
 			singleIterationCount++
 			s.gc.count++
-//			log.Trace("garbage collect enqueued chunk for deletion", "key", hash)
+			//			log.Trace("garbage collect enqueued chunk for deletion", "key", hash)
 
 			// break if target is not on max garbage batch boundary
 			if s.gc.count >= s.gc.target {
@@ -392,13 +392,13 @@ func (s *LDBStore) collectGarbage() error {
 		}
 
 		s.writeBatch(s.gc.batch, wEntryCnt)
-//		log.Trace("garbage collect batch done", "batch", singleIterationCount, "total", s.gc.count)
+		//		log.Trace("garbage collect batch done", "batch", singleIterationCount, "total", s.gc.count)
 		s.lock.Unlock()
 		it.Release()
 	}
 
 	metrics.GetOrRegisterCounter("ldbstore.collectgarbage.delete", nil).Inc(int64(s.gc.count))
-	log.Debug("garbage collect done", "c", s.gc.count)
+	log.Info("garbage collect done", "c", s.gc.count)
 	s.gc.runC <- struct{}{}
 
 	return nil
@@ -425,7 +425,7 @@ func (s *LDBStore) Export(out io.Writer) (int64, error) {
 		decodeIndex(it.Value(), &index)
 		po := s.po(hash)
 		datakey := getDataKey(index.Idx, po)
-//		log.Trace("store.export", "dkey", fmt.Sprintf("%x", datakey), "dataidx", index.Idx, "po", po)
+		//		log.Trace("store.export", "dkey", fmt.Sprintf("%x", datakey), "dataidx", index.Idx, "po", po)
 		data, err := s.db.Get(datakey)
 		if err != nil {
 			log.Warn(fmt.Sprintf("Chunk %x found but could not be accessed: %v", key, err))
@@ -577,7 +577,7 @@ func (s *LDBStore) Cleanup(f func(Chunk) bool) {
 		sdata := c.Data()
 
 		cs := int64(binary.LittleEndian.Uint64(sdata[:8]))
-//		log.Trace("chunk", "key", fmt.Sprintf("%x", key), "ck", fmt.Sprintf("%x", ck), "dkey", fmt.Sprintf("%x", datakey), "dataidx", index.Idx, "po", po, "len data", len(data), "len sdata", len(sdata), "size", cs)
+		//		log.Trace("chunk", "key", fmt.Sprintf("%x", key), "ck", fmt.Sprintf("%x", ck), "dkey", fmt.Sprintf("%x", datakey), "dataidx", index.Idx, "po", po, "len data", len(data), "len sdata", len(sdata), "size", cs)
 
 		// if chunk is to be removed
 		if f(c) {
@@ -775,12 +775,12 @@ func (s *LDBStore) deleteNow(idx *dpaDBIndex, idxKey []byte, po uint8) error {
 // if called directly, decrements entrycount regardless if the chunk exists upon deletion. Risk of wrap to max uint64
 func (s *LDBStore) delete(batch *leveldb.Batch, idx *dpaDBIndex, idxKey []byte, po uint8) {
 	metrics.GetOrRegisterCounter("ldbstore.delete", nil).Inc(1)
-//	log.Info("delete chunk info","index key",idxKey)
+	//	log.Info("delete chunk info","index key",idxKey)
 	gcIdxKey := getGCIdxKey(idx)
 	batch.Delete(gcIdxKey)
 	dataKey := getDataKey(idx.Idx, po)
 	if s.deleteChunkFunc != nil {
-		addr,_err := s.db.Get(dataKey)
+		addr, _err := s.db.Get(dataKey)
 		if _err == nil {
 			s.deleteChunkFunc(addr)
 		}
@@ -808,7 +808,7 @@ func (s *LDBStore) BinIndex(po uint8) uint64 {
 // Is thread safe
 func (s *LDBStore) Put(ctx context.Context, chunk Chunk) error {
 	metrics.GetOrRegisterCounter("ldbstore.put", nil).Inc(1)
-//	log.Trace("ldbstore.put", "key", chunk.Address())
+	//	log.Trace("ldbstore.put", "key", chunk.Address())
 
 	ikey := getIndexKey(chunk.Address())
 	var index dpaDBIndex
@@ -824,16 +824,16 @@ func (s *LDBStore) Put(ctx context.Context, chunk Chunk) error {
 	}
 	batch := s.batch
 
-//	log.Trace("ldbstore.put: s.db.Get", "key", chunk.Address(), "ikey", fmt.Sprintf("%x", ikey))
+	//	log.Trace("ldbstore.put: s.db.Get", "key", chunk.Address(), "ikey", fmt.Sprintf("%x", ikey))
 	orgData, err := s.db.Get(ikey)
 	if err != nil {
 		s.doPut(chunk, &index, po)
-	}else {
+	} else {
 		decodeIndex(orgData, &index)
 
 	}
-	if(index.Idx == 0 ) {
-		log.Error("Error in db put", "index",0)
+	if index.Idx == 0 {
+		log.Error("Error in db put", "index", 0)
 	}
 	idata := encodeIndex(&index)
 	s.batch.Put(ikey, idata)
@@ -863,9 +863,9 @@ func (s *LDBStore) doPut(chunk Chunk, index *dpaDBIndex, po uint8) {
 	/*if !s.VerifyHash(chunk.Data(),chunk.Address()) {
 		fmt.Println("Chunk not correct!",chunk.Address())
 	}*/
-	data := s.encodeDataFunc(chunk)  //数据存入到boltdb,返回的是address
+	data := s.encodeDataFunc(chunk) //数据存入到boltdb,返回的是address
 	dkey := getDataKey(s.dataIdx, po)
-	s.batch.Put(dkey, data)			//记录了address
+	s.batch.Put(dkey, data) //记录了address
 	index.Idx = s.dataIdx
 	s.bucketCnt[po] = s.dataIdx
 	s.entryCnt++
@@ -928,7 +928,7 @@ func (s *LDBStore) writeBatch(b *dbBatch, wFlag uint8) error {
 	if err := s.db.Write(b.Batch); err != nil {
 		return fmt.Errorf("unable to write batch: %v", err)
 	}
-//	log.Trace(fmt.Sprintf("batch write (%d entries)", l))
+	//	log.Trace(fmt.Sprintf("batch write (%d entries)", l))
 	return nil
 }
 
@@ -941,6 +941,29 @@ func newMockEncodeDataFunc(mockStore *mock.NodeStore) func(chunk Chunk) []byte {
 		if err := mockStore.Put(chunk.Address(), encodeData(chunk)); err != nil {
 			log.Error(fmt.Sprintf("%T: Chunk %v put: %v", mockStore, chunk.Address().Log(), err))
 		}
+		return chunk.Address()[:]
+	}
+}
+func AddrBucket(addr []byte) []byte {
+	return addr[0:1]
+}
+
+// newMockEncodeDataFunc returns a function that stores the chunk data
+// to a mock store to bypass the default functionality encodeData.
+// The constructed function always returns the nil data, as DbStore does
+// not need to store the data, but still need to create the index.
+func newBoltDbEncodeDataFunc(db *bolt.DB) func(chunk Chunk) []byte {
+	return func(chunk Chunk) []byte {
+		go func() {
+			db.Update(func(tx *bolt.Tx) error {
+				b, err := tx.CreateBucketIfNotExists(AddrBucket(chunk.Address()))
+				err = b.Put(chunk.Address(), encodeData(chunk))
+				if err != nil {
+					log.Error(fmt.Sprintf("%T: Chunk %v put: %v", db.String(), chunk.Address().Log(), err))
+				}
+				return err
+			})
+		}()
 		return chunk.Address()[:]
 	}
 }
@@ -1003,7 +1026,7 @@ func (s *LDBStore) PutSchema(schema string) error {
 // Updates access count and is thread safe
 func (s *LDBStore) Get(_ context.Context, addr Address) (chunk Chunk, err error) {
 	metrics.GetOrRegisterCounter("ldbstore.get", nil).Inc(1)
-//	log.Trace("ldbstore.get", "key", addr)
+	//	log.Trace("ldbstore.get", "key", addr)
 
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -1039,14 +1062,15 @@ func StringSliceEqualBCE(a, b []byte) bool {
 
 	return true
 }
-func (s *LDBStore) VerifyHash(chunkData,address []byte) bool{
+func (s *LDBStore) VerifyHash(chunkData, address []byte) bool {
 
-		hasher := s.hashfunc()
-		hasher.ResetWithLength(chunkData[:8]) // 8 bytes of length
-		hasher.Write(chunkData[8:])           // minus 8 []byte length
-		targetAddr := hasher.Sum(nil)
-		return StringSliceEqualBCE(targetAddr,address)
+	hasher := s.hashfunc()
+	hasher.ResetWithLength(chunkData[:8]) // 8 bytes of length
+	hasher.Write(chunkData[8:])           // minus 8 []byte length
+	targetAddr := hasher.Sum(nil)
+	return StringSliceEqualBCE(targetAddr, address)
 }
+
 // TODO: To conform with other private methods of this object indices should not be updated
 func (s *LDBStore) get(addr Address) (chunk Chunk, err error) {
 	if s.closed {
@@ -1058,7 +1082,7 @@ func (s *LDBStore) get(addr Address) (chunk Chunk, err error) {
 		var data []byte
 		if s.getDataFunc != nil {
 			// if getDataFunc is defined, use it to retrieve the chunk data
-	//		log.Trace("ldbstore.get retrieve with getDataFunc", "key", addr)
+			//		log.Trace("ldbstore.get retrieve with getDataFunc", "key", addr)
 			data, err = s.getDataFunc(addr)
 			if err != nil {
 				return
@@ -1070,17 +1094,16 @@ func (s *LDBStore) get(addr Address) (chunk Chunk, err error) {
 			if len(data) == 32 {
 				err = ErrChunkInvalid
 			}
-//			log.Trace("ldbstore.get retrieve", "key", addr, "indexkey", index.Idx, "datakey", fmt.Sprintf("%x", datakey), "proximity", proximity)
+			//			log.Trace("ldbstore.get retrieve", "key", addr, "indexkey", index.Idx, "datakey", fmt.Sprintf("%x", datakey), "proximity", proximity)
 			if err != nil {
-//				log.Trace("ldbstore.get chunk found but could not be accessed", "key", addr, "err", err)
+				//				log.Trace("ldbstore.get chunk found but could not be accessed", "key", addr, "err", err)
 				s.deleteNow(index, getIndexKey(addr), s.po(addr))
 				return
 			}
-		/*	if !s.VerifyHash(data[32:],addr) {
+			/*	if !s.VerifyHash(data[32:],addr) {
 				fmt.Printf("hash check error: %v datalen :%v \r\n",addr,len(data))
 			}*/
 		}
-
 
 		return decodeData(addr, data)
 	} else {
@@ -1104,6 +1127,39 @@ func newMockGetDataFunc(mockStore *mock.NodeStore) func(addr Address) (data []by
 	}
 }
 
+func newBoltDbGetDataFunc(db *bolt.DB) func(addr Address) (data []byte, err error) {
+	return func(addr Address) (data []byte, err error) {
+
+		err = db.View(func(tx *bolt.Tx) error {
+			b := tx.Bucket(AddrBucket(addr))
+			if b != nil {
+				data = b.Get(addr)
+				//fmt.Printf("The answer is: %s\n", v)
+				return nil
+			} else {
+				return errors.New("bucket not exist")
+			}
+
+		})
+		return data, err
+	}
+}
+
+func newBoltDbDeleteDataFunc(db *bolt.DB) func(addr Address) (err error) {
+	return func(addr Address) (err error) {
+
+		err = db.Update(func(tx *bolt.Tx) error {
+			b := tx.Bucket(AddrBucket(addr))
+			if b != nil {
+				return b.Delete(addr)
+			} else {
+				return errors.New("bucket not exist")
+			}
+
+		})
+		return err
+	}
+}
 func (s *LDBStore) setCapacity(c uint64) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -1123,6 +1179,7 @@ func (s *LDBStore) Close() {
 	// force writing out current batch
 	s.writeCurrentBatch()
 	s.db.Close()
+	s.chunkDb.Close()
 }
 
 // SyncIterator(start, stop, po, f) calls f on each hash of a bin po from start to stop

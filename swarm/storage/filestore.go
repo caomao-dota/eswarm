@@ -36,15 +36,15 @@ implementation for storage or retrieval.
 */
 
 const (
-	defaultLDBCapacity                = 10000000 // capacity for LevelDB, by default 5*10^6*4096 bytes == 20GB
-	defaultCacheCapacity              = 1000   // capacity for in-memory chunks' cache
+	defaultLDBCapacity                = 10000000 // capacity for LevelDB, by default 10M*256K bytes == 2.56TB
+	defaultCacheCapacity              = 1000     // capacity for in-memory chunks' cache
 	defaultChunkRequestsCacheCapacity = 10000000 // capacity for container holding outgoing requests for chunks. should be set to LevelDB capacity
 )
 
 type FileStore struct {
 	ChunkStore
-	hashFunc SwarmHasher
-	failesafeUrl    string // fail safe url
+	hashFunc     SwarmHasher
+	failesafeUrl string // fail safe url
 }
 
 type FileStoreParams struct {
