@@ -613,16 +613,19 @@ func (p *Peer) HandleMsg(ctx context.Context, msg interface{}) error {
 	default:
 	}
 
-	ctx, _ = context.WithTimeout(ctx, 30*time.Second)
+
 	switch msg := msg.(type) {
 
 	case *SubscribeMsg:
+		ctx, _ = context.WithTimeout(ctx, 30*time.Second)
 		return p.handleSubscribeMsg(ctx, msg)
 
 	case *SubscribeErrorMsg:
+		ctx, _ = context.WithTimeout(ctx, 30*time.Second)
 		return p.handleSubscribeErrorMsg(msg)
 
 	case *UnsubscribeMsg:
+		ctx, _ = context.WithTimeout(ctx, 30*time.Second)
 		return p.handleUnsubscribeMsg(msg)
 
 	case *OfferedHashesMsg:
@@ -632,6 +635,7 @@ func (p *Peer) HandleMsg(ctx context.Context, msg interface{}) error {
 		return p.handleTakeoverProofMsg(ctx, msg)
 
 	case *WantedHashesMsg:
+		ctx, _ = context.WithTimeout(ctx, 30*time.Second)
 		return p.handleWantedHashesMsg(ctx, msg)
 
 	case *ChunkDeliveryMsgRetrieval:
@@ -643,12 +647,15 @@ func (p *Peer) HandleMsg(ctx context.Context, msg interface{}) error {
 		return p.streamer.delivery.handleChunkDeliveryMsg(ctx, p, ((*ChunkDeliveryMsg)(msg)), false)
 
 	case *RetrieveRequestMsg:
+		ctx, _ = context.WithTimeout(ctx, 30*time.Second)
 		return p.streamer.delivery.handleRetrieveRequestMsg(ctx, p, msg)
 
 	case *RequestSubscriptionMsg:
+		ctx, _ = context.WithTimeout(ctx, 30*time.Second)
 		return p.handleRequestSubscription(ctx, msg)
 
 	case *ReceiptsMsg:
+		ctx, _ = context.WithTimeout(ctx, 30*time.Second)
 		return p.streamer.delivery.handleReceiptsMsg(p, ((*ReceiptsMsg)(msg)))
 
 	case *QuitMsg:

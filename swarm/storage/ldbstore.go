@@ -117,6 +117,7 @@ type LDBStore struct {
 	quit     chan struct{}
 	gc       *garbage
 
+	waitChan chan struct{}
 	chunkDb *bolt.DB
 	// Functions encodeDataFunc is used to bypass
 	// the default functionality of DbStore with
@@ -148,7 +149,7 @@ func NewLDBStore(params *LDBStoreParams) (s *LDBStore, err error) {
 	s = new(LDBStore)
 	s.hashfunc = params.Hash
 	s.quit = make(chan struct{})
-
+	s.waitChan = make(chan struct{},100)
 	s.batchesC = make(chan struct{}, 1)
 	go s.writeBatches()
 	s.batch = newBatch()
@@ -160,14 +161,14 @@ func NewLDBStore(params *LDBStoreParams) (s *LDBStore, err error) {
 	}
 	// associate encodeData with default functionality
 	//s.encodeDataFunc = encodeData
-	db, err := bolt.Open(params.Path+"/rawchunk", 0644, nil)
+	db, err := bolt.Open(params.Path+"/../rawchunk", 0644, nil)
 
 	if err != nil {
 		return nil, err
 	}
 
 	s.chunkDb = db
-	s.encodeDataFunc = newBoltDbEncodeDataFunc(db)
+	s.encodeDataFunc = newBoltDbEncodeDataFunc(s)
 	s.getDataFunc = newBoltDbGetDataFunc(db)
 	s.deleteChunkFunc = newBoltDbDeleteDataFunc(db)
 
@@ -952,15 +953,17 @@ func AddrBucket(addr []byte) []byte {
 // to a mock store to bypass the default functionality encodeData.
 // The constructed function always returns the nil data, as DbStore does
 // not need to store the data, but still need to create the index.
-func newBoltDbEncodeDataFunc(db *bolt.DB) func(chunk Chunk) []byte {
+func newBoltDbEncodeDataFunc(s *LDBStore) func(chunk Chunk) []byte {
 	return func(chunk Chunk) []byte {
 		go func() {
-			db.Update(func(tx *bolt.Tx) error {
+			s.waitChan <- struct {}{}
+			s.chunkDb.Update(func(tx *bolt.Tx) error {
 				b, err := tx.CreateBucketIfNotExists(AddrBucket(chunk.Address()))
 				err = b.Put(chunk.Address(), encodeData(chunk))
 				if err != nil {
-					log.Error(fmt.Sprintf("%T: Chunk %v put: %v", db.String(), chunk.Address().Log(), err))
+					log.Error(fmt.Sprintf("%T: Chunk %v put: %v", s.chunkDb.String(), chunk.Address().Log(), err))
 				}
+				<- s.waitChan
 				return err
 			})
 		}()
@@ -1135,11 +1138,12 @@ func newBoltDbGetDataFunc(db *bolt.DB) func(addr Address) (data []byte, err erro
 			if b != nil {
 				data = b.Get(addr)
 				//fmt.Printf("The answer is: %s\n", v)
-				return nil
-			} else {
-				return errors.New("bucket not exist")
 			}
-
+			if data != nil  {
+				return errors.New("bucket not exist")
+			}else {
+				return nil
+			}
 		})
 		return data, err
 	}
@@ -1147,7 +1151,6 @@ func newBoltDbGetDataFunc(db *bolt.DB) func(addr Address) (data []byte, err erro
 
 func newBoltDbDeleteDataFunc(db *bolt.DB) func(addr Address) (err error) {
 	return func(addr Address) (err error) {
-
 		err = db.Update(func(tx *bolt.Tx) error {
 			b := tx.Bucket(AddrBucket(addr))
 			if b != nil {
