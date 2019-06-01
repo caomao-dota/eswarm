@@ -160,8 +160,8 @@ func NewLDBStore(params *LDBStoreParams) (s *LDBStore, err error) {
 		return nil, err
 	}
 	// associate encodeData with default functionality
-	//s.encodeDataFunc = encodeData
-	db, err := bolt.Open(params.Path+"/../rawchunk", 0644, nil)
+	s.encodeDataFunc = encodeData
+	/*db, err := bolt.Open(params.Path+"/../rawchunk", 0644, nil)
 
 	if err != nil {
 		return nil, err
@@ -171,7 +171,7 @@ func NewLDBStore(params *LDBStoreParams) (s *LDBStore, err error) {
 	s.encodeDataFunc = newBoltDbEncodeDataFunc(s)
 	s.getDataFunc = newBoltDbGetDataFunc(db)
 	s.deleteChunkFunc = newBoltDbDeleteDataFunc(db)
-
+*/
 	s.po = params.Po
 	s.setCapacity(params.DbCapacity)
 
@@ -1182,7 +1182,10 @@ func (s *LDBStore) Close() {
 	// force writing out current batch
 	s.writeCurrentBatch()
 	s.db.Close()
-	s.chunkDb.Close()
+	if s.chunkDb != nil {
+		s.chunkDb.Close()
+	}
+
 }
 
 // SyncIterator(start, stop, po, f) calls f on each hash of a bin po from start to stop
