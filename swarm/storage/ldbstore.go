@@ -43,7 +43,7 @@ import (
 
 const (
 	defaultGCRatio    = 10
-	defaultMaxGCRound = 1000000
+	defaultMaxGCRound = 500000
 	defaultMaxGCBatch = 5000
 
 	wEntryCnt  = 1 << 0
