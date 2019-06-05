@@ -24,6 +24,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/opt"
+	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
 const openFileLimit = 65536
@@ -79,4 +80,9 @@ func (db *LDBDatabase) Write(batch *leveldb.Batch) error {
 func (db *LDBDatabase) Close() {
 	// Close the leveldb database
 	db.db.Close()
+}
+
+func (db *LDBDatabase) CompactRange(r util.Range) error {
+	// Close the leveldb database
+	return db.db.CompactRange(r)
 }
