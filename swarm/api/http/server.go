@@ -17,6 +17,8 @@
 /*
 A simple http server interface to Swarm
 */
+
+
 package http
 
 import (
@@ -900,7 +902,7 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 
 
 				log.Info("set timeout:","ms",int64(timeout))
-				newContext, _ = context.WithTimeout(newContext, time.Duration(int64(timeout) * int64(time.Millisecond)))
+
 
 				/*if s.m3u8.sizelost > 0 && s.m3u8.sizelost <= 10 {
 					newContext, _ = context.WithTimeout(newContext, 5*time.Second)
@@ -911,8 +913,10 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 					newContext, _ = context.WithTimeout(newContext, 20*time.Second)
 				}
 */
-				addr, err := s.api.ResolveURI(newContext, actUri, pass)
+				anewContext, _ := context.WithTimeout(newContext, time.Duration(int64(2000) * int64(time.Millisecond)))
+				addr, err := s.api.ResolveURI(anewContext, actUri, pass)
 				if err == nil {
+					newContext, _ = context.WithTimeout(newContext, time.Duration(int64(timeout) * int64(time.Millisecond)))
 					//log.Info("addr resolved:","uri",actUri)
 					reader, isEncrypted := s.api.Retrieve(newContext, addr)
 					_, err := reader.Size(newContext, nil);

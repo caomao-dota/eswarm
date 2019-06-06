@@ -1543,12 +1543,8 @@ func (tab *Table) OnPingReceived(n  *enode.Node,ip net.IP,port uint16) {
 	} else if b.replacements.Contains(n.ID()) {
 		oldNode := b.replacements.Get(n.ID())
 		oldNode.OnPingReceived(ip,port)
-
 		tab.DoPing(oldNode,nil)
-
-
 	} else {
-
 		_,newnode := b.replacements.AddNode(wrapNode(n))
 		if newnode != nil {
 			tab.DoPing(newnode,nil)
