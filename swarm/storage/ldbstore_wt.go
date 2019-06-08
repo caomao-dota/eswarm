@@ -168,7 +168,7 @@ func NewLDBStore(params *LDBStoreParams) (s *LDBStore, err error) {
 	s.encodeDataFunc = encodeData
 
 	// Set client options
-	conn, err := wiredtiger.Open(params.Path+"/../..", "create")
+	conn, err := wiredtiger.Open(params.Path, "create")
 
 
 	if err != nil {
@@ -1095,7 +1095,7 @@ func (s *LDBStore) get(addr Address) (chunk Chunk, err error) {
 			// default DbStore functionality to retrieve chunk data
 			datakey := getDataKey(index.Idx, proximity)
 			data, err = s.db.Get(datakey)
-			if len(data) == 32 {
+			if len(data) <= 32 {
 				err = ErrChunkInvalid
 			}
 			//			log.Trace("ldbstore.get retrieve", "key", addr, "indexkey", index.Idx, "datakey", fmt.Sprintf("%x", datakey), "proximity", proximity)
@@ -1257,39 +1257,38 @@ func newWtEncodeDataFunc(s *LDBStore) func(chunk Chunk) []byte {
 			if err != nil {
 				log.Error("error in set key","reason",err)
 			}
-			err = s.cursor.SetValue(chunk.Data())
+			err = s.cursor.SetValue(encodeData(chunk))
 			if err != nil {
 				log.Error("error in set data","reason",err)
 			}
 			err = s.cursor.Insert()
 			if err != nil {
-				log.Error("Failed to insert", "error",err.Error())
-			}
-	//	 else{
-		//				log.Info("Ok to insert")
-		//			}	<- s.waitChan
+				log.Error("Failed to insert", "error",err)
+			} else{
+			//			log.Info("Ok to insert","addr",chunk.Address(),"value",chunk.Data()[:10])
+			}	//<- s.waitChan
 	//	}()
+
 		return chunk.Address()[:]
 	}
 }
 
-type  Data struct{
 
-}
 func newWtGetDataFunc(s *LDBStore) func(addr Address) (data []byte, err error) {
 	return func(addr Address) (data []byte, err error) {
 
 
-
+		value := make([]byte,0)
 		s.cursor.SetKey([]byte(addr[:]))
 		err = s.cursor.Search()
-		if err != nil {
-			err = s.cursor.GetValue(data)
+		if err == nil {
+			err = s.cursor.GetValue(&value)
 		}
 		if err != nil {
-			log.Error("Failed to lookup", "error",err.Error())
-		} else{
-			log.Info("Ok to insert")
+			log.Error("Failed to lookup", "addr",addr,"error",err.Error())
+		}else {
+			data = value
+			//log.Info("Ok to retrieve","addr",addr,"value",data[:10])
 		}
 		return
 
@@ -1298,14 +1297,10 @@ func newWtGetDataFunc(s *LDBStore) func(addr Address) (data []byte, err error) {
 
 func newWtDeleteDataFunc(s *LDBStore) func(addr Address) (err error) {
 	return func(addr Address) (err error) {
-
-
 		s.cursor.SetKey([]byte(addr[:]))
 		err = s.cursor.Remove()
 		if err != nil {
 			log.Error("Failed to delete", "error",err.Error())
-		} else{
-			log.Info("Ok to insert")
 		}
 
 		return
