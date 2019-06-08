@@ -20,7 +20,7 @@
 // it implements purging based on access count allowing for external control of
 // max capacity
 
-// +build use_mongo
+// +build !mobile
 
 package storage
 
@@ -32,19 +32,16 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/plotozhu/MDCMainnet/rlp"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"io"
 	"io/ioutil"
 	"sync"
-	"time"
 
 	"github.com/plotozhu/MDCMainnet/metrics"
+	"github.com/plotozhu/MDCMainnet/rlp"
 	"github.com/plotozhu/MDCMainnet/swarm/log"
 	"github.com/plotozhu/MDCMainnet/swarm/storage/mock"
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/plotozhu/wiredtiger-go/wiredtiger"
 )
 
 const (
@@ -136,7 +133,8 @@ type LDBStore struct {
 	//deleteChunkFunc is used to delete data from boltdb
 	deleteChunkFunc func(addr Address) (err error)
 
-	mongoClient  []*mongo.Collection
+	wtSession  *wiredtiger.Session
+	cursor     *wiredtiger.Cursor
 }
 
 type dbBatch struct {
@@ -170,34 +168,31 @@ func NewLDBStore(params *LDBStoreParams) (s *LDBStore, err error) {
 	s.encodeDataFunc = encodeData
 
 	// Set client options
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	conn, err := wiredtiger.Open(params.Path+"/../..", "create")
 
-	// Connect to MongoDB
-	client, err := mongo.Connect(context.TODO(), clientOptions)
 
 	if err != nil {
 		log.Error(err.Error())
 	}
-
-	s.mongoClient = make([]*mongo.Collection,16)
-	for i := 0 ;i < 16; i++ {
-
-		s.mongoClient[i] = client.Database("chunks").Collection(fmt.Sprintf("shard%v",i))
-	}
-	s.encodeDataFunc = newMongoEncodeDataFunc(s)
-	s.getDataFunc = newMongoGetDataFunc(s)
-	s.deleteChunkFunc = newMongoDeleteDataFunc(s)
-	/*db, err := bolt.Open(params.Path+"/../rawchunk", 0644, nil)
-
+	session, err := conn.OpenSession("")
 	if err != nil {
-		return nil, err
+		panic(fmt.Sprintf("Failed to create session: %v", err.Error()))
+
 	}
 
-	s.chunkDb = db
-	s.encodeDataFunc = newBoltDbEncodeDataFunc(s)
-	s.getDataFunc = newBoltDbGetDataFunc(db)
-	s.deleteChunkFunc = newBoltDbDeleteDataFunc(db)
-*/
+	err = session.Create("table:rawchunks", "key_format=u,value_format=u")
+	if err != nil {
+		panic(fmt.Sprintf("Failed to open cursor table: %v", err.Error()))
+	}
+	cursor, err := session.OpenCursor("table:rawchunks", nil,"")
+
+	s.cursor = cursor
+	s.wtSession = session
+
+	s.encodeDataFunc = newWtEncodeDataFunc(s)
+	s.getDataFunc = newWtGetDataFunc(s)
+	s.deleteChunkFunc = newWtDeleteDataFunc(s)
+
 	s.po = params.Po
 	s.setCapacity(params.DbCapacity)
 
@@ -1159,6 +1154,7 @@ func (s *LDBStore) Close() {
 		s.chunkDb.Close()
 	}
 */
+	s.wtSession.GetConnection().Close("")
 }
 
 // SyncIterator(start, stop, po, f) calls f on each hash of a bin po from start to stop
@@ -1250,22 +1246,29 @@ func newBoltDbDeleteDataFunc(db *bolt.DB) func(addr Address) (err error) {
 // to a mock store to bypass the default functionality encodeData.
 // The constructed function always returns the nil data, as DbStore does
 // not need to store the data, but still need to create the index.
-func newMongoEncodeDataFunc(s *LDBStore) func(chunk Chunk) []byte {
+func newWtEncodeDataFunc(s *LDBStore) func(chunk Chunk) []byte {
 	return func(chunk Chunk) []byte {
-		go func() {
-			s.waitChan <- struct {}{}
-			i := chunk.Address()[0] & 0xF
-			ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
-
-			updsert := true
-
-			_,err := s.mongoClient[i].ReplaceOne(ctx,bson.M{"_id": chunk.Address()}, bson.M{"v": chunk.Data()},&options.ReplaceOptions{Upsert:&updsert})
+		//go func() {
+		//	s.waitChan <- struct {}{}
 
 
+			key := chunk.Address()
+			err := s.cursor.SetKey([]byte(key[:]))
 			if err != nil {
-				log.Error("error in insert chunk","addr",chunk.Address(),"reason", err)
+				log.Error("error in set key","reason",err)
 			}
-		}()
+			err = s.cursor.SetValue(chunk.Data())
+			if err != nil {
+				log.Error("error in set data","reason",err)
+			}
+			err = s.cursor.Insert()
+			if err != nil {
+				log.Error("Failed to insert", "error",err.Error())
+			}
+	//	 else{
+		//				log.Info("Ok to insert")
+		//			}	<- s.waitChan
+	//	}()
 		return chunk.Address()[:]
 	}
 }
@@ -1273,32 +1276,40 @@ func newMongoEncodeDataFunc(s *LDBStore) func(chunk Chunk) []byte {
 type  Data struct{
 
 }
-func newMongoGetDataFunc(s *LDBStore) func(addr Address) (data []byte, err error) {
+func newWtGetDataFunc(s *LDBStore) func(addr Address) (data []byte, err error) {
 	return func(addr Address) (data []byte, err error) {
-		var result bson.M
-
-		i := addr[0] & 0xF
-		ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
-
-		err = s.mongoClient[i].FindOne(ctx,bson.M{"_id":addr},nil).Decode(&result)
 
 
 
-		data = result["v"].([]byte)
+		s.cursor.SetKey([]byte(addr[:]))
+		err = s.cursor.Search()
+		if err != nil {
+			err = s.cursor.GetValue(data)
+		}
+		if err != nil {
+			log.Error("Failed to lookup", "error",err.Error())
+		} else{
+			log.Info("Ok to insert")
+		}
 		return
 
 	}
 }
 
-func newMongoDeleteDataFunc(s *LDBStore) func(addr Address) (err error) {
+func newWtDeleteDataFunc(s *LDBStore) func(addr Address) (err error) {
 	return func(addr Address) (err error) {
 
 
-		i := addr[0] & 0xF
-		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+		s.cursor.SetKey([]byte(addr[:]))
+		err = s.cursor.Remove()
+		if err != nil {
+			log.Error("Failed to delete", "error",err.Error())
+		} else{
+			log.Info("Ok to insert")
+		}
 
-		_,err = s.mongoClient[i].DeleteOne(ctx,bson.M{"_id":addr},nil)
 		return
+
 
 
 	}

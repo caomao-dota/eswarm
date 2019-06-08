@@ -187,15 +187,15 @@ func NewRegistry(localID enode.ID, delivery *Delivery, syncChunkStore storage.Sy
 				select {
 				case <-timer.C:
 					// force syncing update when a hard timeout is reached
-					log.Info("Sync subscriptions update on timeout")
+					log.Trace("Sync subscriptions update on timeout")
 					// request for syncing subscription to new peers
 					streamer.updateSyncing(nil)
 
 				case size := <-peerChangedC:
-					log.Info("Kademlia address book size changed on depth change", "size", size)
+					log.Trace("Kademlia address book size changed on depth change", "size", size)
 					// new peers has been added to kademlia,
 					// reset the timer to prevent early sync subscriptions
-					log.Info("rest timer:", "size", size)
+					log.Trace("rest timer:", "size", size)
 					timer.Reset(options.SyncUpdateDelay)
 				case <-quit:
 					log.Info("quited")
@@ -471,7 +471,7 @@ func (r *Registry) updateSyncing(peers map[enode.ID]*Peer) {
 	if peers == nil  {
 		peers = r.peers
 	}
-	log.Info("update syncing")
+	log.Trace("update syncing")
 	for id, peer := range peers {
 		peer.serverMu.RLock()
 		for stream := range peer.servers {
