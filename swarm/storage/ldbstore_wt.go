@@ -124,14 +124,14 @@ type LDBStore struct {
 	// Functions encodeDataFunc is used to bypass
 	// the default functionality of DbStore with
 	// mock.NodeStore for testing purposes.
-	encodeDataFunc func(chunk Chunk,cursor *wiredtiger.Cursor) []byte
+	encodeDataFunc func(chunk Chunk) []byte
 	// If getDataFunc is defined, it will be used for
 	// retrieving the chunk data instead from the local
 	// LevelDB database.
-	getDataFunc func(key Address,cursor *wiredtiger.Cursor) (data []byte, err error)
+	getDataFunc func(key Address) (data []byte, err error)
 
 	//deleteChunkFunc is used to delete data from boltdb
-	deleteChunkFunc func(addr Address,cursor *wiredtiger.Cursor) (err error)
+	deleteChunkFunc func(addr Address) (err error)
 
 	conn *wiredtiger.Connection
 }
@@ -351,9 +351,7 @@ func (s *LDBStore) collectGarbage() error {
 	s.lock.Lock()
 	entryCnt := s.entryCnt
 	s.lock.Unlock()
-	cursor := s.createAccessCursor()
 
-	defer s.closeSession(cursor)
 	metrics.GetOrRegisterCounter("ldbstore.collectgarbage", nil).Inc(1)
 
 	// calculate the amount of chunks to collect and reset counter
@@ -383,7 +381,7 @@ func (s *LDBStore) collectGarbage() error {
 			copy(keyIdx[1:], hash)
 
 			// add delete operation to batch
-			s.delete(s.gc.batch.Batch, index, keyIdx, po,cursor)
+			s.delete(s.gc.batch.Batch, index, keyIdx, po)
 			singleIterationCount++
 			s.gc.count++
 			//			log.Trace("garbage collect enqueued chunk for deletion", "key", hash)
@@ -555,8 +553,7 @@ func (s *LDBStore) Cleanup(f func(Chunk) bool) {
 
 	it := s.db.NewIterator()
 	defer it.Release()
-	cursor := s.createAccessCursor()
-	defer s.closeSession(cursor)
+
 	for ok := it.Seek([]byte{keyIndex}); ok; ok = it.Next() {
 		key := it.Key()
 		if (key == nil) || (key[0] != keyIndex) {
@@ -609,7 +606,7 @@ func (s *LDBStore) Cleanup(f func(Chunk) bool) {
 		// if chunk is to be removed
 		if f(c) {
 			log.Warn("chunk for cleanup", "key", fmt.Sprintf("%x", key), "ck", fmt.Sprintf("%x", ck), "dkey", fmt.Sprintf("%x", datakey), "dataidx", index.Idx, "po", po, "len data", len(data), "len sdata", len(sdata), "size", cs)
-			s.deleteNow(&index, getIndexKey(key[1:]), po,cursor)
+			s.deleteNow(&index, getIndexKey(key[1:]), po)
 			removed++
 			errorsFound++
 		}
@@ -787,22 +784,21 @@ func (s *LDBStore) Delete(addr Address) error {
 	var idx dpaDBIndex
 	decodeIndex(idata, &idx)
 	proximity := s.po(addr)
-	cursor := s.createAccessCursor()
-	defer s.closeSession(cursor)
-	return s.deleteNow(&idx, ikey, proximity,cursor)
+
+	return s.deleteNow(&idx, ikey, proximity)
 }
 
 // executes one delete operation immediately
 // see *LDBStore.delete
-func (s *LDBStore) deleteNow(idx *dpaDBIndex, idxKey []byte, po uint8,cursor *wiredtiger.Cursor) error {
+func (s *LDBStore) deleteNow(idx *dpaDBIndex, idxKey []byte, po uint8) error {
 	batch := new(leveldb.Batch)
-	s.delete(batch, idx, idxKey, po,cursor)
+	s.delete(batch, idx, idxKey, po)
 	return s.db.Write(batch)
 }
 
 // adds a delete chunk operation to the provided batch
 // if called directly, decrements entrycount regardless if the chunk exists upon deletion. Risk of wrap to max uint64
-func (s *LDBStore) delete(batch *leveldb.Batch, idx *dpaDBIndex, idxKey []byte, po uint8,cursor *wiredtiger.Cursor) {
+func (s *LDBStore) delete(batch *leveldb.Batch, idx *dpaDBIndex, idxKey []byte, po uint8) {
 	metrics.GetOrRegisterCounter("ldbstore.delete", nil).Inc(1)
 	//	log.Info("delete chunk info","index key",idxKey)
 	gcIdxKey := getGCIdxKey(idx)
@@ -811,7 +807,7 @@ func (s *LDBStore) delete(batch *leveldb.Batch, idx *dpaDBIndex, idxKey []byte, 
 	if s.deleteChunkFunc != nil {
 		addr, _err := s.db.Get(dataKey)
 		if _err == nil {
-			s.deleteChunkFunc(addr,cursor)
+			s.deleteChunkFunc(addr)
 		} else {
 			log.Error("unabled to delete:", "key", dataKey)
 
@@ -858,10 +854,9 @@ func (s *LDBStore) Put(ctx context.Context, chunk Chunk) error {
 
 	//	log.Trace("ldbstore.put: s.db.Get", "key", chunk.Address(), "ikey", fmt.Sprintf("%x", ikey))
 	orgData, err := s.db.Get(ikey)
-	cursor := s.createAccessCursor()
-	defer s.closeSession(cursor)
+
 	if err != nil {
-		s.doPut(chunk, &index, po,cursor)
+		s.doPut(chunk, &index, po)
 	} else {
 		decodeIndex(orgData, &index)
 
@@ -892,12 +887,12 @@ func (s *LDBStore) Put(ctx context.Context, chunk Chunk) error {
 }
 
 // force putting into db, does not check or update necessary indices
-func (s *LDBStore) doPut(chunk Chunk, index *dpaDBIndex, po uint8,cursor *wiredtiger.Cursor) {
+func (s *LDBStore) doPut(chunk Chunk, index *dpaDBIndex, po uint8) {
 
 	/*if !s.VerifyHash(chunk.Data(),chunk.Address()) {
 		fmt.Println("Chunk not correct!",chunk.Address())
 	}*/
-	data := s.encodeDataFunc(chunk,cursor) //数据存入到boltdb,返回的是address
+	data := s.encodeDataFunc(chunk) //数据存入到boltdb,返回的是address
 	dkey := getDataKey(s.dataIdx, po)
 	s.batch.Put(dkey, data) //记录了address
 	index.Idx = s.dataIdx
@@ -1044,9 +1039,8 @@ func (s *LDBStore) Get(_ context.Context, addr Address) (chunk Chunk, err error)
 
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	cursor := s.createAccessCursor()
-	defer s.closeSession(cursor)
-	return s.get(addr,cursor)
+
+	return s.get(addr)
 }
 
 // Has queries the underlying DB if a chunk with the given address is stored
@@ -1088,7 +1082,7 @@ func (s *LDBStore) VerifyHash(chunkData, address []byte) bool {
 }
 
 // TODO: To conform with other private methods of this object indices should not be updated
-func (s *LDBStore) get(addr Address,cursor *wiredtiger.Cursor) (chunk Chunk, err error) {
+func (s *LDBStore) get(addr Address) (chunk Chunk, err error) {
 	if s.closed {
 		return nil, ErrDBClosed
 	}
@@ -1099,7 +1093,7 @@ func (s *LDBStore) get(addr Address,cursor *wiredtiger.Cursor) (chunk Chunk, err
 		if s.getDataFunc != nil {
 			// if getDataFunc is defined, use it to retrieve the chunk data
 			//		log.Trace("ldbstore.get retrieve with getDataFunc", "key", addr)
-			data, err = s.getDataFunc(addr,cursor)
+			data, err = s.getDataFunc(addr)
 			if err != nil {
 				return
 			}
@@ -1113,7 +1107,7 @@ func (s *LDBStore) get(addr Address,cursor *wiredtiger.Cursor) (chunk Chunk, err
 			//			log.Trace("ldbstore.get retrieve", "key", addr, "indexkey", index.Idx, "datakey", fmt.Sprintf("%x", datakey), "proximity", proximity)
 			if err != nil {
 				//				log.Trace("ldbstore.get chunk found but could not be accessed", "key", addr, "err", err)
-				s.deleteNow(index, getIndexKey(addr), s.po(addr),cursor)
+				s.deleteNow(index, getIndexKey(addr), s.po(addr))
 				return
 			}
 			/*	if !s.VerifyHash(data[32:],addr) {
@@ -1246,63 +1240,122 @@ func newBoltDbDeleteDataFunc(db *bolt.DB) func(addr Address) (err error) {
 // to a mock store to bypass the default functionality encodeData.
 // The constructed function always returns the nil data, as DbStore does
 // not need to store the data, but still need to create the index.
-func newWtEncodeDataFunc(s *LDBStore) func(chunk Chunk,cursor *wiredtiger.Cursor) []byte {
-	return func(chunk Chunk,cursor *wiredtiger.Cursor) []byte {
-		//go func() {
-		//	s.waitChan <- struct {}{}
+func newWtEncodeDataFunc(s *LDBStore) func(chunk Chunk) []byte {
 
-		key := chunk.Address()
-		err := cursor.SetKey([]byte(key[:]))
-		if err != nil {
-			log.Error("error in set key", "reason", err)
-		}
-		err = cursor.SetValue(encodeData(chunk))
-		if err != nil {
-			log.Error("error in set data", "reason", err)
-		}
-		err = cursor.Insert()
-		if err != nil {
-			log.Error("Failed to insert", "error", err)
-		} else {
-			//			log.Info("Ok to insert","addr",chunk.Address(),"value",chunk.Data()[:10])
-		} //<- s.waitChan
-		//	}()
+	start := make(chan Chunk)
+	result := make(chan struct{})
+	go func (){
+		cursor := s.createAccessCursor()
+		defer s.closeSession(cursor)
+		for {
+			select {
+			case chunk := <- start:
+				key := chunk.Address()
+				err := cursor.SetKey([]byte(key[:]))
+				if err != nil {
+					log.Error("error in set key", "reason", err)
+				}
+				err = cursor.SetValue(encodeData(chunk))
+				if err != nil {
+					log.Error("error in set data", "reason", err)
+				}
+				err = cursor.Insert()
+				if err != nil {
+					log.Error("Failed to insert", "error", err)
+				} else {
+					//			log.Info("Ok to insert","addr",chunk.Address(),"value",chunk.Data()[:10])
+				} //<- s.waitChan
+				//	}()
 
+				result <- struct{}{}
+			case <- s.quit:
+				return
+			}
+		}
+
+
+	}()
+	return func(chunk Chunk) []byte {
+		start <- chunk
+		 <- result
 		return chunk.Address()[:]
 	}
 }
+type resultV struct {
+	data []byte
+	err error
+}
+func newWtGetDataFunc(s *LDBStore) func(addr Address) (data []byte, err error) {
 
-func newWtGetDataFunc(s *LDBStore) func(addr Address,cursor *wiredtiger.Cursor) (data []byte, err error) {
-	return func(addr Address,cursor *wiredtiger.Cursor) (data []byte, err error) {
+	start := make(chan Address)
+	result := make(chan resultV)
+	go func (){
+		cursor := s.createAccessCursor()
+		defer s.closeSession(cursor)
+		for {
+			select {
+			case addr := <- start:
+				value := make([]byte, 0)
+				cursor.SetKey([]byte(addr[:]))
+				err := cursor.Search()
+				if err == nil {
+					err = cursor.GetValue(&value)
+				}
+				if err != nil {
+					log.Error("Failed to lookup", "addr", addr, "error", err.Error())
+				}
 
-		value := make([]byte, 0)
-		cursor.SetKey([]byte(addr[:]))
-		err = cursor.Search()
-		if err == nil {
-			err = cursor.GetValue(&value)
+				result <- resultV{value,err}
+			case <- s.quit:
+				return
+			}
 		}
-		if err != nil {
-			log.Error("Failed to lookup", "addr", addr, "error", err.Error())
-		} else {
-			data = value
-			//log.Info("Ok to retrieve","addr",addr,"value",data[:10])
-		}
-		return
+
+
+	}()
+	return func(addr Address) (data []byte, err error) {
+
+		start <- addr
+		res := <- result
+		return res.data,res.err
 
 	}
 }
 
-func newWtDeleteDataFunc(s *LDBStore) func(addr Address,cursor *wiredtiger.Cursor) (err error) {
-	return func(addr Address,cursor *wiredtiger.Cursor) (err error) {
-		cursor.SetKey([]byte(addr[:]))
-		err = cursor.Remove()
-		if err != nil {
-			log.Error("Failed to delete", "error", err.Error())
-		} else {
-			log.Info("chunk deleted:", "addr", addr)
+func newWtDeleteDataFunc(s *LDBStore) func(addr Address) (err error) {
+	//创建一个删除线程
 
+
+	start := make(chan Address)
+	result := make(chan struct{})
+	go func (){
+		cursor := s.createAccessCursor()
+		defer s.closeSession(cursor)
+		for {
+			select {
+			case addr := <- start:
+				cursor.SetKey([]byte(addr[:]))
+				err := cursor.Remove()
+				if err != nil {
+					log.Error("Failed to delete", "error", err.Error())
+				} else {
+					log.Info("chunk deleted:", "addr", addr)
+
+				}
+
+				result <- struct{}{}
+			case <- s.quit:
+				return
+			}
 		}
 
+
+	}()
+
+
+	return func(addr Address) (err error) {
+		start <- addr
+		<- result
 		return
 
 	}
