@@ -20,7 +20,7 @@
 // it implements purging based on access count allowing for external control of
 // max capacity
 
-// +build mobile
+// +build android ios
 
 package storage
 
