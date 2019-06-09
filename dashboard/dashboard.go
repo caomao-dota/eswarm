@@ -35,12 +35,12 @@ import (
 	"io"
 
 	"github.com/elastic/gosigar"
+	"github.com/mohae/deepcopy"
 	"github.com/plotozhu/MDCMainnet/log"
 	"github.com/plotozhu/MDCMainnet/metrics"
 	"github.com/plotozhu/MDCMainnet/p2p"
 	"github.com/plotozhu/MDCMainnet/params"
 	"github.com/plotozhu/MDCMainnet/rpc"
-	"github.com/mohae/deepcopy"
 	"golang.org/x/net/websocket"
 )
 

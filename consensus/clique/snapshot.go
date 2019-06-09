@@ -21,11 +21,11 @@ import (
 	"encoding/json"
 	"sort"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/plotozhu/MDCMainnet/common"
 	"github.com/plotozhu/MDCMainnet/core/types"
 	"github.com/plotozhu/MDCMainnet/ethdb"
 	"github.com/plotozhu/MDCMainnet/params"
-	lru "github.com/hashicorp/golang-lru"
 )
 
 // Vote represents a single vote that an authorized signer made to modify the

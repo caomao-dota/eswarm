@@ -32,18 +32,19 @@ import (
 // node represents a host on the network.
 // The fields of Node may not be modified.
 var (
-	LatencyInvalid = int64(100*time.Hour)
-	TimeInvalid = time.Unix(0,0)
-	RevalidateInterval = 30*time.Second
+	LatencyInvalid     = int64(100 * time.Hour)
+	TimeInvalid        = time.Unix(0, 0)
+	RevalidateInterval = 30 * time.Second
 )
+
 type node struct {
 	enode.Node
-	addedAt        time.Time 	// first time of ping
-	testAt         time.Time 	//last time send ping
-	findAt         time.Time    //last time of received ping
-	latency         int64		 //ping/pong delay ,by the unit of millium-second
-	seenAt          time.Time   //last ping received
-	registered      bool
+	addedAt    time.Time // first time of ping
+	testAt     time.Time //last time send ping
+	findAt     time.Time //last time of received ping
+	latency    int64     //ping/pong delay ,by the unit of millium-second
+	seenAt     time.Time //last ping received
+	registered bool
 }
 
 type encPubkey [64]byte
@@ -51,7 +52,7 @@ type encPubkey [64]byte
 func encodePubkey(key *ecdsa.PublicKey) encPubkey {
 	if key == nil {
 		return encPubkey{0}
-	}else {
+	} else {
 		var e encPubkey
 		math.ReadBits(key.X, e[:len(e)/2])
 		math.ReadBits(key.Y, e[len(e)/2:])
@@ -87,7 +88,7 @@ func recoverNodeKey(hash, sig []byte) (key encPubkey, err error) {
 }
 
 func wrapNode(n *enode.Node) *node {
-	return &node{Node: *n,latency:int64(60*time.Hour),findAt:time.Unix(0,0)}
+	return &node{Node: *n, latency: int64(60 * time.Hour), findAt: time.Unix(0, 0)}
 }
 
 func wrapNodes(ns []*enode.Node) []*node {

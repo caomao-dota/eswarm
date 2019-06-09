@@ -155,6 +155,7 @@ type Config struct {
 	Logger log.Logger `toml:",omitempty"`
 }
 type AddCheck func(node *enode.Node) bool
+
 // Server manages all peer connections.
 type Server struct {
 	// Config fields may not be modified while the server is running.
@@ -193,9 +194,9 @@ type Server struct {
 	peerFeed      event.Feed
 	log           log.Logger
 
-	blacklist     *lru.Cache
-	FilterChain   *FilterChain
-	_addCheckFun  AddCheck
+	blacklist    *lru.Cache
+	FilterChain  *FilterChain
+	_addCheckFun AddCheck
 }
 type BlackItem struct {
 	DiscTime  time.Time
@@ -334,7 +335,7 @@ func (srv *Server) AddPeer(node *enode.Node) {
 
 // RemovePeer disconnects from the given node
 func (srv *Server) RemovePeer(node *enode.Node) {
-	log.Info("Remove Peer","id",node.ID())
+	log.Info("Remove Peer", "id", node.ID())
 	select {
 	case srv.removestatic <- node:
 	case <-srv.quit:
@@ -344,9 +345,10 @@ func (srv *Server) RemovePeer(node *enode.Node) {
 func (srv *Server) GetKnownNodesSorted() []*enode.Node {
 	return srv.ntab.GetKnownNodesSorted()
 }
-func (srv *Server) SetNotificationChan(channel chan struct {}){
+func (srv *Server) SetNotificationChan(channel chan struct{}) {
 	srv.ntab.OnNodeChanged(channel)
 }
+
 // AddTrustedPeer adds the given node to a reserved whitelist which allows the
 // node to always connect, even if the slot are full.
 func (srv *Server) AddTrustedPeer(node *enode.Node) {
@@ -366,6 +368,7 @@ func (srv *Server) RemoveTrustedPeer(node *enode.Node) {
 func (srv *Server) AddBootnode(n *enode.Node) {
 	srv.ntab.AddBootnode(n)
 }
+
 // SubscribePeers subscribes the given channel to peer events
 func (srv *Server) SubscribeEvents(ch chan *PeerEvent) event.Subscription {
 	return srv.peerFeed.Subscribe(ch)
@@ -378,7 +381,7 @@ func (srv *Server) Self() *enode.Node {
 	srv.lock.Unlock()
 
 	if ln == nil {
-		return enode.NewV4(&srv.PrivateKey.PublicKey, net.ParseIP("0.0.0.0"), 0, 0, 0,net.ParseIP("127.0.0.1"))
+		return enode.NewV4(&srv.PrivateKey.PublicKey, net.ParseIP("0.0.0.0"), 0, 0, 0, net.ParseIP("127.0.0.1"))
 	}
 	return ln.Node()
 }
@@ -427,20 +430,20 @@ func (s *sharedUDPConn) Close() error {
 	return nil
 }
 
-func (srv *Server) CanSendPing(id enode.ID) bool{
-	return true;
+func (srv *Server) CanSendPing(id enode.ID) bool {
+	return true
 }
-func (srv *Server) CanProcPing(id enode.ID) bool{
-	return true;
+func (srv *Server) CanProcPing(id enode.ID) bool {
+	return true
 }
-func (srv *Server) CanProcPong(id enode.ID) bool{
-	return true;
+func (srv *Server) CanProcPong(id enode.ID) bool {
+	return true
 }
-func (srv *Server) CanStartConnect(id enode.ID) bool{
-	return true;
+func (srv *Server) CanStartConnect(id enode.ID) bool {
+	return true
 }
-func (srv *Server)ShouldAcceptConn(id enode.ID) bool{
-	return true;
+func (srv *Server) ShouldAcceptConn(id enode.ID) bool {
+	return true
 }
 
 // Start starts running the server.
@@ -452,7 +455,7 @@ func (srv *Server) Start() (err error) {
 		return errors.New("server already running")
 	}
 	srv.running = true
-	srv.blacklist,_ = lru.New(1000)
+	srv.blacklist, _ = lru.New(1000)
 	srv.FilterChain = NewFilterChain()
 
 	srv.log = srv.Config.Logger
@@ -504,14 +507,14 @@ func (srv *Server) Start() (err error) {
 	go srv.run(dialer)
 	return nil
 }
-func (srv *Server) SetNodeAddChecker(checker AddCheck)  {
+func (srv *Server) SetNodeAddChecker(checker AddCheck) {
 	srv._addCheckFun = checker
 }
 func (srv *Server) setupLocalNode() error {
 	// Create the devp2p handshake.
 	pubkey := crypto.FromECDSAPub(&srv.PrivateKey.PublicKey)
-	listenAddr, err:=strconv.ParseInt(strings.Replace(srv.Config.ListenAddr,":","",-1),10,16)
-	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name, ID: pubkey[1:],NodeType:srv.NodeType,ListenPort:uint64(listenAddr)}
+	listenAddr, err := strconv.ParseInt(strings.Replace(srv.Config.ListenAddr, ":", "", -1), 10, 16)
+	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name, ID: pubkey[1:], NodeType: srv.NodeType, ListenPort: uint64(listenAddr)}
 	for _, p := range srv.Protocols {
 		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
 	}
@@ -523,7 +526,7 @@ func (srv *Server) setupLocalNode() error {
 		return err
 	}
 	srv.nodedb = db
-	srv.localnode = enode.NewLocalNode(db, srv.PrivateKey,srv.Config.NodeType)
+	srv.localnode = enode.NewLocalNode(db, srv.PrivateKey, srv.Config.NodeType)
 	srv.localnode.SetFallbackIP(net.IP{127, 0, 0, 1})
 	srv.localnode.Set(capsByNameAndVersion(srv.ourHandshake.Caps))
 	// TODO: check conflicts
@@ -711,13 +714,12 @@ running:
 			// ephemeral static peer list. Add it to the dialer,
 			// it will keep the node connected.
 			srv.log.Trace("Adding static node", "node", n)
-			if n.ID() != srv.localnode.ID(){
+			if n.ID() != srv.localnode.ID() {
 
-				go srv.ntab.RequestPing(n,srv.pingFinished)
-
+				go srv.ntab.RequestPing(n, srv.pingFinished)
 
 			}
-		case n := <- srv.pingFinished:
+		case n := <-srv.pingFinished:
 			if n != nil {
 				dialstate.addStatic(n)
 			}
@@ -784,7 +786,6 @@ running:
 				// The handshakes are done and it passed all checks.
 				p := newPeer(c, srv.Protocols)
 
-
 				// If message events are enabled, pass the peerFeed
 				// to the peer
 				if srv.EnableMsgEvents {
@@ -808,19 +809,19 @@ running:
 			}
 		case pd := <-srv.delpeer:
 
-			val,exist :=srv.blacklist.Get(pd.ID())
-			item := BlackItem{time.Now().Add(30*time.Second),1}
-			if(exist) {
+			val, exist := srv.blacklist.Get(pd.ID())
+			item := BlackItem{time.Now().Add(30 * time.Second), 1}
+			if exist {
 				item = val.(BlackItem)
 
-				item.DiscTime = time.Now().Add( time.Duration(item.DiscCount* 30)*time.Second)
+				item.DiscTime = time.Now().Add(time.Duration(item.DiscCount*30) * time.Second)
 				if item.DiscCount < 60 {
 					item.DiscCount++
 				}
 
 			}
-			srv.blacklist.Add(pd.ID(),item)
-			srv.ntab.RemoveConnectedNode(pd.ID(),item.DiscCount)
+			srv.blacklist.Add(pd.ID(), item)
+			srv.ntab.RemoveConnectedNode(pd.ID(), item.DiscCount)
 			// A peer disconnected.
 			d := common.PrettyDuration(mclock.Now() - pd.created)
 			pd.log.Debug("Removing p2p peer", "duration", d, "peers", len(peers)-1, "req", pd.requested, "err", pd.err)
@@ -844,7 +845,7 @@ running:
 	for _, p := range peers {
 		p.Disconnect(DiscQuitting)
 	}
-	fmt.Println("remain Peers:","total",len(peers))
+	fmt.Println("remain Peers:", "total", len(peers))
 	// Wait for peers to shut down. Pending connections and tasks are
 	// not handled here and will terminate soon-ish because srv.quit
 	// is closed.
@@ -859,38 +860,36 @@ running:
 }
 
 func (srv *Server) protoHandshakeChecks(peers map[enode.ID]*Peer, inboundCount int, c *conn) error {
-	lightPeerCnt := 0;
+	lightPeerCnt := 0
 	fullPeerCnt := 0
 
-	for _,peer := range peers {
+	for _, peer := range peers {
 		//log.Info("node exist:","id",peer.ID(),"ip",peer.Node().IP(),"port",peer.Node().UDP())
 		if enode.IsLightNode(enode.NodeTypeOption(peer.Node().NodeType())) {
 			lightPeerCnt++
-		}else {
+		} else {
 			fullPeerCnt++
 		}
 	}
 	isLightNode := enode.IsLightNode(enode.NodeTypeOption(c.node.NodeType()))
-	log.Trace("connects:","light conn",lightPeerCnt," full conn",fullPeerCnt)
+	log.Trace("connects:", "light conn", lightPeerCnt, " full conn", fullPeerCnt)
 	// Drop connections with no matching protocols.
 	switch {
 
-		case len(srv.Protocols) > 0 && countMatchingProtocols(srv.Protocols, c.caps) == 0:
-			return DiscUselessPeer
+	case len(srv.Protocols) > 0 && countMatchingProtocols(srv.Protocols, c.caps) == 0:
+		return DiscUselessPeer
 
-		case !c.is(trustedConn) && (fullPeerCnt >= srv.MaxPeers && !isLightNode) || (lightPeerCnt >= srv.MaxPeers && isLightNode):
-			return DiscTooManyPeers
-		case !c.is(trustedConn) && c.is(inboundConn) && !isLightNode && inboundCount >= srv.maxInboundConns():
-			return DiscTooManyPeers
-		case srv.FilterChain.IsBlocked(c.node.ID(),c.is(inboundConn)):
-			return DiscBlockedPeer
+	case !c.is(trustedConn) && (fullPeerCnt >= srv.MaxPeers && !isLightNode) || (lightPeerCnt >= srv.MaxPeers && isLightNode):
+		return DiscTooManyPeers
+	case !c.is(trustedConn) && c.is(inboundConn) && !isLightNode && inboundCount >= srv.maxInboundConns():
+		return DiscTooManyPeers
+	case srv.FilterChain.IsBlocked(c.node.ID(), c.is(inboundConn)):
+		return DiscBlockedPeer
 
 	}
 
-
-	bucketId,entries,_ := srv.ntab.TargetBucketInfo(c.node.ID())
-	log.Trace("bucketInfo:","id",c.node.ID(),"bucketIndex",bucketId," entries",entries.Length())
-
+	bucketId, entries, _ := srv.ntab.TargetBucketInfo(c.node.ID())
+	log.Trace("bucketInfo:", "id", c.node.ID(), "bucketIndex", bucketId, " entries", entries.Length())
 
 	// Repeat the encryption handshake checks because the
 	// peer set might have changed between the handshakes.
@@ -898,8 +897,6 @@ func (srv *Server) protoHandshakeChecks(peers map[enode.ID]*Peer, inboundCount i
 }
 
 func (srv *Server) encHandshakeChecks(peers map[enode.ID]*Peer, inboundCount int, c *conn) error {
-
-
 
 	switch {
 
@@ -1005,7 +1002,7 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 	if !running {
 		return errServerStopped
 	}
-	if dialDest!= nil && srv.FilterChain.IsBlocked(dialDest.ID(),dialDest == nil){
+	if dialDest != nil && srv.FilterChain.IsBlocked(dialDest.ID(), dialDest == nil) {
 		return DiscBlockedPeer
 	}
 	// If dialing, figure out the remote public key.
@@ -1047,7 +1044,7 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 		clog.Trace("Failed proto handshake", "err", err)
 		return err
 	}
-	c.node = updateNodeByPhs(c.node,phs)
+	c.node = updateNodeByPhs(c.node, phs)
 	//movee posthandshake to doProtoHandshake so that we can know the nodetype
 	if id := c.node.ID(); !bytes.Equal(crypto.Keccak256(phs.ID), id[:]) {
 		clog.Trace("Wrong devp2p handshake identity", "phsid", hex.EncodeToString(phs.ID))
@@ -1056,7 +1053,7 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 	c.caps, c.name = phs.Caps, phs.Name
 
 	if !srv.ntab.CanAddNode(c.node) {
-		log.Info(" unable to add node to kad network","id",c.node.String(),"ip",c.node.IP(), "port",c.node.TCP())
+		log.Info(" unable to add node to kad network", "id", c.node.String(), "ip", c.node.IP(), "port", c.node.TCP())
 		return errors.New("break peer and waiting for ping/pong first")
 	}
 	err = srv.checkpoint(c, srv.addpeer)
@@ -1064,8 +1061,8 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 		clog.Trace("Rejected peer", "err", err)
 		return err
 	}
-	if srv._addCheckFun != nil  {
-		if  !srv._addCheckFun(c.node){
+	if srv._addCheckFun != nil {
+		if !srv._addCheckFun(c.node) {
 			return errors.New("bucket full!")
 		}
 	}
@@ -1083,12 +1080,12 @@ func nodeFromConn(pubkey *ecdsa.PublicKey, conn net.Conn) *enode.Node {
 		ip = tcp.IP
 		port = tcp.Port
 	}
-	return enode.NewV4(pubkey, ip, port, port,0,ip)
+	return enode.NewV4(pubkey, ip, port, port, 0, ip)
 }
 
-func updateNodeByPhs(n *enode.Node,handshake *protoHandshake) *enode.Node{
+func updateNodeByPhs(n *enode.Node, handshake *protoHandshake) *enode.Node {
 
-	return enode.NewV4(n.Pubkey(), n.IP(), n.TCP(), int(handshake.ListenPort),handshake.NodeType,n.IP())
+	return enode.NewV4(n.Pubkey(), n.IP(), n.TCP(), int(handshake.ListenPort), handshake.NodeType, n.IP())
 }
 
 func truncateName(s string) string {

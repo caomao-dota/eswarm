@@ -29,10 +29,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pborman/uuid"
 	"github.com/plotozhu/MDCMainnet/accounts"
 	"github.com/plotozhu/MDCMainnet/common"
 	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/pborman/uuid"
 )
 
 const (

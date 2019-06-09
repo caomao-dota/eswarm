@@ -193,6 +193,7 @@ func newPeer(conn *conn, protocols []Protocol) *Peer {
 func (p *Peer) Log() log.Logger {
 	return p.log
 }
+
 /*func (p *Peer) Init() {
 
 		p.created =  mclock.Now()
@@ -207,9 +208,9 @@ func (p *Peer) run() (remoteRequested bool, err error) {
 		writeErr   = make(chan error, 1)
 		readErr    = make(chan error, 1)
 		reason     DiscReason // sent to the peer
-	)//
+	) //
 	//p.Init()
-	log.Info("new Peer Run:","id", p.ID())
+	log.Info("new Peer Run:", "id", p.ID())
 	p.wg.Add(2)
 	//两个处理线程，发生错误时，错误放到errc
 	go p.readLoop(readErr)
@@ -249,7 +250,7 @@ loop:
 		}
 	}
 
-	log.Info("peer closed:","id",p.ID())
+	log.Info("peer closed:", "id", p.ID())
 	close(p.closed)
 	p.rw.close(reason)
 	p.wg.Wait()
@@ -273,10 +274,11 @@ func (p *Peer) pingLoop() {
 		}
 	}
 }
+
 /**
  read loop 只有在读取消息错误或者解析消息协议错误时，才将会向errc中放入错误消息
 其它的无论协议怎么处理，都不会发送错误消息
- */
+*/
 func (p *Peer) readLoop(errc chan<- error) {
 	defer p.wg.Done()
 	for {
@@ -314,7 +316,7 @@ func (p *Peer) handle(msg Msg) error {
 			return fmt.Errorf("msg code out of range: %v", msg.Code)
 		}
 		select {
-		case proto.in <- msg:  //消息放到接收队列里
+		case proto.in <- msg: //消息放到接收队列里
 			return nil
 		case <-p.closed:
 			return io.EOF
@@ -406,9 +408,10 @@ type protoRW struct {
 	offset uint64
 	w      MsgWriter
 }
+
 /**
 写消息函数，等待rw.wstart信号，调用MsgWriter.WriteMsg函数进行发送，当发送错误时，错误提交到werr
- */
+*/
 func (rw *protoRW) WriteMsg(msg Msg) (err error) {
 	if msg.Code >= rw.Length {
 		return newPeerError(errInvalidMsgCode, "not handled")

@@ -24,12 +24,12 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/metrics"
-	"github.com/plotozhu/MDCMainnet/metrics/exp"
 	"github.com/fjl/memsize/memsizeui"
 	colorable "github.com/mattn/go-colorable"
 	"github.com/mattn/go-isatty"
+	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/plotozhu/MDCMainnet/metrics"
+	"github.com/plotozhu/MDCMainnet/metrics/exp"
 	"gopkg.in/urfave/cli.v1"
 )
 

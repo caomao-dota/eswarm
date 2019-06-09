@@ -45,7 +45,7 @@ type HiveParams struct {
 	PeersBroadcastSetSize uint8 // how many peers to use when relaying
 	MaxPeersPerRequest    uint8 // max size for peer address batches
 	KeepAliveInterval     time.Duration
-	RefreshPeers		  time.Duration
+	RefreshPeers          time.Duration
 }
 
 // NewHiveParams returns hive config with only the
@@ -55,28 +55,28 @@ func NewHiveParams() *HiveParams {
 		PeersBroadcastSetSize: 3,
 		MaxPeersPerRequest:    5,
 		KeepAliveInterval:     500 * time.Millisecond,
-		RefreshPeers:		   120*time.Second,
+		RefreshPeers:          120 * time.Second,
 	}
 }
 
 // Hive manages network connections of the swarm node
 type Hive struct {
-	*HiveParams                   // settings
-	*Kademlia                     // the overlay connectiviy driver
-	Store       state.Store       // storage interface to save peers across sessions
-	addPeer     func(*enode.Node) // server callback to connect to a peer
-	getKnowNodes func()[]*enode.Node
+	*HiveParams                    // settings
+	*Kademlia                      // the overlay connectiviy driver
+	Store        state.Store       // storage interface to save peers across sessions
+	addPeer      func(*enode.Node) // server callback to connect to a peer
+	getKnowNodes func() []*enode.Node
 	addNode      func(node *enode.Node)
 	removePeer   func(node *enode.Node)
 	// bookkeeping
-	lock   sync.Mutex
+	lock        sync.Mutex
 	refreshLock sync.Mutex
-	peers  map[enode.ID]*BzzPeer
+	peers       map[enode.ID]*BzzPeer
 
-	ticker *time.Ticker
+	ticker        *time.Ticker
 	refreshTicker *time.Ticker
 	newNodeDiscov chan struct{}
-	quitC chan struct{}
+	quitC         chan struct{}
 }
 
 // NewHive constructs a new hive
@@ -85,15 +85,14 @@ type Hive struct {
 // StateStore: to save peers across sessions
 func NewHive(params *HiveParams, kad *Kademlia, store state.Store) *Hive {
 	return &Hive{
-		HiveParams: params,
-		Kademlia:   kad,
-		Store:      store,
-		peers:      make(map[enode.ID]*BzzPeer),
+		HiveParams:    params,
+		Kademlia:      kad,
+		Store:         store,
+		peers:         make(map[enode.ID]*BzzPeer),
 		newNodeDiscov: make(chan struct{}),
-		quitC: make(chan struct{}),
+		quitC:         make(chan struct{}),
 	}
 }
-
 
 // Start stars the hive, receives p2p.Server only at startup
 // server is used to connect to a peer based on its NodeID or enode URL
@@ -126,7 +125,7 @@ func (h *Hive) Start(server *p2p.Server) error {
 	go h.refresh()
 	return nil
 }
-func (h *Hive) CheckNode(n *enode.Node) bool{
+func (h *Hive) CheckNode(n *enode.Node) bool {
 	/*length,po := h.Kademlia.GetIntendBinInfo(n)
 	if  length >= h.KadParams.MaxBinSize {
 		log.Info("bucket size full :","id",n.ID(),"bucket",po,"connected",length)
@@ -138,20 +137,20 @@ func (h *Hive) CheckNode(n *enode.Node) bool{
 	return true
 }
 
-func (h *Hive)refresh(){
-	for  {
+func (h *Hive) refresh() {
+	for {
 		select {
-		case <-  h.refreshTicker.C:
+		case <-h.refreshTicker.C:
 			//log.Debug(" Refresh ticker ")
-				go h.doRefresh()
-			case <- h.newNodeDiscov:
-				//log.Debug(" New Node notified")
-				go h.doRefresh()
-				//log.Debug(" New Node processed")
-			case <- h.quitC:
-				if h.newNodeDiscov != nil {
-					close(h.newNodeDiscov)
-				}
+			go h.doRefresh()
+		case <-h.newNodeDiscov:
+			//log.Debug(" New Node notified")
+			go h.doRefresh()
+			//log.Debug(" New Node processed")
+		case <-h.quitC:
+			if h.newNodeDiscov != nil {
+				close(h.newNodeDiscov)
+			}
 
 			return
 
@@ -159,14 +158,15 @@ func (h *Hive)refresh(){
 
 	}
 }
+
 //refresh load peers and register to kad network
-func (h *Hive)doRefresh(){
+func (h *Hive) doRefresh() {
 	//log.Debug("do Refresh")
 
-	nodes := make([]*BzzAddr,0)
+	nodes := make([]*BzzAddr, 0)
 	knownNodes := h.getKnowNodes()
-	for _,node := range  knownNodes{
-		nodes = append(nodes,NewAddr(node))
+	for _, node := range knownNodes {
+		nodes = append(nodes, NewAddr(node))
 	}
 	//log.Info("hive doRefresh lock")
 	//defer log.Info("hive doRefresh unlock")
@@ -176,6 +176,7 @@ func (h *Hive)doRefresh(){
 	h.Register(nodes...)
 
 }
+
 // Stop terminates the updateloop and saves the peers
 func (h *Hive) Stop() error {
 	log.Info(fmt.Sprintf("%08x hive stopping, saving peers", h.BaseAddr()[:4]))
@@ -240,7 +241,7 @@ func (h *Hive) Run(p *BzzPeer) error {
 	h.trackPeer(p)
 	defer h.untrackPeer(p)
 	dp := NewPeer(p, h.Kademlia)
-	depth, changed,err  := h.On(dp)
+	depth, changed, err := h.On(dp)
 	if err != nil {
 		return err
 	}
@@ -253,7 +254,7 @@ func (h *Hive) Run(p *BzzPeer) error {
 			// otherwise just send depth to new peer
 			dp.NotifyDepth(depth)
 		}
-		aNode,_ := enode.ParseV4(string(p.BzzAddr.UAddr))
+		aNode, _ := enode.ParseV4(string(p.BzzAddr.UAddr))
 		if aNode != nil && enode.GetRetrievalOptions(enode.NodeTypeOption(aNode.NodeType())) == enode.RetrievalEnabled {
 			NotifyPeer(p.BzzAddr, h.Kademlia)
 		}
@@ -316,7 +317,7 @@ func (h *Hive) loadPeers() error {
 	}
 	log.Info(fmt.Sprintf("hive %08x: peers loaded", h.BaseAddr()[:4]))
 
-	return h.Register( as...)
+	return h.Register(as...)
 }
 
 // savePeers, savePeer implement persistence callback/

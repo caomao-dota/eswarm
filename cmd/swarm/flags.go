@@ -157,10 +157,10 @@ var (
 		Usage: "Prints encryption keys in compressed form",
 	}
 	SwarmNodeTypeFlag = cli.UintFlag{
-		Name:  "nodetype",
-		Usage: "change node type",
+		Name:   "nodetype",
+		Usage:  "change node type",
 		EnvVar: SwarmEnvNodeType,
-		Value: 36,
+		Value:  36,
 	}
 	SwarmFeedNameFlag = cli.StringFlag{
 		Name:  "name",

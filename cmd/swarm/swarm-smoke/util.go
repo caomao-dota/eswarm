@@ -32,13 +32,13 @@ import (
 	"strings"
 	"time"
 
+	opentracing "github.com/opentracing/opentracing-go"
+	"github.com/pborman/uuid"
 	"github.com/plotozhu/MDCMainnet/log"
 	"github.com/plotozhu/MDCMainnet/metrics"
 	"github.com/plotozhu/MDCMainnet/swarm/api"
 	"github.com/plotozhu/MDCMainnet/swarm/api/client"
 	"github.com/plotozhu/MDCMainnet/swarm/spancontext"
-	opentracing "github.com/opentracing/opentracing-go"
-	"github.com/pborman/uuid"
 	cli "gopkg.in/urfave/cli.v1"
 )
 

@@ -49,7 +49,7 @@ const (
 	dbNodePing      = "lastping"
 	dbNodePong      = "lastpong"
 	dbNodeSeq       = "seq"
-	dbLatency     = "latency"
+	dbLatency       = "latency"
 
 	// Local information is keyed by ID only, the full key is "local:<ID>:seq".
 	// Use localItemKey to create those keys.
@@ -152,7 +152,7 @@ func nodeItemKey(id ID, ip net.IP, field string) []byte {
 	ip16 := ip.To16()
 	if ip16 == nil {
 		log.Error(fmt.Sprintf("invalid IP (length %d)", len(ip)))
-		ip16=net.IP{0,0,0,0}.To16()
+		ip16 = net.IP{0, 0, 0, 0}.To16()
 	}
 	return bytes.Join([][]byte{nodeKey(id), ip16, []byte(field)}, []byte{':'})
 }
@@ -375,14 +375,17 @@ func (db *DB) UpdateLastPongReceived(id ID, ip net.IP, instance time.Time) error
 
 	return db.storeInt64(nodeItemKey(id, ip, dbNodePong), instance.Unix())
 }
+
 // UpdateLastPongReceived updates the last pong time of a node.
 func (db *DB) UpdateNodeLatency(id ID, ip net.IP, instance int64) error {
 	return db.storeInt64(nodeItemKey(id, ip, dbLatency), int64(instance))
 }
+
 // UpdateLastPongReceived updates the last pong time of a node.
 func (db *DB) GetNodeLatency(id ID, ip net.IP) int64 {
 	return db.fetchInt64(nodeItemKey(id, ip, dbLatency))
 }
+
 // FindFails retrieves the number of findnode failures since bonding.
 func (db *DB) FindFails(id ID, ip net.IP) int {
 
@@ -437,7 +440,7 @@ seek:
 			continue seek
 		}
 		for i := range nodes {
-			if nodes[i].ID() == n.ID() || uint8(n.NodeType()) == 0x11{
+			if nodes[i].ID() == n.ID() || uint8(n.NodeType()) == 0x11 {
 				continue seek // duplicate
 			}
 		}

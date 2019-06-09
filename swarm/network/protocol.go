@@ -67,7 +67,7 @@ type BzzConfig struct {
 	UnderlayAddr []byte // node's underlay address
 	HiveParams   *HiveParams
 	NetworkID    uint64
-	NodeType	 uint8
+	NodeType     uint8
 	BzzAccount   [20]byte
 }
 
@@ -91,7 +91,6 @@ type Bzz struct {
 // * peer store
 func NewBzz(config *BzzConfig, kad *Kademlia, store state.Store, streamerSpec *protocols.Spec, streamerRun func(*BzzPeer) error) *Bzz {
 
-
 	bzz := &Bzz{
 		Hive:         NewHive(config.HiveParams, kad, store),
 		NetworkID:    config.NetworkID,
@@ -103,7 +102,7 @@ func NewBzz(config *BzzConfig, kad *Kademlia, store state.Store, streamerSpec *p
 		bzzAccount:   config.BzzAccount,
 	}
 
-	if enode.IsBootNode(enode.NodeTypeOption(config.NodeType))  {
+	if enode.IsBootNode(enode.NodeTypeOption(config.NodeType)) {
 		bzz.streamerRun = nil
 		bzz.streamerSpec = nil
 	}
@@ -131,7 +130,7 @@ func (b *Bzz) NodeInfo() interface{} {
 // * discovery
 func (b *Bzz) Protocols() []p2p.Protocol {
 
-	if enode.IsBootNode(enode.NodeTypeOption(b.NodeType))  {
+	if enode.IsBootNode(enode.NodeTypeOption(b.NodeType)) {
 		return []p2p.Protocol{}
 	}
 	protocol := []p2p.Protocol{
@@ -141,7 +140,6 @@ func (b *Bzz) Protocols() []p2p.Protocol {
 			Length:   BzzSpec.Length(),
 			Run:      b.runBzz,
 			NodeInfo: b.NodeInfo,
-
 		},
 		{
 			Name:     DiscoverySpec.Name,
@@ -194,9 +192,9 @@ func (b *Bzz) RunProtocol(spec *protocols.Spec, run func(*BzzPeer) error) func(*
 			return fmt.Errorf("%08x: %s protocol timeout waiting for handshake on %08x", b.BaseAddr()[:4], spec.Name, p.ID().Bytes()[:4])
 		}
 		if handshake.err != nil {
-			b.Kademlia.SetDelay(p.ID(),true)
+			b.Kademlia.SetDelay(p.ID(), true)
 
-			b.Kademlia.SetDelay(p.ID(),false)
+			b.Kademlia.SetDelay(p.ID(), false)
 			return fmt.Errorf("%08x: %s protocol closed: %v", b.BaseAddr()[:4], spec.Name, handshake.err)
 		}
 		//修改C记录
@@ -231,7 +229,7 @@ func (b *Bzz) performHandshake(p *protocols.Peer, handshake *HandshakeMsg) error
 	handshake.Account = rsh.(*HandshakeMsg).Account
 	p.SetAccount(handshake.Account)
 	p.Node().SetNodeType(enr.NodeType(handshake.NodeType))
-	log.Trace("hand shake","peer type",p.Node().NodeType(),"enode:",string(handshake.peerAddr.UAddr))
+	log.Trace("hand shake", "peer type", p.Node().NodeType(), "enode:", string(handshake.peerAddr.UAddr))
 	return nil
 }
 
@@ -257,7 +255,6 @@ func (b *Bzz) runBzz(p *p2p.Peer, rw p2p.MsgReadWriter) error {
 	if err != nil {
 		return err
 	}
-
 
 	msg.Discard()
 	return errors.New("received multiple handshakes")
@@ -306,7 +303,7 @@ type HandshakeMsg struct {
 
 // String pretty prints the handshake
 func (bh *HandshakeMsg) String() string {
-	return fmt.Sprintf("Handshake: Version: %v, NetworkID: %v, Addr: %v, nodeType: %v, peerAddr: %v", bh.Version, bh.NetworkID, bh.Addr,bh.NodeType, bh.peerAddr)
+	return fmt.Sprintf("Handshake: Version: %v, NetworkID: %v, Addr: %v, nodeType: %v, peerAddr: %v", bh.Version, bh.NetworkID, bh.Addr, bh.NodeType, bh.peerAddr)
 }
 
 // Perform initiates the handshake and validates the remote handshake message
@@ -340,7 +337,7 @@ func (b *Bzz) GetOrCreateHandshake(peerID enode.ID) (*HandshakeMsg, bool) {
 			Version:   uint64(BzzSpec.Version),
 			NetworkID: b.NetworkID,
 			Addr:      b.localAddr,
-			NodeType : b.NodeType,
+			NodeType:  b.NodeType,
 			init:      make(chan bool, 1),
 			done:      make(chan struct{}),
 			Account:   b.bzzAccount,
@@ -400,7 +397,7 @@ func RandomAddr() *BzzAddr {
 	if err != nil {
 		panic("unable to generate key")
 	}
-	node := enode.NewV4(&key.PublicKey, net.IP{127, 0, 0, 1}, 30303, 30303,0,net.IP{127, 0, 0, 1})
+	node := enode.NewV4(&key.PublicKey, net.IP{127, 0, 0, 1}, 30303, 30303, 0, net.IP{127, 0, 0, 1})
 	return NewAddr(node)
 }
 

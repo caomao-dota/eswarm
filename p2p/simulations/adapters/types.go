@@ -168,7 +168,7 @@ func (n *NodeConfig) UnmarshalJSON(data []byte) error {
 
 // Node returns the node descriptor represented by the config.
 func (n *NodeConfig) Node() *enode.Node {
-	return enode.NewV4(&n.PrivateKey.PublicKey, net.IP{127, 0, 0, 1}, int(n.Port), int(n.Port),36)
+	return enode.NewV4(&n.PrivateKey.PublicKey, net.IP{127, 0, 0, 1}, int(n.Port), int(n.Port), 36)
 }
 
 // RandomNodeConfig returns node configuration with a randomly generated ID and

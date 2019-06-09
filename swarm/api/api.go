@@ -83,9 +83,10 @@ var (
 
 type Counter interface {
 	GetReceivedChunkInfo() map[common.Address]int64
-	GetReceiptsLogs()  []state.Receipts
-	GetConnectedNodes() (int,int)
+	GetReceiptsLogs() []state.Receipts
+	GetConnectedNodes() (int, int)
 }
+
 // Resolver interface resolve a domain name to a hash using ENS
 type Resolver interface {
 	Resolve(string) (common.Hash, error)
@@ -206,7 +207,7 @@ func NewAPI(fileStore *storage.FileStore, mockStore *mock.NodeStore, dns Resolve
 		fileStore: fileStore,
 		dns:       dns,
 		feed:      feedHandler,
-		mockStore:mockStore,
+		mockStore: mockStore,
 		Decryptor: func(ctx context.Context, credentials string) DecryptFunc {
 			return self.doDecrypt(ctx, credentials, pk)
 		},
@@ -225,12 +226,13 @@ func (a *API) RetrieveChunk(ctx context.Context, addr storage.Address) (storage.
 	return a.fileStore.ChunkStore.Get(ctx, addr)
 }
 func (a *API) RetrieveChunkFromGS(ctx context.Context, addr storage.Address) (storage.Chunk, error) {
-	if(a.mockStore == nil ) {
-		return storage.NewChunk(addr,nil), errors.New("no global store ")
+	if a.mockStore == nil {
+		return storage.NewChunk(addr, nil), errors.New("no global store ")
 	}
-	data,err := a.mockStore.Get(addr)
-	return storage.NewChunk(addr,data),err
+	data, err := a.mockStore.Get(addr)
+	return storage.NewChunk(addr, data), err
 }
+
 // Store wraps the Store API call of the embedded FileStore
 func (a *API) Store(ctx context.Context, data io.Reader, size int64, toEncrypt bool) (addr storage.Address, wait func(ctx context.Context) error, err error) {
 	log.Debug("api.store", "size", size)
@@ -292,7 +294,7 @@ func (a *API) ResolveURI(ctx context.Context, uri *URI, credentials string) (sto
 		return nil, err
 	}
 	var entry *ManifestEntry
-	walker.Walk(ctx,func(e *ManifestEntry) error {
+	walker.Walk(ctx, func(e *ManifestEntry) error {
 		// if the entry matches the path, set entry and stop
 		// the walk
 		if e.Path == uri.Path {
@@ -358,7 +360,7 @@ func (a *API) Get(ctx context.Context, decrypt DecryptFunc, manifestAddr storage
 	}
 
 	log.Debug("trie getting entry", "key", manifestAddr, "path", path)
-	entry, _ := trie.getEntry(ctx,path)
+	entry, _ := trie.getEntry(ctx, path)
 
 	if entry != nil {
 		log.Debug("trie got entry", "key", manifestAddr, "path", path, "entry.Hash", entry.Hash)
@@ -415,7 +417,7 @@ func (a *API) Get(ctx context.Context, decrypt DecryptFunc, manifestAddr storage
 
 			// finally, get the manifest entry
 			// it will always be the entry on path ""
-			entry, _ = trie.getEntry(ctx,path)
+			entry, _ = trie.getEntry(ctx, path)
 			if entry == nil {
 				status = http.StatusNotFound
 				apiGetNotFound.Inc(1)
@@ -489,7 +491,7 @@ func (a *API) GetDirectoryTar(ctx context.Context, decrypt DecryptFunc, uri *URI
 	tw := tar.NewWriter(pipew)
 
 	go func() {
-		err := walker.Walk(ctx,func(entry *ManifestEntry) error {
+		err := walker.Walk(ctx, func(entry *ManifestEntry) error {
 			// ignore manifests (walk will recurse into them)
 			if entry.ContentType == ManifestType {
 				return nil
@@ -545,7 +547,7 @@ func (a *API) GetDirectoryTar(ctx context.Context, decrypt DecryptFunc, uri *URI
 // GetManifestList lists the manifest entries for the specified address and prefix
 // and returns it as a ManifestList
 func (a *API) GetManifestList(actx context.Context, decryptor DecryptFunc, addr storage.Address, prefix string) (list ManifestList, err error) {
-	ctx,_ := context.WithTimeout(actx,time.Second*15)
+	ctx, _ := context.WithTimeout(actx, time.Second*15)
 	apiManifestListCount.Inc(1)
 	walker, err := a.NewManifestWalker(ctx, addr, decryptor, nil)
 	if err != nil {
@@ -553,7 +555,7 @@ func (a *API) GetManifestList(actx context.Context, decryptor DecryptFunc, addr 
 		return ManifestList{}, err
 	}
 
-	err = walker.Walk(ctx,func(entry *ManifestEntry) error {
+	err = walker.Walk(ctx, func(entry *ManifestEntry) error {
 		// handle non-manifest files
 		if entry.ContentType != ManifestType {
 			// ignore the file if it doesn't have the specified prefix
@@ -916,7 +918,7 @@ func (a *API) BuildDirectoryTree(ctx context.Context, mhash string, nameresolver
 	}
 
 	manifestEntryMap = map[string]*manifestTrieEntry{}
-	err = rootTrie.listWithPrefix(ctx,uri.Path, quitC, func(entry *manifestTrieEntry, suffix string) {
+	err = rootTrie.listWithPrefix(ctx, uri.Path, quitC, func(entry *manifestTrieEntry, suffix string) {
 		manifestEntryMap[suffix] = entry
 	})
 
@@ -963,7 +965,7 @@ func (a *API) ResolveFeedManifest(ctx context.Context, addr storage.Address) (*f
 		return nil, ErrCannotLoadFeedManifest
 	}
 
-	entry, _ := trie.getEntry(ctx,"")
+	entry, _ := trie.getEntry(ctx, "")
 	if entry.ContentType != FeedContentType {
 		return nil, ErrNotAFeedManifest
 	}
@@ -1038,7 +1040,7 @@ func DetectContentType(fileName string, f io.ReadSeeker) (string, error) {
 
 	return ctype, nil
 }
-func (a *API)SetCounter( _counter Counter){
+func (a *API) SetCounter(_counter Counter) {
 	a.counter = _counter
 }
 
@@ -1046,26 +1048,25 @@ type DelivryState struct {
 	ReceivedChunks map[common.Address]int64
 	Receipts       []state.Receipts
 }
+
 // ResolveFeed attempts to extract feed information out of the manifest, if provided
 // If not, it attempts to extract the feed out of a set of key-value pairs
 func (a *API) GetReadCount(ctx context.Context) (*DelivryState, error) {
 	if a.counter == nil {
-		return nil ,errors.New("No counter exists")
-	}else{
+		return nil, errors.New("No counter exists")
+	} else {
 
-
-		return &DelivryState{ a.counter.GetReceivedChunkInfo(),a.counter.GetReceiptsLogs()}, nil
+		return &DelivryState{a.counter.GetReceivedChunkInfo(), a.counter.GetReceiptsLogs()}, nil
 	}
 
 }
 
 // ResolveFeed attempts to extract feed information out of the manifest, if provided
 // If not, it attempts to extract the feed out of a set of key-value pairs
-func (a *API) GetNodeCount(ctx context.Context) (int,int) {
+func (a *API) GetNodeCount(ctx context.Context) (int, int) {
 	if a.counter == nil {
-		return 0,0
-	}else{
-
+		return 0, 0
+	} else {
 
 		return a.counter.GetConnectedNodes()
 	}

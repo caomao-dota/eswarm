@@ -29,12 +29,12 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/julienschmidt/httprouter"
 	"github.com/plotozhu/MDCMainnet/event"
 	"github.com/plotozhu/MDCMainnet/p2p"
 	"github.com/plotozhu/MDCMainnet/p2p/enode"
 	"github.com/plotozhu/MDCMainnet/p2p/simulations/adapters"
 	"github.com/plotozhu/MDCMainnet/rpc"
-	"github.com/julienschmidt/httprouter"
 	"golang.org/x/net/websocket"
 )
 

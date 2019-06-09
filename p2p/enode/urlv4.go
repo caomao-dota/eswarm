@@ -72,14 +72,14 @@ func ParseV4(rawurl string) (*Node, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid node ID (%v)", err)
 		}
-		return NewV4(id, nil, 0, 0,0,nil), nil
+		return NewV4(id, nil, 0, 0, 0, nil), nil
 	}
 	return parseComplete(rawurl)
 }
 
 // NewV4 creates a node from discovery v4 node information. The record
 // contained in the node has a zero-length signature.
-func NewV4(pubkey *ecdsa.PublicKey, ip net.IP, tcp, udp int,nodeType uint8,lip net.IP) *Node {
+func NewV4(pubkey *ecdsa.PublicKey, ip net.IP, tcp, udp int, nodeType uint8, lip net.IP) *Node {
 	var r enr.Record
 	if ip != nil {
 		r.Set(enr.IP(ip))
@@ -148,14 +148,14 @@ func parseComplete(rawurl string) (*Node, error) {
 		}
 	}
 	nodeType := uint64(0)
-	nodeString := qv.Get(enr.NodeType.ENRKey(0) )
+	nodeString := qv.Get(enr.NodeType.ENRKey(0))
 	if nodeString != "" {
-		nodeType, err = strconv.ParseUint(nodeString,10,16)
+		nodeType, err = strconv.ParseUint(nodeString, 10, 16)
 		if err != nil {
 			return nil, errors.New("invalid discport in query")
 		}
 	}
- 	return NewV4(id, ip, int(tcpPort), int(udpPort),uint8(nodeType),nil), nil
+	return NewV4(id, ip, int(tcpPort), int(udpPort), uint8(nodeType), nil), nil
 }
 
 // parsePubkey parses a hex-encoded secp256k1 public key.
@@ -194,12 +194,11 @@ func (n *Node) v4URL() string {
 		if n.UDP() != n.TCP() {
 			u.RawQuery = "discport=" + strconv.Itoa(n.UDP())
 		}
-		if u.RawQuery ==  "" {
-			u.RawQuery += n.NodeType().ENRKey()+"="+strconv.FormatUint(uint64(n.NodeType()),10)
-		}else {
-			u.RawQuery += "&"+n.NodeType().ENRKey()+"="+strconv.FormatUint(uint64(n.NodeType()),10)
+		if u.RawQuery == "" {
+			u.RawQuery += n.NodeType().ENRKey() + "=" + strconv.FormatUint(uint64(n.NodeType()), 10)
+		} else {
+			u.RawQuery += "&" + n.NodeType().ENRKey() + "=" + strconv.FormatUint(uint64(n.NodeType()), 10)
 		}
-
 
 	}
 	return u.String()

@@ -272,7 +272,7 @@ func newReceiptsStore(newDb *leveldb.DB, prvKey *ecdsa.PrivateKey, serverAddr st
 		unpaidAmount: make(map[[20]byte]uint32),
 		allReceipts:  make(Receipts),
 		server:       serverAddr,
-		receiptsLogs: make([]Receipts,0),
+		receiptsLogs: make([]Receipts, 0),
 	}
 	store.nodeCommCache, _ = lru.New(MAX_C_REC_LIMIT)
 
@@ -347,14 +347,14 @@ func (rs *ReceiptStore) saveReceipts(key []byte, receipts Receipts) error {
 
 //新收到了一个数据,在C记录中记录，并且返回一个签过名的收据
 //如果nodeId不合法，返回的收据为空，error为ErrInvalidNode
-func (rs *ReceiptStore) OnNodeChunkReceived(account [20]byte,dataLength int64 ) (*Receipt, error) {
+func (rs *ReceiptStore) OnNodeChunkReceived(account [20]byte, dataLength int64) (*Receipt, error) {
 	rs.cmu.Lock()
 	defer rs.cmu.Unlock()
 
 	if len(account) != 20 {
 		return nil, ErrInvalidNode
 	}
-	chunkAmount := uint32((dataLength+4095) >> 12)
+	chunkAmount := uint32((dataLength + 4095) >> 12)
 	//update chunkOfNode
 	item, exist := rs.nodeCommCache.Get(account)
 	if !exist {
@@ -421,16 +421,16 @@ func (rs *ReceiptStore) OnNewReceipt(receipt *Receipt) error {
 	//持久化
 	return rs.saveHRecord()
 }
-func (rs *ReceiptStore) GetReceiptsLogs() []Receipts{
+func (rs *ReceiptStore) GetReceiptsLogs() []Receipts {
 
 	toReport := rs.GetReceiptsToReport()
 	rs.hmu.Lock()
 	defer rs.hmu.Unlock()
-	result := make([]Receipts,0)
+	result := make([]Receipts, 0)
 
-	result = append(result,rs.receiptsLogs...)
-	result = append(result,toReport)
-	result = append(result,rs.allReceipts)
+	result = append(result, rs.receiptsLogs...)
+	result = append(result, toReport)
+	result = append(result, rs.allReceipts)
 	return result
 }
 func (rs *ReceiptStore) GetReceiptsToReport() Receipts {
@@ -557,7 +557,7 @@ func (rs *ReceiptStore) doAutoSubmit() error {
 		rs.receiptsLogs = rs.receiptsLogs[len-100:]
 	}
 	if err == nil { //提交成功，本地删除
-		rs.receiptsLogs = append(rs.receiptsLogs,receipts)
+		rs.receiptsLogs = append(rs.receiptsLogs, receipts)
 		rs.saveReceipts(RPREF, Receipts{})
 	} else {
 		//提交失败，本地已经存储过了
@@ -610,7 +610,7 @@ func (rs *ReceiptStore) OnChunkDelivered(nodeId [20]byte, amount4k uint32) uint3
 }
 
 func (rs *ReceiptStore) decreaseOnNewReceipt(account [20]byte, count uint32) {
-	_,ok := rs.unpaidAmount[account]
+	_, ok := rs.unpaidAmount[account]
 	if !ok {
 		rs.unpaidAmount[account] = 0
 	}

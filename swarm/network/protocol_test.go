@@ -158,7 +158,6 @@ func correctBzzHandshake(addr *BzzAddr, lightNode bool) *HandshakeMsg {
 		Version:   TestProtocolVersion,
 		NetworkID: TestProtocolNetworkID,
 		Addr:      addr,
-
 	}
 }
 
@@ -214,8 +213,8 @@ func TestBzzHandshakeSuccess(t *testing.T) {
 
 func TestBzzHandshakeLightNode(t *testing.T) {
 	var lightNodeTests = []struct {
-		name      string
-		nodetype  uint8
+		name     string
+		nodetype uint8
 	}{
 		{"on", 0x24},
 		{"off", 0x11},
@@ -231,7 +230,7 @@ func TestBzzHandshakeLightNode(t *testing.T) {
 
 			err := pt.testHandshake(
 				correctBzzHandshake(randomAddr, false),
-				&HandshakeMsg{Version: TestProtocolVersion, NetworkID: TestProtocolNetworkID, Addr: addr, NodeType:0x24},
+				&HandshakeMsg{Version: TestProtocolVersion, NetworkID: TestProtocolNetworkID, Addr: addr, NodeType: 0x24},
 			)
 
 			if err != nil {

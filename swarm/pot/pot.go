@@ -512,7 +512,7 @@ func (t *Pot) eachBin(val Val, pof Pof, po int, f func(int, int, func(func(val V
 			return
 		}
 	}
-	if lim == len(t.bins) {//没找到任何大于spr的bin
+	if lim == len(t.bins) { //没找到任何大于spr的bin
 		if spr >= po {
 			f(spr, 1, func(g func(Val) bool) bool {
 				return g(t.pin)
@@ -530,7 +530,7 @@ func (t *Pot) eachBin(val Val, pof Pof, po int, f func(int, int, func(func(val V
 	}
 	if spr >= po {
 		//用 spr,t.size-n.size,f1，来执行参数中的f
-		if !f(spr, t.size - size, func(g func(Val) bool) bool {
+		if !f(spr, t.size-size, func(g func(Val) bool) bool {
 			return t.eachFrom(func(v Val) bool {
 				return g(v)
 			}, spo)
@@ -765,7 +765,7 @@ func (t *Pot) getPos(po int) (n *Pot, i int) {
 // getPos called on (n) returns the forking node at PO n and its index if it exists
 // otherwise nil
 // caller is supposed to hold the lock
-func (t *Pot) SizeOfBin(po int) (int) {
+func (t *Pot) SizeOfBin(po int) int {
 
 	for _, n := range t.bins {
 

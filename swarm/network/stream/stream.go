@@ -47,7 +47,6 @@ const (
 	HashSize         = 32
 )
 
-
 // subscriptionFunc is used to determine what to do in order to perform subscriptions
 // usually we would start to really subscribe to nodes, but for tests other functionality may be needed
 // (see TestRequestPeerSubscriptions in streamer_test.go)
@@ -92,7 +91,6 @@ func NewRegistry(localID enode.ID, delivery *Delivery, syncChunkStore storage.Sy
 		options.SyncUpdateDelay = 15 * time.Second
 	}
 
-
 	quit := make(chan struct{})
 
 	streamer := &Registry{
@@ -103,7 +101,7 @@ func NewRegistry(localID enode.ID, delivery *Delivery, syncChunkStore storage.Sy
 		peers:          make(map[enode.ID]*Peer),
 		delivery:       delivery,
 		intervalsStore: intervalsStore,
-		NodeType: 		options.NodeType,
+		NodeType:       options.NodeType,
 		maxPeerServers: options.MaxPeerServers,
 		balance:        balance,
 		quit:           quit,
@@ -114,7 +112,7 @@ func NewRegistry(localID enode.ID, delivery *Delivery, syncChunkStore storage.Sy
 	streamer.api = NewAPI(streamer)
 	delivery.getPeer = streamer.getPeer
 
-	retrivalState := enode.GetRetrievalOptions(enode.NodeTypeOption( options.NodeType ) )
+	retrivalState := enode.GetRetrievalOptions(enode.NodeTypeOption(options.NodeType))
 	// if retrieval is enabled, register the server func, so that retrieve requests will be served (non-light nodes only)
 	if retrivalState == (enode.RetrievalEnabled) {
 		streamer.RegisterServerFunc(swarmChunkServerStreamName, func(_ *Peer, _ string, live bool) (Server, error) {
@@ -126,15 +124,15 @@ func NewRegistry(localID enode.ID, delivery *Delivery, syncChunkStore storage.Sy
 	}
 
 	// if retrieval is not disabled, register the client func (both light nodes and normal nodes can issue retrieve requests)
-	if retrivalState != ( enode.RetrievalDisabled ){
+	if retrivalState != (enode.RetrievalDisabled) {
 		streamer.RegisterClientFunc(swarmChunkServerStreamName, func(p *Peer, t string, live bool) (Client, error) {
 			return NewSwarmSyncerClient(p, syncChunkStore, NewStream(swarmChunkServerStreamName, t, live))
 		})
 	}
-	syncing := enode.GetSyncingOptions(enode.NodeTypeOption( options.NodeType ))
+	syncing := enode.GetSyncingOptions(enode.NodeTypeOption(options.NodeType))
 	//同步是stream上的一个服务，这里注册了一个客户端和一个服务端
 	// If syncing is not disabled, the syncing functions are registered (both client and server)
-	if syncing !=  (enode.SyncingDisabled ) {
+	if syncing != (enode.SyncingDisabled) {
 		RegisterSwarmSyncerServer(streamer, syncChunkStore)
 		RegisterSwarmSyncerClient(streamer, syncChunkStore)
 	}
@@ -199,14 +197,14 @@ func NewRegistry(localID enode.ID, delivery *Delivery, syncChunkStore storage.Sy
 					timer.Reset(options.SyncUpdateDelay)
 				case <-quit:
 					log.Info("quited")
-					break;
+					break
 				}
 			}
 
 			log.Info("quited 2")
 			timer.Stop()
 
-			}()
+		}()
 	}
 
 	return streamer
@@ -299,9 +297,9 @@ func (r *Registry) RequestSubscription(peerId enode.ID, s Stream, h *Range, prio
 // Subscribe initiates the streamer
 func (r *Registry) Subscribe(peerId enode.ID, s Stream, h *Range, priority uint8) error {
 	if h == nil {
-		log.Info("Subscribe","id",peerId,"stream:",s.String(),"range:","no")
-	}else {
-		log.Info("Subscribe","id",peerId,"stream:",s.String(),"range:",h.String())
+		log.Info("Subscribe", "id", peerId, "stream:", s.String(), "range:", "no")
+	} else {
+		log.Info("Subscribe", "id", peerId, "stream:", s.String(), "range:", h.String())
 	}
 
 	// check if the stream is registered
@@ -439,7 +437,7 @@ func (r *Registry) Run(p *network.BzzPeer) error {
 	defer sp.close()
 
 	//是否需要注册Request_Retrieval
-	if  enode.GetRetrievalOptions(enode.NodeTypeOption(p.Node().NodeType())) == (enode.RetrievalEnabled) {
+	if enode.GetRetrievalOptions(enode.NodeTypeOption(p.Node().NodeType())) == (enode.RetrievalEnabled) {
 		err := r.Subscribe(p.ID(), NewStream(swarmChunkServerStreamName, "", true), nil, Top)
 		if err != nil {
 			return err
@@ -468,7 +466,7 @@ func (r *Registry) updateSyncing(peers map[enode.ID]*Peer) {
 	// that are not needed anymore
 	subs := make(map[enode.ID]map[Stream]struct{})
 	r.peersMu.RLock()
-	if peers == nil  {
+	if peers == nil {
 		peers = r.peers
 	}
 	log.Trace("update syncing")
@@ -536,20 +534,20 @@ func (r *Registry) requestPeerSubscriptions(kad *network.Kademlia, subs map[enod
 		// nodes that do not provide stream protocol
 		// should not be subscribed, e.g. bootnodes
 		if !p.HasCap("stream") {
-			log.Info("peer has no Stream:","Id",p.ID(),"addr",p.String())
+			log.Info("peer has no Stream:", "Id", p.ID(), "addr", p.String())
 			return true
 		}
-	/*	//如果bucket中有轻节点，就跳过，这个是保护措施，其实bucket中不应该有轻节
-		if p.LightNode {
-			return true
-		}
+		/*	//如果bucket中有轻节点，就跳过，这个是保护措施，其实bucket中不应该有轻节
+			if p.LightNode {
+				return true
+			}
 
-		//只会和全节点发出同步请求
-		if p.Node().NodeType() != enode.NodeTypeFull {
-			return true
-		}
-	*/
-		if enode.GetRetrievalOptions(enode.NodeTypeOption(p.NodeType())) != (enode.RetrievalEnabled) || enode.GetSyncingOptions(enode.NodeTypeOption(p.NodeType())) == (enode.SyncingDisabled){
+			//只会和全节点发出同步请求
+			if p.Node().NodeType() != enode.NodeTypeFull {
+				return true
+			}
+		*/
+		if enode.GetRetrievalOptions(enode.NodeTypeOption(p.NodeType())) != (enode.RetrievalEnabled) || enode.GetSyncingOptions(enode.NodeTypeOption(p.NodeType())) == (enode.SyncingDisabled) {
 			return true
 		}
 		//if the peer's bin is shallower than the kademlia depth,
@@ -586,7 +584,7 @@ func doRequestSubscription(r *Registry, p *network.Peer, bin uint8, subs map[eno
 	if err != nil {
 		log.Info("Request subscription", "err", err, "peer", p.ID(), "stream", stream)
 		return false
-	}else{
+	} else {
 		log.Info("Request subscription ok", "peer", p.ID(), "stream", stream)
 	}
 	return true
@@ -612,7 +610,6 @@ func (p *Peer) HandleMsg(ctx context.Context, msg interface{}) error {
 		return nil
 	default:
 	}
-
 
 	switch msg := msg.(type) {
 
@@ -685,7 +682,7 @@ func (s *server) setNextBatch(from, to uint64) ([]byte, uint64, uint64, *Handove
 		if to <= from || from >= s.sessionIndex { //如果实时的同步完成了，要求同步未来所有的数据	to足够大
 			to = math.MaxUint64
 		}
-	} else {  //如果是历史的，同步超过了当前的session，完成了，不需要再同部了，因为 from=to=0,调用者不再发送OfferedHashes
+	} else { //如果是历史的，同步超过了当前的session，完成了，不需要再同部了，因为 from=to=0,调用者不再发送OfferedHashes
 		if (to < from && to != 0) || from > s.sessionIndex {
 			return nil, 0, 0, nil, nil
 		}
@@ -739,10 +736,10 @@ func (c *client) NextInterval() (start, end uint64, err error) {
 	i := &intervals.Intervals{}
 	err = c.intervalsStore.Get(c.intervalsKey, i)
 	if err != nil {
-		log.Error("next intervals", "key", c.intervalsKey,"error",err)
-	//	return 0, 0, err
+		log.Error("next intervals", "key", c.intervalsKey, "error", err)
+		//	return 0, 0, err
 		end = uint64(0xFFFFFFFFFFFFFFFF)
-	}else{
+	} else {
 		start, end = i.Next()
 	}
 
@@ -756,17 +753,17 @@ type Client interface {
 	Close()
 }
 
-func (c *client) nextBatch(from uint64,live_Stream *client) (nextFrom uint64, nextTo uint64) {
+func (c *client) nextBatch(from uint64, live_Stream *client) (nextFrom uint64, nextTo uint64) {
 	if c.to > 0 && from >= c.to {
 		return 0, 0
 	}
-	if c.stream.Live {  //实时的，并不清楚需要哪些，总是把to设置成0
+	if c.stream.Live { //实时的，并不清楚需要哪些，总是把to设置成0
 		return from, 0
 	} else if live_Stream == nil || from >= live_Stream.sessionAt { //非实时的，当前的已经超过记录的实时开始的部分了，
 		if c.to > 0 {
 			return from, c.to
 		}
-		return from, math.MaxUint64  //要一个超级大的数字，作用？<-- 对应handleWantedHashes
+		return from, math.MaxUint64 //要一个超级大的数字，作用？<-- 对应handleWantedHashes
 	}
 	//非实时，还在实时的开始位置之前
 	nextFrom, nextTo, err := c.NextInterval()
@@ -794,10 +791,10 @@ func (c *client) batchDone(p *Peer, req *OfferedHashesMsg, hashes []byte) error 
 		if err := p.SendPriority(context.TODO(), tp, c.priority); err != nil {
 			return err
 		}
-	/*	if c.to > 0 && tp.Takeover.End >= c.to {
-			return p.streamer.Unsubscribe(p.Peer.ID(), req.Stream)
-		}
-	*/
+		/*	if c.to > 0 && tp.Takeover.End >= c.to {
+				return p.streamer.Unsubscribe(p.Peer.ID(), req.Stream)
+			}
+		*/
 		return nil
 	}
 	return c.AddInterval(req.From, req.To)

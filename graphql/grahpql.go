@@ -24,6 +24,8 @@ import (
 	"net/http"
 	"time"
 
+	graphqlgo "github.com/graph-gophers/graphql-go"
+	"github.com/graph-gophers/graphql-go/relay"
 	"github.com/plotozhu/MDCMainnet"
 	"github.com/plotozhu/MDCMainnet/common"
 	"github.com/plotozhu/MDCMainnet/common/hexutil"
@@ -39,8 +41,6 @@ import (
 	"github.com/plotozhu/MDCMainnet/p2p"
 	"github.com/plotozhu/MDCMainnet/rlp"
 	"github.com/plotozhu/MDCMainnet/rpc"
-	graphqlgo "github.com/graph-gophers/graphql-go"
-	"github.com/graph-gophers/graphql-go/relay"
 )
 
 // Account represents an Ethereum account at a particular block.

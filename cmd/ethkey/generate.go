@@ -23,10 +23,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pborman/uuid"
 	"github.com/plotozhu/MDCMainnet/accounts/keystore"
 	"github.com/plotozhu/MDCMainnet/cmd/utils"
 	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/pborman/uuid"
 	"gopkg.in/urfave/cli.v1"
 )
 

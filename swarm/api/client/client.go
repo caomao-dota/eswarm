@@ -37,12 +37,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pborman/uuid"
 	"github.com/plotozhu/MDCMainnet/log"
 	"github.com/plotozhu/MDCMainnet/metrics"
 	"github.com/plotozhu/MDCMainnet/swarm/api"
 	"github.com/plotozhu/MDCMainnet/swarm/spancontext"
 	"github.com/plotozhu/MDCMainnet/swarm/storage/feed"
-	"github.com/pborman/uuid"
 )
 
 var (

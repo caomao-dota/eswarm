@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pborman/uuid"
 	"github.com/plotozhu/MDCMainnet/metrics"
 	"github.com/plotozhu/MDCMainnet/swarm/api"
 	"github.com/plotozhu/MDCMainnet/swarm/log"
 	"github.com/plotozhu/MDCMainnet/swarm/sctx"
 	"github.com/plotozhu/MDCMainnet/swarm/spancontext"
-	"github.com/pborman/uuid"
 )
 
 // Adapt chains h (main request handler) main handler to adapters (middleware handlers)
@@ -105,7 +105,7 @@ func RecoverPanic(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				log.Error("panic recovery!", "stack trace", string(debug.Stack()), "url", r.URL.String(), "headers", r.Header,"error",err)
+				log.Error("panic recovery!", "stack trace", string(debug.Stack()), "url", r.URL.String(), "headers", r.Header, "error", err)
 
 			}
 		}()

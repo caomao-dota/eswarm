@@ -25,8 +25,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/log"
 	"github.com/jackpal/go-nat-pmp"
+	"github.com/plotozhu/MDCMainnet/log"
 )
 
 // An implementation of nat.Interface can map local ports to ports

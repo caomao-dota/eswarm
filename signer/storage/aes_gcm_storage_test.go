@@ -23,9 +23,9 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/mattn/go-colorable"
 	"github.com/plotozhu/MDCMainnet/common"
 	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/mattn/go-colorable"
 )
 
 func TestEncryption(t *testing.T) {

@@ -55,7 +55,9 @@ node from the other.
 */
 
 var Pof = pot.DefaultPof(256)
+
 const MaxPoBin = 16
+
 // KadParams holds the config params for Kademlia
 type KadParams struct {
 	// adjustable parameters
@@ -82,24 +84,24 @@ func NewKadParams() *KadParams {
 		RetryExponent:     2,
 	}
 }
+
 type UDEF []byte
 
 // Kademlia is a table of live peers and a db of known peers (node records)
 type Kademlia struct {
-	lock       sync.RWMutex
-	*KadParams          // Kademlia configuration parameters
-	base       []byte   // immutable baseaddress of the table
-	addrs      *pot.Pot // pots container for known peer addresses
-	conns      *pot.Pot // pots container for live peer connections
-	lconns     *pot.Pot // pots container for light
-	depth      uint8    // stores the last current depth of saturation
-	nDepth     int      // stores the last neighbourhood depth
-	nDepthC    chan int // returned by DepthC function to signal neighbourhood depth change
+	lock         sync.RWMutex
+	*KadParams            // Kademlia configuration parameters
+	base         []byte   // immutable baseaddress of the table
+	addrs        *pot.Pot // pots container for known peer addresses
+	conns        *pot.Pot // pots container for live peer connections
+	lconns       *pot.Pot // pots container for light
+	depth        uint8    // stores the last current depth of saturation
+	nDepth       int      // stores the last neighbourhood depth
+	nDepthC      chan int // returned by DepthC function to signal neighbourhood depth change
 	peerChangedC chan int // returned by AddrCountC function to signal peer count change
-	peers      map[string]bool
-	filter     *p2p.FilterChain
-	blacklist  *lru.Cache
-
+	peers        map[string]bool
+	filter       *p2p.FilterChain
+	blacklist    *lru.Cache
 }
 
 // NewKademlia creates a Kademlia table for base address addr
@@ -109,7 +111,7 @@ func NewKademlia(addr []byte, params *KadParams) *Kademlia {
 	if params == nil {
 		params = NewKadParams()
 	}
-	blacklist,_:= lru.New(1000)
+	blacklist, _ := lru.New(1000)
 	return &Kademlia{
 		base:      addr,
 		KadParams: params,
@@ -117,28 +119,27 @@ func NewKademlia(addr []byte, params *KadParams) *Kademlia {
 		conns:     pot.NewPot(nil, 0),
 		lconns:    pot.NewPot(nil, 0),
 		peers:     make(map[string]bool),
-		blacklist:blacklist,
-		nDepth:   -1,
-
+		blacklist: blacklist,
+		nDepth:    -1,
 	}
 }
 
 // entry represents a Kademlia table entry (an extension of BzzAddr)
 type entry struct {
 	*BzzAddr
-	conn    *Peer
-	seenAt  time.Time
-	retries int
-	lastRetry time.Time
+	conn        *Peer
+	seenAt      time.Time
+	retries     int
+	lastRetry   time.Time
 	connectedAt time.Time
 }
 
 // newEntry creates a kademlia peer from a *Peer
 func newEntry(p *BzzAddr) *entry {
 	return &entry{
-		BzzAddr: p,
-		seenAt:  time.Now(),
-		connectedAt: time.Unix(0,0),
+		BzzAddr:     p,
+		seenAt:      time.Now(),
+		connectedAt: time.Unix(0, 0),
 	}
 }
 
@@ -151,67 +152,66 @@ func Label(e *entry) string {
 func (e *entry) Hex() string {
 	return fmt.Sprintf("%x", e.Address())
 }
-func (k *Kademlia) SetFilter(chain *p2p.FilterChain )  {
+func (k *Kademlia) SetFilter(chain *p2p.FilterChain) {
 	k.filter = chain
 	k.filter.AddFilter(k)
 }
-func (k *Kademlia) IsBlocked(id enode.ID,inbound bool) bool{
-	 idStr := fmt.Sprintf("%v-%v",id,inbound)
-	val,ok := k.blacklist.Get(idStr)
+func (k *Kademlia) IsBlocked(id enode.ID, inbound bool) bool {
+	idStr := fmt.Sprintf("%v-%v", id, inbound)
+	val, ok := k.blacklist.Get(idStr)
 	if ok && !inbound && !time.Now().After(val.(p2p.BlackItem).DiscTime) {
 		return true
-	} else if inbound{
+	} else if inbound {
 
-		bin,_ := Pof(k.BaseAddr(),id[:],0)
+		bin, _ := Pof(k.BaseAddr(), id[:], 0)
 
-			log.Info(" test for bucket","id",id,"bucket",bin,"size",k.conns.SizeOfBin(bin))
-			return k.conns.SizeOfBin(bin) >= k.MaxBinSize
-
+		log.Info(" test for bucket", "id", id, "bucket", bin, "size", k.conns.SizeOfBin(bin))
+		return k.conns.SizeOfBin(bin) >= k.MaxBinSize
 
 	}
 	return false
 }
-func (k *Kademlia) CanSendPing(id enode.ID) bool{
-	return true;
+func (k *Kademlia) CanSendPing(id enode.ID) bool {
+	return true
 }
-func (k *Kademlia) CanProcPing(id enode.ID) bool{
-	return true;
+func (k *Kademlia) CanProcPing(id enode.ID) bool {
+	return true
 }
-func (k *Kademlia) CanProcPong(id enode.ID) bool{
-	return true;
+func (k *Kademlia) CanProcPong(id enode.ID) bool {
+	return true
 }
-func (k *Kademlia) CanStartConnect(id enode.ID) bool{
-	return true;
+func (k *Kademlia) CanStartConnect(id enode.ID) bool {
+	return true
 }
-func (k *Kademlia)ShouldAcceptConn(id enode.ID) bool{
-	return true;
+func (k *Kademlia) ShouldAcceptConn(id enode.ID) bool {
+	return true
 }
 
-func (k *Kademlia)ClearDelay(id enode.ID,inbound bool){
+func (k *Kademlia) ClearDelay(id enode.ID, inbound bool) {
 
-	k.blacklist.Remove(fmt.Sprintf("%v-%v",id,inbound))
+	k.blacklist.Remove(fmt.Sprintf("%v-%v", id, inbound))
 }
-func (k *Kademlia)SetDelay(id enode.ID,inbound bool ) {
-	idStr := fmt.Sprintf("%v-%v",id,inbound)
-	val,exist :=k.blacklist.Get(idStr)
-	item := p2p.BlackItem{time.Now().Add(30*time.Second),1}
+func (k *Kademlia) SetDelay(id enode.ID, inbound bool) {
+	idStr := fmt.Sprintf("%v-%v", id, inbound)
+	val, exist := k.blacklist.Get(idStr)
+	item := p2p.BlackItem{time.Now().Add(30 * time.Second), 1}
 	if exist {
 		item = val.(p2p.BlackItem)
-		item.DiscTime = time.Now().Add(time.Duration(30*item.DiscCount)*time.Second)
+		item.DiscTime = time.Now().Add(time.Duration(30*item.DiscCount) * time.Second)
 		if item.DiscCount < 60 {
 			item.DiscCount++
 		}
 
 	}
-	log.Info("block peer","peer",idStr,"time to",item.DiscTime)
+	log.Info("block peer", "peer", idStr, "time to", item.DiscTime)
 
-
-	k.blacklist.Add(idStr,item)
+	k.blacklist.Add(idStr, item)
 
 }
+
 // Register enters each address as kademlia peer record into the
 // database of known peer addresses
-func (k *Kademlia) Register(peers ...*BzzAddr ) error {
+func (k *Kademlia) Register(peers ...*BzzAddr) error {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	var known, size int
@@ -231,24 +231,22 @@ func (k *Kademlia) Register(peers ...*BzzAddr ) error {
 				log.Trace("registering new peer", "addr", p)
 				// insert new offline peer into conns
 
-					return newEntry(p)
-
+				return newEntry(p)
 
 			}
 
-				e := v.(*entry)
+			e := v.(*entry)
 
-				// if underlay address is different, still add
-				if !bytes.Equal(e.BzzAddr.UAddr, p.UAddr) {
-					log.Trace("underlay addr is different, so add again", "new", p, "old", e.BzzAddr)
-					// insert new offline peer into conns
-					return newEntry(p)
-				}
+			// if underlay address is different, still add
+			if !bytes.Equal(e.BzzAddr.UAddr, p.UAddr) {
+				log.Trace("underlay addr is different, so add again", "new", p, "old", e.BzzAddr)
+				// insert new offline peer into conns
+				return newEntry(p)
+			}
 
-				//	log.Trace("found among known peers, underlay addr is same, do nothing", "new", p, "old", e.BzzAddr)
+			//	log.Trace("found among known peers, underlay addr is same, do nothing", "new", p, "old", e.BzzAddr)
 
-				return v
-
+			return v
 
 		})
 		if found {
@@ -260,19 +258,18 @@ func (k *Kademlia) Register(peers ...*BzzAddr ) error {
 	//k.sendNeighbourhoodDepthChange()
 	return nil
 }
-func (k *Kademlia)GetIntendBinInfo(nodeAddr *BzzAddr) (int,int){
+func (k *Kademlia) GetIntendBinInfo(nodeAddr *BzzAddr) (int, int) {
 
-	bin,_ := Pof(k.conns,nodeAddr,0)
-//	bin = int(math.Log2(float64(bin)))
-	return k.conns.SizeOfBin(bin),bin
-
+	bin, _ := Pof(k.conns, nodeAddr, 0)
+	//	bin = int(math.Log2(float64(bin)))
+	return k.conns.SizeOfBin(bin), bin
 
 }
 func (k *Kademlia) __SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, changed bool) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 
-	sizeOfBin := make([]int,MaxPoBin)
+	sizeOfBin := make([]int, MaxPoBin)
 	//first find connected count for each bin
 	k.conns.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
 		sizeOfBin[po] = size
@@ -282,13 +279,13 @@ func (k *Kademlia) __SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int,
 	//找到最深的size >= 2的桶
 	saturationDepth = 0
 	connsOverSaturation := 0
-	for i := 0; i < MaxPoBin; i++{
-		if sizeOfBin[i] < k.MinBinSize  {
+	for i := 0; i < MaxPoBin; i++ {
+		if sizeOfBin[i] < k.MinBinSize {
 			saturationDepth = i
-			break;
+			break
 		}
 	}
-	for i := saturationDepth; i< MaxPoBin; i++ {
+	for i := saturationDepth; i < MaxPoBin; i++ {
 		connsOverSaturation += sizeOfBin[i]
 	}
 	//如果saturationDepth之上的所有节点不满足要求，那么降一格（降低后肯定满足要求了）
@@ -306,7 +303,7 @@ func (k *Kademlia) __SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int,
 
 	if connsOverSaturation < k.MinBinSize {
 		if saturationDepth > 0 {
-			saturationDepth --;
+			saturationDepth--
 		}
 	}
 	targetPO := 0
@@ -318,7 +315,7 @@ func (k *Kademlia) __SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int,
 		if sizeOfBin[po] < k.MinBinSize+1 {
 			return f(func(val pot.Val) bool {
 				e := val.(*entry)
-				_,ok := k.peers[string(e.UAddr)]
+				_, ok := k.peers[string(e.UAddr)]
 
 				if k.callable(e) && !ok {
 
@@ -328,16 +325,15 @@ func (k *Kademlia) __SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int,
 				}
 				return true
 			})
-		}else{ //桶里连接满了，找下一个po吧
+		} else { //桶里连接满了，找下一个po吧
 			return true
 		}
 
 	})
 
-
-	if suggestedPeer != nil{
-		log.Trace("Suggested peer:","po",targetPO,"oaddr",common.Bytes2Hex(suggestedPeer.Over()))
-	}/*else{
+	if suggestedPeer != nil {
+		log.Trace("Suggested peer:", "po", targetPO, "oaddr", common.Bytes2Hex(suggestedPeer.Over()))
+	} /*else{
 		//没有节点用可了，把标识成不能查询的恢复起来
 		k.addrs.EachBin(k.base, Pof, 0, func(po, size int, f func(func(val pot.Val) bool) bool) bool {
 			return f(func(val pot.Val) bool {
@@ -359,13 +355,14 @@ func (k *Kademlia) __SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int,
 	//在on的时候会改变depth，所以现在是不可能会变得saturationDepth > k.depth的
 	return suggestedPeer, 0, false
 }
+
 // SuggestPeer returns an unconnected peer address as a peer suggestion for connection
 // 这么简单的目标，写出这么复杂的逻辑.......
 func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, changed bool) {
 	//log.Info("lock Sp")
 	k.lock.Lock()
 	//defer log.Info("unlock Sp")
-	defer  k.lock.Unlock() ;
+	defer k.lock.Unlock()
 	radius := neighbourhoodRadiusForPot(k.conns, k.NeighbourhoodSize, k.base)
 	// collect undersaturated bins in ascending order of number of connected peers
 	// and from shallow to deep (ascending order of PO)
@@ -457,8 +454,8 @@ func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, c
 			// stop if found
 			f(func(val pot.Val) bool {
 				e := val.(*entry)
-				ok := k.filter == nil || !k.filter.IsBlocked(e.ID(),false)
-				if k.callable(e) &&  ok{
+				ok := k.filter == nil || !k.filter.IsBlocked(e.ID(), false)
+				if k.callable(e) && ok {
 					targetPO = po
 
 					suggestedPeer = e.BzzAddr
@@ -469,8 +466,8 @@ func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, c
 			return cur < len(bins) && suggestedPeer == nil
 		})
 	}
-	if suggestedPeer != nil{
-		log.Info("Suggested peer:","uaddr",string(suggestedPeer.UAddr),"po",targetPO)
+	if suggestedPeer != nil {
+		log.Info("Suggested peer:", "uaddr", string(suggestedPeer.UAddr), "po", targetPO)
 	}
 
 	if uint8(saturationDepth) < k.depth {
@@ -481,12 +478,12 @@ func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, c
 }
 
 // On inserts the peer as a kademlia peer into the live peers
-func (k *Kademlia) On(p *Peer) (depth uint8, changed bool,err error) {
+func (k *Kademlia) On(p *Peer) (depth uint8, changed bool, err error) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	var ins bool
-	 changed  = false
-	 k.peers[string(p.UAddr)] = true
+	changed = false
+	k.peers[string(p.UAddr)] = true
 	if p.NodeType() != enode.NodeTypeLight {
 		po := int(0)
 
@@ -498,8 +495,8 @@ func (k *Kademlia) On(p *Peer) (depth uint8, changed bool,err error) {
 					ins = true
 					// insert new online peer into conns
 					return p
-				}else {
-					err = errors.New(fmt.Sprintf("Full bucket id:=%v  po:=%v",common.Bytes2Hex(p.OAddr),po))
+				} else {
+					err = errors.New(fmt.Sprintf("Full bucket id:=%v  po:=%v", common.Bytes2Hex(p.OAddr), po))
 					return v
 				}
 
@@ -508,8 +505,7 @@ func (k *Kademlia) On(p *Peer) (depth uint8, changed bool,err error) {
 			return v
 		})
 
-
-		if ins  {
+		if ins {
 			a := newEntry(p.BzzAddr)
 			a.conn = p
 			a.connectedAt = time.Now()
@@ -518,7 +514,7 @@ func (k *Kademlia) On(p *Peer) (depth uint8, changed bool,err error) {
 				return a
 			})
 			// send new address count value only if the peer is inserted
-			log.Info("Update addr counts","size", k.addrs.Size(),"channel",k.peerChangedC != nil)
+			log.Info("Update addr counts", "size", k.addrs.Size(), "channel", k.peerChangedC != nil)
 			if k.peerChangedC != nil {
 				k.peerChangedC <- k.conns.Size()
 			}
@@ -534,7 +530,7 @@ func (k *Kademlia) On(p *Peer) (depth uint8, changed bool,err error) {
 		}
 		k.sendNeighbourhoodDepthChange()
 
-	}else{
+	} else {
 		k.lconns, _, _, _ = pot.Swap(k.lconns, p, Pof, func(v pot.Val) pot.Val {
 			// if not found live
 			if v == nil {
@@ -546,7 +542,7 @@ func (k *Kademlia) On(p *Peer) (depth uint8, changed bool,err error) {
 		})
 	}
 
-	return k.depth, changed,err
+	return k.depth, changed, err
 
 }
 
@@ -587,7 +583,7 @@ func (k *Kademlia) sendNeighbourhoodDepthChange() {
 		nDepth := depthForPot(k.conns, k.NeighbourhoodSize, k.base)
 		if nDepth != k.nDepth {
 			k.nDepth = nDepth
-			log.Info("new neighbor","depth",nDepth)
+			log.Info("new neighbor", "depth", nDepth)
 			k.nDepthC <- nDepth
 		}
 	}
@@ -624,8 +620,8 @@ func (k *Kademlia) Off(p *Peer) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	var del bool
-	delete (k.peers,string(p.UAddr))
-	k.SetDelay(p.ID(),false)
+	delete(k.peers, string(p.UAddr))
+	k.SetDelay(p.ID(), false)
 	if p.NodeType() != enode.NodeTypeLight {
 		k.addrs, _, _, _ = pot.Swap(k.addrs, p, Pof, func(v pot.Val) pot.Val {
 			// v cannot be nil, must check otherwise we overwrite entry
@@ -654,7 +650,6 @@ func (k *Kademlia) Off(p *Peer) {
 		})
 
 	}
-
 
 }
 
@@ -727,7 +722,7 @@ func (k *Kademlia) NeighbourhoodDepth() (depth int) {
 // caller must hold the lock
 /*
 	neighbourhoodRadiusForPot 检查Pot，根据pivotAddr从近到远，检查每个桶，找到第一个桶里的size < neighbourhoodSize的值
- */
+*/
 func neighbourhoodRadiusForPot(p *pot.Pot, neighbourhoodSize int, pivotAddr []byte) (depth int) {
 	if p.Size() <= neighbourhoodSize {
 		return 0
@@ -789,9 +784,9 @@ func depthForPot(p *pot.Pot, neighbourhoodSize int, pivotAddr []byte) (depth int
 // callable decides if an address entry represents a callable peer
 func (k *Kademlia) callable(e *entry) bool {
 	// not callable if peer is live or exceeded maxRetries
-	if e.conn != nil && time.Since(e.connectedAt) > 2* time.Minute && e.retries != 0{
+	if e.conn != nil && time.Since(e.connectedAt) > 2*time.Minute && e.retries != 0 {
 		e.retries = 0
-		k.ClearDelay(e.ID(),false)
+		k.ClearDelay(e.ID(), false)
 	}
 	if e.conn != nil || e.retries > k.MaxRetries {
 		//log.Info(fmt.Sprintf("%08x:connected %v %v", k.BaseAddr()[:4], e, e.retries))
@@ -803,25 +798,24 @@ func (k *Kademlia) callable(e *entry) bool {
 		return false
 	}
 	// calculate the allowed number of retries based on time lapsed since last seen
-	timeElasped := int64(time.Since(e.seenAt))/int64(time.Millisecond)
+	timeElasped := int64(time.Since(e.seenAt)) / int64(time.Millisecond)
 	//指数级增长，直到30分钟一次
 	div := int64(e.retries)
-	if div > 30{
+	if div > 30 {
 		div = 10
-	}else if div > 20 {
+	} else if div > 20 {
 		div = 8
-	}else  if div > 10 {
+	} else if div > 10 {
 		div = 5
 	}
-	 shouldWait := int64(0)
+	shouldWait := int64(0)
 	if e.retries > 0 {
-		shouldWait =  int64(time.Second) * int64(math.Pow(float64(k.RetryExponent),float64(div))) /int64(time.Millisecond)
+		shouldWait = int64(time.Second) * int64(math.Pow(float64(k.RetryExponent), float64(div))) / int64(time.Millisecond)
 	}
-
 
 	// this is never called concurrently, so safe to increment
 	// peer can be retried again
-	if timeElasped < shouldWait{
+	if timeElasped < shouldWait {
 		//log.Trace(fmt.Sprintf("%08x: %v long time since last try (at %v) needed before retry %v, should wait for %v", k.BaseAddr()[:4], e, timeElasped, e.retries, shouldWait))
 		return false
 	}
@@ -861,7 +855,7 @@ func (k *Kademlia) string() string {
 		rows = append(rows, fmt.Sprintf("commit hash: %s", sv.GitCommit))
 	}
 	rows = append(rows, fmt.Sprintf("%v KΛÐΞMLIΛ hive: queen's address: %x", time.Now().UTC().Format(time.UnixDate), k.BaseAddr()[:3]))
-	rows = append(rows, fmt.Sprintf("population: %d,%d (%d), NeighbourhoodSize: %d, MinBinSize: %d, MaxBinSize: %d", k.conns.Size(),  k.lconns.Size(),k.addrs.Size(), k.NeighbourhoodSize, k.MinBinSize, k.MaxBinSize))
+	rows = append(rows, fmt.Sprintf("population: %d,%d (%d), NeighbourhoodSize: %d, MinBinSize: %d, MaxBinSize: %d", k.conns.Size(), k.lconns.Size(), k.addrs.Size(), k.NeighbourhoodSize, k.MinBinSize, k.MaxBinSize))
 
 	liverows := make([]string, k.MaxProxDisplay)
 	peersrows := make([]string, k.MaxProxDisplay)
@@ -949,7 +943,7 @@ func (k *Kademlia) string() string {
 			third = " 0"
 		}
 
-		rows = append(rows, fmt.Sprintf("%03d %v | %v | %v", i, left, right,third))
+		rows = append(rows, fmt.Sprintf("%03d %v | %v | %v", i, left, right, third))
 	}
 	rows = append(rows, "=========================================================================")
 	return "\n" + strings.Join(rows, "\n")
@@ -1104,9 +1098,10 @@ func (k *Kademlia) knowNeighbours(addrs [][]byte) (got bool, n int, missing [][]
 	}
 	return gots == len(addrs), gots, culprits
 }
-func (k *Kademlia)GetConnectedNodes() (int,int){
-	return k.conns.Size(),k.lconns.Size()
+func (k *Kademlia) GetConnectedNodes() (int, int) {
+	return k.conns.Size(), k.lconns.Size()
 }
+
 // connectedNeighbours tests if all neighbours in the peerpot
 // are currently connected in the kademlia
 // It is used in Healthy function for testing only

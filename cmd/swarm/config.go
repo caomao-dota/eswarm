@@ -69,7 +69,7 @@ const (
 	SwarmEnvSyncDisable          = "SWARM_SYNC_DISABLE"
 	SwarmEnvSyncUpdateDelay      = "SWARM_ENV_SYNC_UPDATE_DELAY"
 	SwarmEnvMaxStreamPeerServers = "SWARM_ENV_MAX_STREAM_PEER_SERVERS"
-	SwarmEnvNodeType		     = "SWARM_NODE_TYPE"
+	SwarmEnvNodeType             = "SWARM_NODE_TYPE"
 	SwarmEnvDeliverySkipCheck    = "SWARM_DELIVERY_SKIP_CHECK"
 	SwarmEnvENSAPI               = "SWARM_ENS_API"
 	SwarmEnvENSAddr              = "SWARM_ENS_ADDR"
@@ -80,11 +80,11 @@ const (
 	SwarmEnvStoreCapacity        = "SWARM_STORE_CAPACITY"
 	SwarmEnvStoreCacheCapacity   = "SWARM_STORE_CACHE_CAPACITY"
 	//SwarmEnvBootnodeMode         = "SWARM_BOOTNODE_MODE"
-	SwarmAccessPassword          = "SWARM_ACCESS_PASSWORD"
-	SwarmAutoDefaultPath         = "SWARM_AUTO_DEFAULTPATH"
-	SwarmGlobalstoreAPI          = "SWARM_GLOBALSTORE_API"
-	ChunkDbPath					 = "CHUNK_DB_PATH"
-	GethEnvDataDir               = "GETH_DATADIR"
+	SwarmAccessPassword  = "SWARM_ACCESS_PASSWORD"
+	SwarmAutoDefaultPath = "SWARM_AUTO_DEFAULTPATH"
+	SwarmGlobalstoreAPI  = "SWARM_GLOBALSTORE_API"
+	ChunkDbPath          = "CHUNK_DB_PATH"
+	GethEnvDataDir       = "GETH_DATADIR"
 )
 
 // These settings ensure that TOML keys use the same names as Go struct fields.
@@ -136,7 +136,6 @@ func initSwarmNode(config *bzzapi.Config, stack *node.Node, ctx *cli.Context) {
 	log.Debug("Starting Swarm with the following parameters:")
 	//after having created the config, print it to screen
 	log.Debug(printConfig(config))
-
 
 }
 
@@ -220,14 +219,12 @@ func cmdLineOverride(currentConfig *bzzapi.Config, ctx *cli.Context) *bzzapi.Con
 	// any value including 0 is acceptable
 	currentConfig.MaxStreamPeerServers = ctx.GlobalInt(SwarmMaxStreamPeerServersFlag.Name)
 
-
 	if ctx.GlobalIsSet(SwarmDeliverySkipCheckFlag.Name) {
 		currentConfig.DeliverySkipCheck = true
 	}
 	if ctx.GlobalIsSet(SwarmNodeTypeFlag.Name) {
 		currentConfig.NodeType = ctx.GlobalUint(SwarmNodeTypeFlag.Name)
 	}
-
 
 	currentConfig.SwapAPI = ctx.GlobalString(SwarmSwapAPIFlag.Name)
 	if currentConfig.SwapEnabled && currentConfig.SwapAPI == "" {
@@ -354,7 +351,7 @@ func envVarsOverride(currentConfig *bzzapi.Config) (config *bzzapi.Config) {
 	}
 
 	if lne := os.Getenv(SwarmEnvNodeType); lne != "" {
-		nodetype, err := strconv.ParseUint(lne,10,16)
+		nodetype, err := strconv.ParseUint(lne, 10, 16)
 		if err != nil {
 			utils.Fatalf("invalid environment variable %s: %v", SwarmEnvNodeType, err)
 		}
@@ -380,7 +377,6 @@ func envVarsOverride(currentConfig *bzzapi.Config) (config *bzzapi.Config) {
 	if cors := os.Getenv(SwarmEnvCORS); cors != "" {
 		currentConfig.Cors = cors
 	}
-
 
 	if api := os.Getenv(SwarmGlobalstoreAPI); api != "" {
 		currentConfig.GlobalStoreAPI = api

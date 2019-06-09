@@ -29,11 +29,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	colorable "github.com/mattn/go-colorable"
 	"github.com/plotozhu/MDCMainnet/log"
 	"github.com/plotozhu/MDCMainnet/swarm/api"
 	"github.com/plotozhu/MDCMainnet/swarm/storage"
 	"github.com/plotozhu/MDCMainnet/swarm/testutil"
-	colorable "github.com/mattn/go-colorable"
 )
 
 var (

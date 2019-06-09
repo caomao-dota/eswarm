@@ -38,10 +38,10 @@ import (
 )
 
 const (
-
 	swarmChunkServerStreamName = "RETRIEVE_REQUEST"
 	deliveryCap                = 32
 )
+
 var (
 	ErrorLightNodeRejectRetrieval = errors.New("Light nodes reject retrieval")
 )
@@ -72,7 +72,7 @@ func NewDelivery(kad *network.Kademlia, chunkStore storage.SyncChunkStore, recei
 		chunkStore:   chunkStore,
 		kad:          kad,
 		receiptStore: receiptStore,
-		recvCount:make(map[common.Address]int64),
+		recvCount:    make(map[common.Address]int64),
 	}
 }
 
@@ -150,10 +150,10 @@ func (s *SwarmChunkServer) GetData(ctx context.Context, key []byte) ([]byte, err
 
 // RetrieveRequestMsg is the protocol msg for chunk retrieve requests
 type RetrieveRequestMsg struct {
-	Addr      storage.Address
-	SkipCheck bool
+	Addr        storage.Address
+	SkipCheck   bool
 	RetrieveNow bool
-	HopCount  uint8
+	HopCount    uint8
 }
 
 //收到了某个节点来的查询数据的请求
@@ -161,18 +161,18 @@ func (d *Delivery) AttachBzz(bzz *network.Bzz) {
 	d.bzz = bzz
 }
 
-func (d *Delivery) IncreaseAccount(account common.Address){
+func (d *Delivery) IncreaseAccount(account common.Address) {
 	d.rmu.Lock()
 	defer d.rmu.Unlock()
-	_,ok := d.recvCount[account]
+	_, ok := d.recvCount[account]
 	if !ok {
 		d.recvCount[account] = 1
-	}else {
+	} else {
 		d.recvCount[account] += 1
 	}
 }
 
-func (d *Delivery) GetReceivedChunkInfo() map[common.Address]int64{
+func (d *Delivery) GetReceivedChunkInfo() map[common.Address]int64 {
 	return d.recvCount
 }
 
@@ -224,7 +224,7 @@ func (d *Delivery) handleRetrieveRequestMsg(ctx context.Context, sp *Peer, req *
 			if err != nil {
 				log.Warn("ERROR in handleRetrieveRequestMsg", "err", err)
 			}
-			d.receiptStore.OnChunkDelivered(sp.Account(),uint32((len(chunk.Data())+4095)>>12))
+			d.receiptStore.OnChunkDelivered(sp.Account(), uint32((len(chunk.Data())+4095)>>12))
 			return
 		}
 		select {
@@ -262,7 +262,7 @@ func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *Ch
 	spanId := fmt.Sprintf("stream.send.request.%v.%v", sp.ID(), req.Addr)
 	span := tracing.ShiftSpanByKey(spanId)
 
-	log.Info(" chunk received:","info",spanId)
+	log.Info(" chunk received:", "info", spanId)
 	go func() {
 		if span != nil {
 			defer span.(opentracing.Span).Finish()
@@ -275,14 +275,14 @@ func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *Ch
 			if err == storage.ErrChunkInvalid {
 				// we removed this log because it spams the logs
 				// TODO: Enable this log line
-				 log.Warn("invalid chunk delivered", "peer", sp.ID(), "chunk", req.Addr, )
+				log.Warn("invalid chunk delivered", "peer", sp.ID(), "chunk", req.Addr)
 				req.peer.Drop(err)
 			}
 		}
 		if replyReceipt && d.bzz != nil { //TODO 优化每隔10帧或是10秒发送一次收据
 			hs, _ := d.bzz.GetOrCreateHandshake(sp.ID())
 			//用最低的优先级，发送一个收据
-			receipt, err := d.receiptStore.OnNodeChunkReceived(hs.Account,int64(len(req.SData)))
+			receipt, err := d.receiptStore.OnNodeChunkReceived(hs.Account, int64(len(req.SData)))
 			d.IncreaseAccount(hs.Account)
 			if err == nil {
 				err = sp.SendPriority(ctx, &ReceiptsMsg{receipt.Account, uint32(receipt.Stime.Unix()), receipt.Amount, receipt.Sign}, Mid)
@@ -317,7 +317,7 @@ func (d *Delivery) RequestFromPeers(ctx context.Context, req *network.Request) (
 		//比较容易理解的时，由于近的桶里的节点是直接连接好的，不需要重新连接，因此从最近的桶里找快一些，这个后面优化的时候分析一下
 		d.kad.EachConn(req.Addr[:], 255, func(p *network.Peer, po int) bool {
 			id := p.ID()
-			if enode.GetRetrievalOptions( enode.NodeTypeOption(p.NodeType())) != (enode.RetrievalEnabled){
+			if enode.GetRetrievalOptions(enode.NodeTypeOption(p.NodeType())) != (enode.RetrievalEnabled) {
 				log.Trace("Delivery.RequestFromPeers: skip  peer without RetrievalEnabled", "peer id", id)
 				// skip light nodes
 				return true
@@ -343,19 +343,19 @@ func (d *Delivery) RequestFromPeers(ctx context.Context, req *network.Request) (
 	// this span will finish only when delivery is handled (or times out)
 	ctx = context.WithValue(ctx, tracing.StoreLabelId, "stream.send.request")
 	ctx = context.WithValue(ctx, tracing.StoreLabelMeta, fmt.Sprintf("%v.%v", sp.ID(), req.Addr))
-	log.Info("Send Request:","addr",req.Addr,"Hop",req.HopCount,"target:",sp.ID())
+	log.Info("Send Request:", "addr", req.Addr, "Hop", req.HopCount, "target:", sp.ID())
 	err := sp.SendPriority(ctx, &RetrieveRequestMsg{
 		Addr:      req.Addr,
 		SkipCheck: req.SkipCheck,
 		HopCount:  req.HopCount,
 	}, Top)
 	if err != nil {
-		log.Warn("send request error","request:",req.Addr,"reason",err)
+		log.Warn("send request error", "request:", req.Addr, "reason", err)
 		return nil, nil, err
 	}
 	requestFromPeersEachCount.Inc(1)
 	spanId := fmt.Sprintf("stream.send.request.%v.%v", sp.ID(), req.Addr)
-	log.Trace(" chunk request:","info",spanId)
+	log.Trace(" chunk request:", "info", spanId)
 	return spID, sp.quit, nil
 }
 func (d *Delivery) UpdateNodes(nodes []string) {
@@ -363,10 +363,11 @@ func (d *Delivery) UpdateNodes(nodes []string) {
 	defer d.mu.Unlock()
 	d.centralNodes = nodes
 }
+
 /**
-	not used, read one chunk from center is a very inefficient routine
-	We will research if read from another data-distribute network is very viable
- */
+not used, read one chunk from center is a very inefficient routine
+We will research if read from another data-distribute network is very viable
+*/
 func (d *Delivery) GetDataFromCentral(ctx context.Context, address storage.Address) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
@@ -407,10 +408,10 @@ func (d *Delivery) handleReceiptsMsg(sp *Peer, receipt *ReceiptsMsg) error {
 	return d.receiptStore.OnNewReceipt(&state.Receipt{state.ReceiptBody{receipt.PA, time.Unix(int64(receipt.STime), 0), receipt.AMount}, receipt.Sig})
 
 }
-func (d *Delivery)GetReceiptsLogs() []state.Receipts{
+func (d *Delivery) GetReceiptsLogs() []state.Receipts {
 	return d.receiptStore.GetReceiptsLogs()
 }
 
-func (d *Delivery)GetConnectedNodes() (int,int){
+func (d *Delivery) GetConnectedNodes() (int, int) {
 	return d.kad.GetConnectedNodes()
 }

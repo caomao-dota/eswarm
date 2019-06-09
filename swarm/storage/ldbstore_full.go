@@ -136,7 +136,7 @@ type LDBStore struct {
 	//deleteChunkFunc is used to delete data from boltdb
 	deleteChunkFunc func(addr Address) (err error)
 
-	mongoClient  []*mongo.Collection
+	mongoClient []*mongo.Collection
 }
 
 type dbBatch struct {
@@ -156,7 +156,7 @@ func NewLDBStore(params *LDBStoreParams) (s *LDBStore, err error) {
 	s = new(LDBStore)
 	s.hashfunc = params.Hash
 	s.quit = make(chan struct{})
-	s.waitChan = make(chan struct{},100)
+	s.waitChan = make(chan struct{}, 100)
 	s.batchesC = make(chan struct{}, 1)
 	go s.writeBatches()
 	s.batch = newBatch()
@@ -179,10 +179,10 @@ func NewLDBStore(params *LDBStoreParams) (s *LDBStore, err error) {
 		log.Error(err.Error())
 	}
 
-	s.mongoClient = make([]*mongo.Collection,16)
-	for i := 0 ;i < 16; i++ {
+	s.mongoClient = make([]*mongo.Collection, 16)
+	for i := 0; i < 16; i++ {
 
-		s.mongoClient[i] = client.Database("chunks").Collection(fmt.Sprintf("shard%v",i))
+		s.mongoClient[i] = client.Database("chunks").Collection(fmt.Sprintf("shard%v", i))
 	}
 	s.encodeDataFunc = newMongoEncodeDataFunc(s)
 	s.getDataFunc = newMongoGetDataFunc(s)
@@ -197,7 +197,7 @@ func NewLDBStore(params *LDBStoreParams) (s *LDBStore, err error) {
 	s.encodeDataFunc = newBoltDbEncodeDataFunc(s)
 	s.getDataFunc = newBoltDbGetDataFunc(db)
 	s.deleteChunkFunc = newBoltDbDeleteDataFunc(db)
-*/
+	*/
 	s.po = params.Po
 	s.setCapacity(params.DbCapacity)
 
@@ -975,8 +975,6 @@ func AddrBucket(addr []byte) []byte {
 	return addr[0:1]
 }
 
-
-
 // tryAccessIdx tries to find index entry. If found then increments the access
 // count for garbage collection and returns the index entry and true for found,
 // otherwise returns nil and false.
@@ -1155,10 +1153,10 @@ func (s *LDBStore) Close() {
 	// force writing out current batch
 	s.writeCurrentBatch()
 	s.db.Close()
-/*	if s.chunkDb != nil {
-		s.chunkDb.Close()
-	}
-*/
+	/*	if s.chunkDb != nil {
+			s.chunkDb.Close()
+		}
+	*/
 }
 
 // SyncIterator(start, stop, po, f) calls f on each hash of a bin po from start to stop
@@ -1187,6 +1185,7 @@ func (s *LDBStore) SyncIterator(since uint64, until uint64, po uint8, f func(Add
 	}
 	return it.Error()
 }
+
 /*
 // newMockEncodeDataFunc returns a function that stores the chunk data
 // to a mock store to bypass the default functionality encodeData.
@@ -1245,7 +1244,6 @@ func newBoltDbDeleteDataFunc(db *bolt.DB) func(addr Address) (err error) {
 }
 */
 
-
 // newMockEncodeDataFunc returns a function that stores the chunk data
 // to a mock store to bypass the default functionality encodeData.
 // The constructed function always returns the nil data, as DbStore does
@@ -1253,26 +1251,25 @@ func newBoltDbDeleteDataFunc(db *bolt.DB) func(addr Address) (err error) {
 func newMongoEncodeDataFunc(s *LDBStore) func(chunk Chunk) []byte {
 	return func(chunk Chunk) []byte {
 		go func() {
-			s.waitChan <- struct {}{}
+			s.waitChan <- struct{}{}
 			i := chunk.Address()[0] & 0xF
 			ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
 
 			updsert := true
 
-			_,err := s.mongoClient[i].ReplaceOne(ctx,bson.M{"_id": chunk.Address()}, bson.M{"v": chunk.Data()},&options.ReplaceOptions{Upsert:&updsert})
-
+			_, err := s.mongoClient[i].ReplaceOne(ctx, bson.M{"_id": chunk.Address()}, bson.M{"v": chunk.Data()}, &options.ReplaceOptions{Upsert: &updsert})
 
 			if err != nil {
-				log.Error("error in insert chunk","addr",chunk.Address(),"reason", err)
+				log.Error("error in insert chunk", "addr", chunk.Address(), "reason", err)
 			}
 		}()
 		return chunk.Address()[:]
 	}
 }
 
-type  Data struct{
-
+type Data struct {
 }
+
 func newMongoGetDataFunc(s *LDBStore) func(addr Address) (data []byte, err error) {
 	return func(addr Address) (data []byte, err error) {
 		var result bson.M
@@ -1280,9 +1277,7 @@ func newMongoGetDataFunc(s *LDBStore) func(addr Address) (data []byte, err error
 		i := addr[0] & 0xF
 		ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
 
-		err = s.mongoClient[i].FindOne(ctx,bson.M{"_id":addr},nil).Decode(&result)
-
-
+		err = s.mongoClient[i].FindOne(ctx, bson.M{"_id": addr}, nil).Decode(&result)
 
 		data = result["v"].([]byte)
 		return
@@ -1293,13 +1288,11 @@ func newMongoGetDataFunc(s *LDBStore) func(addr Address) (data []byte, err error
 func newMongoDeleteDataFunc(s *LDBStore) func(addr Address) (err error) {
 	return func(addr Address) (err error) {
 
-
 		i := addr[0] & 0xF
 		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
-		_,err = s.mongoClient[i].DeleteOne(ctx,bson.M{"_id":addr},nil)
+		_, err = s.mongoClient[i].DeleteOne(ctx, bson.M{"_id": addr}, nil)
 		return
-
 
 	}
 }

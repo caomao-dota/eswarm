@@ -89,7 +89,7 @@ type Config struct {
 	UseLightweightKDF bool `toml:",omitempty"`
 
 	//type of this node
-	NodeType   uint8
+	NodeType uint8
 
 	// NoUSB disables hardware wallet monitoring and connectivity.
 	NoUSB bool `toml:",omitempty"`

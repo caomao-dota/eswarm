@@ -80,7 +80,7 @@ type (
 
 		Version    uint
 		From, To   rpcEndpoint
-		NodeType  uint8
+		NodeType   uint8
 		Expiration uint64
 		// Ignore additional fields (for forward compatibility).
 		Rest []rlp.RawValue `rlp:"tail"`
@@ -91,8 +91,8 @@ type (
 		// This field should mirror the UDP envelope address
 		// of the ping packet, which provides a way to discover the
 		// the external address (after NAT).
-		To rpcEndpoint
-		NodeType  uint8
+		To         rpcEndpoint
+		NodeType   uint8
 		ReplyTok   []byte // This contains the hash of the ping packet.
 		Expiration uint64 // Absolute timestamp at which the packet becomes invalid.
 		// Ignore additional fields (for forward compatibility).
@@ -154,7 +154,7 @@ func (t *udp) nodeFromRPC(sender *net.UDPAddr, rn rpcNode) (*node, error) {
 	if err != nil {
 		return nil, err
 	}
-	n := wrapNode(enode.NewV4(key, rn.IP, int(rn.TCP), int(rn.UDP), rn.LN,net.IP{}))
+	n := wrapNode(enode.NewV4(key, rn.IP, int(rn.TCP), int(rn.UDP), rn.LN, net.IP{}))
 
 	err = n.ValidateComplete()
 	return n, err
@@ -166,7 +166,7 @@ func nodeToRPC(n *node) rpcNode {
 	if err := n.Load((*enode.Secp256k1)(&key)); err == nil {
 		ekey = encodePubkey(&key)
 	}
-	return rpcNode{ID: ekey, IP: n.IP(), UDP: uint16(n.UDP()), TCP: uint16(n.TCP()),LN: uint8(n.NodeType()) }
+	return rpcNode{ID: ekey, IP: n.IP(), UDP: uint16(n.UDP()), TCP: uint16(n.TCP()), LN: uint8(n.NodeType())}
 }
 
 // packet is implemented by all protocol messages.
@@ -200,7 +200,7 @@ type udp struct {
 	gotreply        chan reply
 	closing         chan struct{}
 	latencyCache    *lru.Cache
-	DoneFindWork      bool
+	DoneFindWork    bool
 }
 
 // pending represents a pending reply.
@@ -284,8 +284,8 @@ func newUDP(c conn, ln *enode.LocalNode, cfg Config) (*Table, *udp, error) {
 		addReplyMatcher: make(chan *replyMatcher),
 		DoneFindWork:    false,
 	}
-	udp.latencyCache,_ = lru.New(LatencyCacheSize)
-	tab, err := newTable(udp, ln.Database(), cfg.Bootnodes,false)
+	udp.latencyCache, _ = lru.New(LatencyCacheSize)
+	tab, err := newTable(udp, ln.Database(), cfg.Bootnodes, false)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -314,19 +314,19 @@ func (t *udp) ourEndpoint() rpcEndpoint {
 }
 
 // ping sends a ping message to the given node and waits for a reply.
-func (t *udp) ping(toid enode.ID, toaddr *net.UDPAddr) (error,time.Duration) {
+func (t *udp) ping(toid enode.ID, toaddr *net.UDPAddr) (error, time.Duration) {
 	sentTime := time.Now()
-	errc := <- t.sendPing(toid, toaddr,nil)
+	errc := <-t.sendPing(toid, toaddr, nil)
 	if errc == nil {
-			//t.tab.ProcessLive(toid,time.Since(sentTime),true)
-		go func(){
+		//t.tab.ProcessLive(toid,time.Since(sentTime),true)
+		go func() {
 
-			t.db.UpdateNodeLatency(toid,toaddr.IP,int64(time.Since(sentTime)))
+			t.db.UpdateNodeLatency(toid, toaddr.IP, int64(time.Since(sentTime)))
 		}()
-	}else {
+	} else {
 		//t.tab.ProcessLive(toid,time.Since(sentTime),false)
 	}
-	return errc,time.Since(sentTime)
+	return errc, time.Since(sentTime)
 }
 
 // sendPing sends a ping message to the given node and invokes the callback
@@ -389,7 +389,7 @@ func (t *udp) findnode(toid enode.ID, toaddr *net.UDPAddr, target encPubkey) ([]
 			}
 			nodes = append(nodes, n)
 		}
-		return true,  nreceived >= bucketSize /// 只要正常返回了，就是成功了nreceived >= bucketSize
+		return true, nreceived >= bucketSize /// 只要正常返回了，就是成功了nreceived >= bucketSize
 	})
 	t.send(toaddr, toid, findnodePacket, &findnode{
 		Target:     target,
@@ -409,7 +409,7 @@ func (t *udp) pending(id enode.ID, ip net.IP, ptype byte, callback replyMatchFun
 		//log.Info(" Pend procceeded:","nodeId",id, "ip",ip)
 		// loop will handle it
 	case <-t.closing:
-	//	log.Info(" Pend cancelled:","nodeId",id, "ip",ip)
+		//	log.Info(" Pend cancelled:","nodeId",id, "ip",ip)
 		ch <- errClosed
 	}
 	return ch
@@ -484,16 +484,16 @@ func (t *udp) loop() {
 			var matched bool // whether any replyMatcher considered the reply acceptable.
 			for el := plist.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*replyMatcher)
-				if p.from == r.from && p.ptype == r.ptype /*&&  p.ip.Equal(r.ip)*/{
-							ok, requestDone := p.callback(r.data)
-							matched = matched || ok
-							// Remove the matcher if callback indicates that all replies have been received.
-							if requestDone {
-								p.errc <- nil
-								plist.Remove(el)
-							}
-							// Reset the continuous timeout counter (time drift detection)
-							contTimeouts = 0
+				if p.from == r.from && p.ptype == r.ptype /*&&  p.ip.Equal(r.ip)*/ {
+					ok, requestDone := p.callback(r.data)
+					matched = matched || ok
+					// Remove the matcher if callback indicates that all replies have been received.
+					if requestDone {
+						p.errc <- nil
+						plist.Remove(el)
+					}
+					// Reset the continuous timeout counter (time drift detection)
+					contTimeouts = 0
 
 				}
 			}
@@ -688,36 +688,34 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) 
 
 	// only full node will  Reply ping message
 
-//	if t.localNode.NodeType() == enode.NodeTypeFull {
-		t.send(from, fromID, pongPacket, &pong{
-			To:         makeEndpoint(from, req.From.TCP),
-			NodeType: 	t.localNode.NodeType(),
-			ReplyTok:   mac,
-			Expiration: uint64(time.Now().Add(expiration).Unix()),
+	//	if t.localNode.NodeType() == enode.NodeTypeFull {
+	t.send(from, fromID, pongPacket, &pong{
+		To:         makeEndpoint(from, req.From.TCP),
+		NodeType:   t.localNode.NodeType(),
+		ReplyTok:   mac,
+		Expiration: uint64(time.Now().Add(expiration).Unix()),
+	})
+
+	// Ping back if our last pong on file is too far in the past.
+	n := enode.NewV4(req.senderKey, req.From.IP, int(req.From.TCP), int(req.From.UDP), req.NodeType, from.IP)
+
+	n.Set(enr.LUDP(from.Port))
+	log.Trace("ping:", "ping.from ip", req.From.IP, "ping.from port", req.From.TCP, " from", from.IP, " udp", from.Port)
+	if time.Since(t.db.LastPongReceived(n.ID(), from.IP)) > bondExpiration {
+		//
+		t.sendPing(fromID, from, func(latency int64) {
+
+			go t.tab.OnPingReceived(n, from.IP, uint16(from.Port))
+			//pong 也receive了
 		})
+	} else {
+		go t.tab.OnPingReceived(n, from.IP, uint16(from.Port))
+	}
 
-		// Ping back if our last pong on file is too far in the past.
-		n := enode.NewV4(req.senderKey, req.From.IP, int(req.From.TCP),int(req.From.UDP),req.NodeType,from.IP)
-
-		n.Set(enr.LUDP(from.Port))
-		log.Trace("ping:","ping.from ip",req.From.IP,"ping.from port",req.From.TCP," from",from.IP," udp",from.Port)
-		if time.Since(t.db.LastPongReceived(n.ID(), from.IP)) > bondExpiration {
-			//
-			t.sendPing(fromID, from, func(latency int64) {
-
-				go t.tab.OnPingReceived(n,from.IP,uint16(from.Port))
-				//pong 也receive了
-			})
-		} else {
-			go t.tab.OnPingReceived(n,from.IP,uint16(from.Port))
-		}
-
-		// Update node database and endpoint predictor.
-		t.db.UpdateLastPingReceived(n.ID(), from.IP, time.Now())
-		t.localNode.UDPEndpointStatement(from, &net.UDPAddr{IP: req.To.IP, Port: int(req.To.UDP)})
-//	}
-
-
+	// Update node database and endpoint predictor.
+	t.db.UpdateLastPingReceived(n.ID(), from.IP, time.Now())
+	t.localNode.UDPEndpointStatement(from, &net.UDPAddr{IP: req.To.IP, Port: int(req.To.UDP)})
+	//	}
 
 }
 
@@ -734,8 +732,8 @@ func (req *pong) preverify(t *udp, from *net.UDPAddr, fromID enode.ID, fromKey e
 }
 
 func (req *pong) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) {
-	log.Trace("pong:","ip",req.To.IP,"port",req.To.TCP," udp req:",req.To.UDP," udp from",from.Port)
-//	t.localNode.UDPEndpointStatement(from, &net.UDPAddr{IP: req.To.IP, Port: int(req.To.UDP)})
+	log.Trace("pong:", "ip", req.To.IP, "port", req.To.TCP, " udp req:", req.To.UDP, " udp from", from.Port)
+	//	t.localNode.UDPEndpointStatement(from, &net.UDPAddr{IP: req.To.IP, Port: int(req.To.UDP)})
 	t.db.UpdateLastPongReceived(fromID, from.IP, time.Now())
 
 }
@@ -805,6 +803,6 @@ func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []b
 func (req *neighbors) name() string { return "NEIGHBORS/v4" }
 
 func expired(ts uint64) bool {
-	log.Trace("expire:","time",time.Unix(int64(ts), 0))
+	log.Trace("expire:", "time", time.Unix(int64(ts), 0))
 	return time.Unix(int64(ts), 0).Before(time.Now())
 }

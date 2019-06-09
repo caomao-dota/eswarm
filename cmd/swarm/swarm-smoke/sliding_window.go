@@ -22,10 +22,10 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/pborman/uuid"
 	"github.com/plotozhu/MDCMainnet/log"
 	"github.com/plotozhu/MDCMainnet/metrics"
 	"github.com/plotozhu/MDCMainnet/swarm/testutil"
-	"github.com/pborman/uuid"
 
 	cli "gopkg.in/urfave/cli.v1"
 )

@@ -23,9 +23,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/olekukonko/tablewriter"
 	"github.com/plotozhu/MDCMainnet/core"
 	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/olekukonko/tablewriter"
 )
 
 // networkStats verifies the status of network components and generates a protip

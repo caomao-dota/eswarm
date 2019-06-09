@@ -73,7 +73,7 @@ READ:
 		default:
 			if p > 0 {
 				p--
-			//	log.Trace("priority.queue p > 0", "p", p)
+				//	log.Trace("priority.queue p > 0", "p", p)
 				continue READ
 			}
 			p = top

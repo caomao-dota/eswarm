@@ -29,6 +29,7 @@ import (
 	"testing"
 	"time"
 
+	colorable "github.com/mattn/go-colorable"
 	"github.com/plotozhu/MDCMainnet/common"
 	"github.com/plotozhu/MDCMainnet/common/hexutil"
 	"github.com/plotozhu/MDCMainnet/consensus/ethash"
@@ -41,7 +42,6 @@ import (
 	"github.com/plotozhu/MDCMainnet/p2p/simulations"
 	"github.com/plotozhu/MDCMainnet/p2p/simulations/adapters"
 	"github.com/plotozhu/MDCMainnet/rpc"
-	colorable "github.com/mattn/go-colorable"
 )
 
 /*

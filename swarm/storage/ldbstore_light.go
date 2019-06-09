@@ -150,7 +150,7 @@ func NewLDBStore(params *LDBStoreParams) (s *LDBStore, err error) {
 	s = new(LDBStore)
 	s.hashfunc = params.Hash
 	s.quit = make(chan struct{})
-	s.waitChan = make(chan struct{},100)
+	s.waitChan = make(chan struct{}, 100)
 	s.batchesC = make(chan struct{}, 1)
 	go s.writeBatches()
 	s.batch = newBatch()
@@ -172,7 +172,7 @@ func NewLDBStore(params *LDBStoreParams) (s *LDBStore, err error) {
 	s.encodeDataFunc = newBoltDbEncodeDataFunc(s)
 	s.getDataFunc = newBoltDbGetDataFunc(db)
 	s.deleteChunkFunc = newBoltDbDeleteDataFunc(db)
-*/
+	*/
 	s.po = params.Po
 	s.setCapacity(params.DbCapacity)
 
@@ -950,8 +950,6 @@ func AddrBucket(addr []byte) []byte {
 	return addr[0:1]
 }
 
-
-
 // tryAccessIdx tries to find index entry. If found then increments the access
 // count for garbage collection and returns the index entry and true for found,
 // otherwise returns nil and false.
@@ -1130,10 +1128,10 @@ func (s *LDBStore) Close() {
 	// force writing out current batch
 	s.writeCurrentBatch()
 	s.db.Close()
-/*	if s.chunkDb != nil {
-		s.chunkDb.Close()
-	}
-*/
+	/*	if s.chunkDb != nil {
+			s.chunkDb.Close()
+		}
+	*/
 }
 
 // SyncIterator(start, stop, po, f) calls f on each hash of a bin po from start to stop
@@ -1162,6 +1160,7 @@ func (s *LDBStore) SyncIterator(since uint64, until uint64, po uint8, f func(Add
 	}
 	return it.Error()
 }
+
 /*
 // newMockEncodeDataFunc returns a function that stores the chunk data
 // to a mock store to bypass the default functionality encodeData.

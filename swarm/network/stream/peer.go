@@ -77,7 +77,7 @@ type WrappedPriorityMsg struct {
 
 // NewPeer is the constructor for Peer
 func NewPeer(peer *protocols.Peer, streamer *Registry) *Peer {
-	log.Info("new stream peer:","id",peer.ID())
+	log.Info("new stream peer:", "id", peer.ID())
 	p := &Peer{
 		Peer:         peer,
 		pq:           pq.New(int(PriorityQueue), PriorityQueueCap),
@@ -86,7 +86,6 @@ func NewPeer(peer *protocols.Peer, streamer *Registry) *Peer {
 		clients:      make(map[Stream]*client),
 		clientParams: make(map[Stream]*clientParams),
 		quit:         make(chan struct{}),
-
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	go p.pq.Run(ctx, func(i interface{}) {
@@ -157,9 +156,8 @@ func (p *Peer) Deliver(ctx context.Context, chunk storage.Chunk, priority uint8,
 		spanName += ".retrieval"
 	}
 
-
 	ctx = context.WithValue(ctx, "stream_send_tag", nil)
-	log.Info("Send request:","send id",p.ID(),"hash",chunk.Address())
+	log.Info("Send request:", "send id", p.ID(), "hash", chunk.Address())
 	return p.SendPriority(ctx, msg, priority)
 }
 
@@ -195,7 +193,7 @@ func (p *Peer) SendOfferedHashes(s *server, f, t uint64) error {
 	}
 	// true only when quitting
 	if len(hashes) == 0 {
-		log.Debug("Send Offered batch finished", "peer", p.ID(), "stream", s.stream, "len", len(hashes), "from", from, "to", to,"origin from",f,"origin to ",t)
+		log.Debug("Send Offered batch finished", "peer", p.ID(), "stream", s.stream, "len", len(hashes), "from", from, "to", to, "origin from", f, "origin to ", t)
 		return nil
 	}
 	if proof == nil {
@@ -360,8 +358,6 @@ func (p *Peer) getOrSetClient(s Stream, from, to uint64) (c *client, created boo
 			return nil, false, err
 		}
 	}
-
-
 
 	next := make(chan error, 1)
 	c = &client{

@@ -80,7 +80,7 @@ func (n *NetStore) Put(ctx context.Context, ch Chunk) error {
 	// put to the chunk to the store, there should be no error
 	err := n.store.Put(ctx, ch)
 	if err != nil {
-		log.Info("Put data Error:","address",ch.Address(),"reason",err)
+		log.Info("Put data Error:", "address", ch.Address(), "reason", err)
 		return err
 	}
 
@@ -153,8 +153,9 @@ func (n *NetStore) Close() {
 	wg.Wait()
 }
 func (n *NetStore) Validate(ch []byte, ref Address) bool {
-	return (n.store.Validate(ch,ref))
+	return (n.store.Validate(ch, ref))
 }
+
 // get attempts at retrieving the chunk from LocalStore
 // If it is not found then using getOrCreateFetcher:
 //     1. Either there is already a fetcher to retrieve it
@@ -307,7 +308,7 @@ func (f *fetcher) Fetch(rctx context.Context) (Chunk, error) {
 		f.span.Finish()
 	}()
 
-	rctx,_ = context.WithTimeout(rctx,20*time.Second)
+	rctx, _ = context.WithTimeout(rctx, 20*time.Second)
 	// The peer asking for the chunk. Store in the shared peers map, but delete after the request
 	// has been delivered
 	peer := rctx.Value("peer")

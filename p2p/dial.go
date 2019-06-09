@@ -91,13 +91,13 @@ type discoverTable interface {
 	LookupRandom() []*enode.Node
 	ReadRandomNodes([]*enode.Node) int
 	//by Aegon, interpret with Hive
-	GetKnownNodesSorted()[]*enode.Node
-	RequestPing(n  *enode.Node,ch chan *enode.Node )
+	GetKnownNodesSorted() []*enode.Node
+	RequestPing(n *enode.Node, ch chan *enode.Node)
 	CanAddNode(n *enode.Node) bool
-	RemoveConnectedNode(nodeId enode.ID,discCount int)
+	RemoveConnectedNode(nodeId enode.ID, discCount int)
 	AddBootnode(n *enode.Node)
 	OnNodeChanged(chan struct{})
-	TargetBucketInfo(nodeId enode.ID) (bucketId int,entries,replacements *discover.NodeQueue)
+	TargetBucketInfo(nodeId enode.ID) (bucketId int, entries, replacements *discover.NodeQueue)
 }
 
 // the dial history remembers recent dials.

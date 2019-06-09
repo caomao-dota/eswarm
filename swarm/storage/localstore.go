@@ -53,7 +53,6 @@ type LocalStore struct {
 	memStore   *MemStore
 	DbStore    *LDBStore
 	mu         sync.Mutex
-
 }
 
 // This constructor uses MemStore and DbStore as components
@@ -83,10 +82,11 @@ func NewTestLocalStoreForAddr(params *LocalStoreParams) (*LocalStore, error) {
 	}
 	return localStore, nil
 }
-func (ls *LocalStore) Validate(ch []byte,addr Address) bool {
+func (ls *LocalStore) Validate(ch []byte, addr Address) bool {
 
-	return ls.isValid(NewChunk(addr,ch))
+	return ls.isValid(NewChunk(addr, ch))
 }
+
 // isValid returns true if chunk passes any of the LocalStore Validators.
 // isValid also returns true if LocalStore has no Validators.
 func (ls *LocalStore) isValid(chunk Chunk) bool {

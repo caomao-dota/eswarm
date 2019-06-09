@@ -74,7 +74,7 @@ func newUDPTest(t *testing.T) *udpTest {
 		remoteaddr: &net.UDPAddr{IP: net.IP{10, 0, 1, 99}, Port: 30303},
 	}
 	test.db, _ = enode.OpenDB("")
-	ln := enode.NewLocalNode(test.db, test.localkey,0x24)
+	ln := enode.NewLocalNode(test.db, test.localkey, 0x24)
 	test.table, test.udp, _ = newUDP(test.pipe, ln, Config{PrivateKey: test.localkey})
 	// Wait for initial refresh so the table doesn't send unexpected findnode.
 
@@ -152,7 +152,7 @@ func TestUDP_pingTimeout(t *testing.T) {
 
 	toaddr := &net.UDPAddr{IP: net.ParseIP("1.2.3.4"), Port: 2222}
 	toid := enode.ID{1, 2, 3, 4}
-	if err,_ := test.udp.ping(toid, toaddr); err != errTimeout {
+	if err, _ := test.udp.ping(toid, toaddr); err != errTimeout {
 		t.Error("expected timeout error, got", err)
 	}
 }
@@ -259,13 +259,13 @@ func TestUDP_findnode(t *testing.T) {
 	for i := 0; i < numCandidates; i++ {
 		key := newkey()
 		ip := net.IP{10, 13, 0, byte(i)}
-		n := wrapNode(enode.NewV4(&key.PublicKey, ip, 0, 2000,0x24,ip))
+		n := wrapNode(enode.NewV4(&key.PublicKey, ip, 0, 2000, 0x24, ip))
 		// Ensure half of table content isn't verified live yet.
 		if i >= numCandidates/2 {
 			n.findAt = time.Now()
 			n.testAt = time.Now()
 			live[n.ID()] = true
-		}else {
+		} else {
 			n.findAt = TimeInvalid
 			n.testAt = TimeInvalid
 		}
@@ -304,12 +304,14 @@ func TestUDP_findnode(t *testing.T) {
 	}
 	waitNeighbors(want)
 }
+
 type BasicInfo struct {
-	Id enode.ID
-	IP net.IP
+	Id  enode.ID
+	IP  net.IP
 	TCP uint16
 	UDP uint16
 }
+
 func TestUDP_findnodeMultiReply(t *testing.T) {
 	test := newUDPTest(t)
 	defer test.close()
@@ -351,11 +353,10 @@ func TestUDP_findnodeMultiReply(t *testing.T) {
 	test.packetIn(nil, neighborsPacket, &neighbors{Expiration: futureExp, Nodes: rpclist[:2]})
 	test.packetIn(nil, neighborsPacket, &neighbors{Expiration: futureExp, Nodes: rpclist[2:]})
 
-
-	Extract :=func (nodes []*node) []*BasicInfo{
-		result := make([]*BasicInfo,len(nodes))
-		for i,n := range nodes {
-			result[i]= &BasicInfo{n.ID(),n.IP(),uint16(n.TCP()),uint16(n.UDP())}
+	Extract := func(nodes []*node) []*BasicInfo {
+		result := make([]*BasicInfo, len(nodes))
+		for i, n := range nodes {
+			result[i] = &BasicInfo{n.ID(), n.IP(), uint16(n.TCP()), uint16(n.UDP())}
 		}
 		return result
 	}

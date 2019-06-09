@@ -22,10 +22,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/karalabe/hid"
 	"github.com/plotozhu/MDCMainnet/accounts"
 	"github.com/plotozhu/MDCMainnet/event"
 	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/karalabe/hid"
 )
 
 // LedgerScheme is the protocol scheme prefixing account and wallet URLs.

@@ -6,8 +6,8 @@ import (
 )
 
 var (
-	mu   = sync.Mutex{}
-	root          = &logger{[]interface{}{}, new(swapHandler),mu}
+	mu            = sync.Mutex{}
+	root          = &logger{[]interface{}{}, new(swapHandler), mu}
 	StdoutHandler = StreamHandler(os.Stdout, LogfmtFormat())
 	StderrHandler = StreamHandler(os.Stderr, LogfmtFormat())
 )

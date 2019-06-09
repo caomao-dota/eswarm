@@ -38,7 +38,7 @@ func init() {
 
 func newTestTable(t transport) (*Table, *enode.DB) {
 	db, _ := enode.OpenDB("")
-	tab, _ := newTable(t, db, nil,true)
+	tab, _ := newTable(t, db, nil, true)
 	tab.initDone = true
 	return tab, db
 }
@@ -125,9 +125,9 @@ func (t *pingRecorder) ping(toid enode.ID, toaddr *net.UDPAddr) (error, time.Dur
 
 	t.pinged[toid] = true
 	if t.dead[toid] {
-		return errTimeout,time.Duration(LatencyInvalid)
+		return errTimeout, time.Duration(LatencyInvalid)
 	} else {
-		return nil,10*time.Millisecond
+		return nil, 10 * time.Millisecond
 	}
 }
 

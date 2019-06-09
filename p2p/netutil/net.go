@@ -230,9 +230,8 @@ type DistinctNetSet struct {
 // number of existing IPs in the defined range exceeds the limit.
 func (s *DistinctNetSet) Add(ip net.IP) bool {
 	key := s.key(ip)
-	n,ok := s.members.Load(string(key))
+	n, ok := s.members.Load(string(key))
 	if ok && n.(uint) > s.Limit {
-
 
 		return false
 	}
@@ -247,7 +246,7 @@ func (s *DistinctNetSet) Remove(ip net.IP) {
 		if n == 1 {
 			s.members.Delete(string(key))
 		} else {
-			s.members.Store(string(key), n.(uint) - 1)
+			s.members.Store(string(key), n.(uint)-1)
 		}
 	}
 }
@@ -262,7 +261,7 @@ func (s DistinctNetSet) Contains(ip net.IP) bool {
 // Len returns the number of tracked IPs.
 func (s DistinctNetSet) Len() int {
 	n := uint(0)
-	s.members.Range(func (key,i interface{}) bool {
+	s.members.Range(func(key, i interface{}) bool {
 		n += i.(uint)
 		return true
 	})
@@ -305,7 +304,7 @@ func (s DistinctNetSet) String() string {
 	var buf bytes.Buffer
 	buf.WriteString("{")
 	keys := make([]string, 0)
-	s.members.Range(func (k,v interface{})bool {
+	s.members.Range(func(k, v interface{}) bool {
 		keys = append(keys, k.(string))
 		return true
 	})
@@ -319,7 +318,7 @@ func (s DistinctNetSet) String() string {
 			ip = make(net.IP, 16)
 		}
 		copy(ip, k[1:])
-		kval,ok := s.members.Load(k)
+		kval, ok := s.members.Load(k)
 		if ok {
 			fmt.Fprintf(&buf, "%v×%d", ip, kval.(uint))
 		}

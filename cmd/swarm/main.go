@@ -290,17 +290,12 @@ func bzzd(ctx *cli.Context) error {
 	}
 	cfg.NodeType = uint8(bzzconfig.NodeType)
 	//optionally set the bootnodes before configuring the node
-	setSwarmBootstrapNodes(ctx, bzzconfig,&cfg)
+	setSwarmBootstrapNodes(ctx, bzzconfig, &cfg)
 	//setup the ethereum node
 	utils.SetNodeConfig(ctx, &cfg)
 
-
-
-
-
 	//disable dynamic dialing from p2p/discovery
 	cfg.P2P.NoDial = true
-
 
 	stack, err := node.New(&cfg)
 	if err != nil {
@@ -325,25 +320,25 @@ func bzzd(ctx *cli.Context) error {
 		stack.Stop()
 	}()
 
-	if !ctx.GlobalIsSet(utils.BootnodesFlag.Name)  {
-		ticker := time.NewTimer(30*time.Second)
+	if !ctx.GlobalIsSet(utils.BootnodesFlag.Name) {
+		ticker := time.NewTimer(30 * time.Second)
 		quitC := make(chan struct{})
 		// add swarm bootnodes, because swarm doesn't use p2p package's discovery discv5
 		// By Aegon, discovery will use bootnode to find neighborhood
 		go func() {
 			s := stack.Server()
 			for {
-				select  {
+				select {
 
-				case <- ticker.C:
+				case <-ticker.C:
 					bootnodeAddrs := ctx.GlobalString(SwarmBootnodesAddrFlag.Name)
 					bootnodes := []string{}
 					bootnodeFound := false
 					if bootnodeAddrs != "" {
-						nodes,_,err := util.GetBootnodesInfo(bootnodeAddrs)
+						nodes, _, err := util.GetBootnodesInfo(bootnodeAddrs)
 						if err == nil {
 							if len(nodes) != 0 {
-								bootnodes = append(bootnodes,nodes...)
+								bootnodes = append(bootnodes, nodes...)
 								bootnodeFound = true
 							}
 						}
@@ -359,26 +354,22 @@ func bzzd(ctx *cli.Context) error {
 						}
 					}
 					if bootnodeFound {
-						ticker.Reset(30*time.Minute)
-					}else {
-						ticker.Reset(30*time.Second)
+						ticker.Reset(30 * time.Minute)
+					} else {
+						ticker.Reset(30 * time.Second)
 					}
-				case <- quitC:
-					break;
+				case <-quitC:
+					break
 				}
 			}
 
-
-
 		}()
 
-
-
-	stack.Wait()
+		stack.Wait()
 
 		ticker.Stop()
 		quitC <- struct{}{}
-	}else{
+	} else {
 		stack.Wait()
 	}
 	return nil
@@ -513,22 +504,20 @@ func addDefaultHelpSubcommands(commands []cli.Command) {
 	}
 }
 
-func setSwarmBootstrapNodes(ctx *cli.Context, bzzCfg  *bzzapi.Config, cfg *node.Config) {
+func setSwarmBootstrapNodes(ctx *cli.Context, bzzCfg *bzzapi.Config, cfg *node.Config) {
 	if ctx.GlobalIsSet(utils.BootnodesFlag.Name) || ctx.GlobalIsSet(utils.BootnodesV4Flag.Name) {
 		return
 	}
 
-
-
-	if !enode.IsBootNode(enode.NodeTypeOption(bzzCfg.NodeType)){
+	if !enode.IsBootNode(enode.NodeTypeOption(bzzCfg.NodeType)) {
 		cfg.P2P.BootstrapNodes = []*enode.Node{}
 		bootnodeAddrs := ctx.GlobalString(SwarmBootnodesAddrFlag.Name)
-		bootnodes := append([]string{},SwarmBootnodes...)
+		bootnodes := append([]string{}, SwarmBootnodes...)
 		if bootnodeAddrs != "" {
-			nodes,reportUrl,err := util.GetBootnodesInfo(bootnodeAddrs)
+			nodes, reportUrl, err := util.GetBootnodesInfo(bootnodeAddrs)
 			if err == nil {
 				if len(nodes) != 0 {
-					bootnodes = append(bootnodes,nodes...)
+					bootnodes = append(bootnodes, nodes...)
 				}
 			}
 			bzzCfg.ServerAddr = reportUrl
@@ -543,6 +532,4 @@ func setSwarmBootstrapNodes(ctx *cli.Context, bzzCfg  *bzzapi.Config, cfg *node.
 
 	}
 
-
 }
-

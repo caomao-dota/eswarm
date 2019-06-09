@@ -25,12 +25,12 @@ import (
 	"testing"
 	"time"
 
+	colorable "github.com/mattn/go-colorable"
 	"github.com/plotozhu/MDCMainnet/log"
 	"github.com/plotozhu/MDCMainnet/p2p"
 	"github.com/plotozhu/MDCMainnet/p2p/protocols"
 	"github.com/plotozhu/MDCMainnet/p2p/simulations/adapters"
 	"github.com/plotozhu/MDCMainnet/swarm/state"
-	colorable "github.com/mattn/go-colorable"
 )
 
 var (

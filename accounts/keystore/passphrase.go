@@ -38,10 +38,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pborman/uuid"
 	"github.com/plotozhu/MDCMainnet/common"
 	"github.com/plotozhu/MDCMainnet/common/math"
 	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/pborman/uuid"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
 )

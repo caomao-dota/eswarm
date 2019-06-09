@@ -409,11 +409,11 @@ type LazyChunkReader struct {
 	ts_buffer *lru.Cache
 }
 
-func (tc *TreeChunker)  Join(ctx context.Context) *LazyChunkReader {
+func (tc *TreeChunker) Join(ctx context.Context) *LazyChunkReader {
 	bf, _ := lru.New(50)
-	sizeCache,err := lru.New(1000)
-	if(err != nil){
-		fmt.Println("Error of create lru cache,reaseon",err.Error())
+	sizeCache, err := lru.New(1000)
+	if err != nil {
+		fmt.Println("Error of create lru cache,reaseon", err.Error())
 	}
 	return &LazyChunkReader{
 		addr:      tc.addr,
@@ -431,11 +431,11 @@ func (tc *TreeChunker)  Join(ctx context.Context) *LazyChunkReader {
 func (r *LazyChunkReader) Context() context.Context {
 	return r.ctx
 }
+
 type int64str struct {
-	value int32
+	value  int32
 	hvalue int32
 }
-
 
 // Size is meant to be called on the LazySectionReader
 func (r *LazyChunkReader) Size(ctx context.Context, quitC chan bool) (n int64, err error) {
@@ -448,11 +448,11 @@ func (r *LazyChunkReader) Size(ctx context.Context, quitC chan bool) (n int64, e
 		ctx,
 		"lcr.size")
 	defer sp.Finish()
-		sizeValue,ok := r.sizeCache.Get(r.addr.Hex())
-		if ok {
-			//value := sizeValue.(int64str)
-			return sizeValue.(int64),nil
-		}
+	sizeValue, ok := r.sizeCache.Get(r.addr.Hex())
+	if ok {
+		//value := sizeValue.(int64str)
+		return sizeValue.(int64), nil
+	}
 
 	//log.Debug("lazychunkreader.size", "addr", r.addr)
 	if r.chunkData == nil {
@@ -469,7 +469,7 @@ func (r *LazyChunkReader) Size(ctx context.Context, quitC chan bool) (n int64, e
 	s := r.chunkData.Size()
 	log.Debug("lazychunkreader.size", "key", r.addr, "size", s)
 	//val := int64str{int32(s),int32(s>>32)}
-	r.sizeCache.Add(r.addr.Hex(),int64(s))
+	r.sizeCache.Add(r.addr.Hex(), int64(s))
 	return int64(s), nil
 }
 
@@ -524,7 +524,7 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 			length *= r.chunkSize
 		}
 
-		go r.join(cctx, b, off, off+length, depth, treeSize/r.branches, r.chunkData,  errC)
+		go r.join(cctx, b, off, off+length, depth, treeSize/r.branches, r.chunkData, errC)
 
 		err = <-errC
 		if err == nil {
@@ -582,7 +582,7 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 				}
 				//	fmt.Printf("Read hash from central node: %v len:%v from: %v\r\n",url,len(b),off)
 				dataBuf, end := httpClient.(*util.HttpReader).GetChunkFromCentral(url, off, hashValue[:], req)
-				if dataBuf != nil && len(dataBuf) > 0{
+				if dataBuf != nil && len(dataBuf) > 0 {
 					r.ts_buffer.Add(url, &DataCache{start: off, value: dataBuf, end: end})
 					cacheBuffer = dataBuf
 					err = nil
@@ -605,7 +605,7 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 		totalLen := len(cacheBuffer) - int(startOffset)
 		if totalLen > len(b) {
 			totalLen = len(b)
-		}else if(totalLen < 0){
+		} else if totalLen < 0 {
 			totalLen = 0
 		}
 		copy(b, cacheBuffer[startOffset:startOffset+int64(totalLen)])
@@ -616,13 +616,12 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 	err = errors.New("Data Chunk not Found")
 	return
 
-
 }
 
-func (r *LazyChunkReader) join(ctx context.Context, b []byte, off int64, eoff int64, depth int, treeSize int64, chunkData ChunkData,  errC chan error) {
+func (r *LazyChunkReader) join(ctx context.Context, b []byte, off int64, eoff int64, depth int, treeSize int64, chunkData ChunkData, errC chan error) {
 	result := error(nil)
 
-	defer func(){
+	defer func() {
 		//把错误信息提交给上一层
 		errC <- result
 	}()
@@ -655,8 +654,7 @@ func (r *LazyChunkReader) join(ctx context.Context, b []byte, off int64, eoff in
 		end = currentBranches
 	}
 
-
-	errs := make(chan error,end-start)
+	errs := make(chan error, end-start)
 	for i := start; i < end; i++ {
 		soff := i * treeSize
 		roff := soff
@@ -695,13 +693,13 @@ func (r *LazyChunkReader) join(ctx context.Context, b []byte, off int64, eoff in
 			if soff < off {
 				soff = off
 			}
-			r.join(ctx, b[soff-off:seoff-off], soff-roff, seoff-roff, depth-1, treeSize/r.branches, chunkData,  errs)
+			r.join(ctx, b[soff-off:seoff-off], soff-roff, seoff-roff, depth-1, treeSize/r.branches, chunkData, errs)
 		}(i)
 	} //for
 
 	//查看所有的errs，如果有错误，返回给上一层,这一段具有阻塞作用，只有等所有的子线程都返回后，才会返回
 
-	for i := 0; i < int(end-start); i++{
+	for i := 0; i < int(end-start); i++ {
 		select {
 		case res := <-errs:
 			if res != nil {

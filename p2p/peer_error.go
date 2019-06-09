@@ -88,7 +88,7 @@ var discReasonToString = [...]string{
 	DiscUnexpectedIdentity:  "unexpected identity",
 	DiscSelf:                "connected to self",
 	DiscReadTimeout:         "read timeout",
-	DiscBucketFull:			 "bucket max size reached",
+	DiscBucketFull:          "bucket max size reached",
 	DiscSubprotocolError:    "subprotocol error",
 }
 

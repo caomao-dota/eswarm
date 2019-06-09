@@ -28,16 +28,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/syndtr/goleveldb/leveldb/util"
-	 "github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/plotozhu/MDCMainnet/common"
 	"github.com/plotozhu/MDCMainnet/swarm/storage/mock"
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/opt"
+	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
 const (
 	BucketLen = 16
 )
+
 // GlobalStore contains the LevelDB database that is storing
 // chunk data for all swarm nodes.
 // Closing the GlobalStore with Close method is required to
@@ -54,17 +55,17 @@ type GlobalStore struct {
 func NewGlobalStore(path string) (s *GlobalStore, err error) {
 	dbs := new([BucketLen]*leveldb.DB)
 	errString := ""
-	for i:= 0; i <BucketLen; i++ {
-		db, err := leveldb.OpenFile(path+fmt.Sprintf("/bucket%v",i), &opt.Options{CompactionTableSize:opt.DefaultCompactionTableSize*32})
+	for i := 0; i < BucketLen; i++ {
+		db, err := leveldb.OpenFile(path+fmt.Sprintf("/bucket%v", i), &opt.Options{CompactionTableSize: opt.DefaultCompactionTableSize * 32})
 		if err != nil {
-			errString += fmt.Sprintf("dbNumber:%v,err,%v",i,err.Error())
-		}else {
+			errString += fmt.Sprintf("dbNumber:%v,err,%v", i, err.Error())
+		} else {
 			dbs[i] = db
 		}
 	}
 
 	if errString != "" {
-		return nil,errors.New(errString)
+		return nil, errors.New(errString)
 	}
 	return &GlobalStore{
 		db: *dbs,
@@ -74,16 +75,16 @@ func NewGlobalStore(path string) (s *GlobalStore, err error) {
 // Close releases the resources used by the underlying LevelDB.
 func (s *GlobalStore) Close() error {
 	errString := ""
-	for i:=0; i < BucketLen; i++{
+	for i := 0; i < BucketLen; i++ {
 		err := s.db[i].Close()
 		if err != nil {
-			errString += fmt.Sprintf("dbNumber:%v,err,%v",i,err.Error())
+			errString += fmt.Sprintf("dbNumber:%v,err,%v", i, err.Error())
 		}
 	}
 
 	if errString != "" {
 		return errors.New(errString)
-	}else{
+	} else {
 		return nil
 	}
 
@@ -95,8 +96,9 @@ func (s *GlobalStore) NewNodeStore(addr common.Address) *mock.NodeStore {
 	return mock.NewNodeStore(addr, s)
 }
 func getBucket(key []byte) int {
-	return int(key[0]&0x0f)
+	return int(key[0] & 0x0f)
 }
+
 // Get returns chunk data if the chunk with key exists for node
 // on address addr.
 func (s *GlobalStore) Get(addr common.Address, key []byte) (data []byte, err error) {
@@ -124,11 +126,10 @@ func (s *GlobalStore) Put(addr common.Address, key []byte, data []byte) error {
 	}
 	defer unlock()
 
-
 	batch := new(leveldb.Batch)
-	in_data, aerr:= s.db[bucket].Get(indexDataKey(key),nil)
+	in_data, aerr := s.db[bucket].Get(indexDataKey(key), nil)
 	if aerr != nil {
-		fmt.Println("data:",in_data)
+		fmt.Println("data:", in_data)
 		batch.Put(indexDataKey(key), data)
 	}
 	batch.Put(indexForHashesPerNode(addr, key), nil)
@@ -293,7 +294,7 @@ func (s *GlobalStore) nodes(key []byte, startAddr *common.Address, limit int) (n
 func (s *GlobalStore) Import(r io.Reader) (n int, err error) {
 	tr := tar.NewReader(r)
 
-	ImportBucket := func(i int)(n int, err error) {
+	ImportBucket := func(i int) (n int, err error) {
 		for {
 			hdr, err := tr.Next()
 			if err != nil {
@@ -335,18 +336,18 @@ func (s *GlobalStore) Import(r io.Reader) (n int, err error) {
 	}
 	count := 0
 	errStr := ""
-	for i:= 0; i < BucketLen; i++{
-		n,err := ImportBucket(i)
+	for i := 0; i < BucketLen; i++ {
+		n, err := ImportBucket(i)
 		if err == nil {
-			count +=  n
-		}else{
-			errStr += fmt.Sprintf("\t bucket %v:error %v",i,err.Error())
+			count += n
+		} else {
+			errStr += fmt.Sprintf("\t bucket %v:error %v", i, err.Error())
 		}
 	}
 	if errStr == "" {
-		return count, errors.New(fmt.Sprintf("Error in import data, reason is:%v",errStr))
-	}else{
-		return count,nil
+		return count, errors.New(fmt.Sprintf("Error in import data, reason is:%v", errStr))
+	} else {
+		return count, nil
 	}
 
 }
@@ -357,7 +358,7 @@ func (s *GlobalStore) Export(w io.Writer) (n int, err error) {
 	tw := tar.NewWriter(w)
 	defer tw.Close()
 
-	ExportBucket := func (i int) (n int, err error){
+	ExportBucket := func(i int) (n int, err error) {
 		buf := bytes.NewBuffer(make([]byte, 0, 1024))
 		encoder := json.NewEncoder(buf)
 
@@ -438,20 +439,19 @@ func (s *GlobalStore) Export(w io.Writer) (n int, err error) {
 	}
 	count := 0
 	errStr := ""
-	for i:= 0; i < BucketLen; i++{
-		n,err := ExportBucket(i)
+	for i := 0; i < BucketLen; i++ {
+		n, err := ExportBucket(i)
 		if err == nil {
-			count +=  n
-		}else{
-			errStr += fmt.Sprintf("\t bucket %v:error %v",i,err.Error())
+			count += n
+		} else {
+			errStr += fmt.Sprintf("\t bucket %v:error %v", i, err.Error())
 		}
 	}
 	if errStr == "" {
-		return count, errors.New(fmt.Sprintf("Error in export data, reason is:%v",errStr))
-	}else{
-		return count,nil
+		return count, errors.New(fmt.Sprintf("Error in export data, reason is:%v", errStr))
+	} else {
+		return count, nil
 	}
-
 
 }
 

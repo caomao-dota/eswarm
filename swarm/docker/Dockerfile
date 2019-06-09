@@ -3,8 +3,16 @@ FROM golang:1.11-alpine as builder
 ARG VERSION
 
 RUN apk add --update git gcc g++ linux-headers
-RUN mkdir -p $GOPATH/src/github.com/plotozhu && \
+
+RUN mkdir -p $GOPATH/src/github.com/plotozhu/MDCMainnet/wiredtiger && \
     cd $GOPATH/src/github.com/plotozhu && \
+    git clone https://github.com/wiredtiger/wiredtiger.git && \
+    cd $GOPATH/src/github.com/plotozhu/wiredtiger && \
+    sh autogen.sh           &&  \
+    ./configure --prefix=$GOPATH/src/github.com/plotozhu/MDCMainnet/wiredtiger
+     make  && make install
+
+RUN  cd $GOPATH/src/github.com/plotozhu && \
     git clone https://3823a1162e4a52f6e284610be5151c4204a900e7:@github.com/plotozhu/MDCMainnet && \
     cd $GOPATH/src/github.com/plotozhu/MDCMainnet && \
     git checkout ${VERSION} && \

@@ -73,7 +73,7 @@ func TestFetcherSingleRequest(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	fetcher := NewFetcher(ctx, addr, requester.doRequest, nil,true)
+	fetcher := NewFetcher(ctx, addr, requester.doRequest, nil, true)
 
 	peers := []string{"a", "b", "c", "d"}
 	peersToSkip := &sync.Map{}
@@ -118,7 +118,7 @@ func TestFetcherCancelStopsFetcher(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	fetcher := NewFetcher(ctx, addr, requester.doRequest, nil,true)
+	fetcher := NewFetcher(ctx, addr, requester.doRequest, nil, true)
 
 	peersToSkip := &sync.Map{}
 
@@ -147,7 +147,7 @@ func TestFetcherCancelStopsRequest(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	fetcher := NewFetcher(ctx, addr, requester.doRequest, nil,true)
+	fetcher := NewFetcher(ctx, addr, requester.doRequest, nil, true)
 
 	peersToSkip := &sync.Map{}
 
@@ -184,7 +184,7 @@ func TestFetcherOfferUsesSource(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	fetcher := NewFetcher(ctx, addr, requester.doRequest, nil,true)
+	fetcher := NewFetcher(ctx, addr, requester.doRequest, nil, true)
 
 	peersToSkip := &sync.Map{}
 
@@ -235,7 +235,7 @@ func TestFetcherOfferAfterRequestUsesSourceFromContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	fetcher := NewFetcher(ctx, addr, requester.doRequest, nil,true)
+	fetcher := NewFetcher(ctx, addr, requester.doRequest, nil, true)
 
 	peersToSkip := &sync.Map{}
 
@@ -284,7 +284,7 @@ func TestFetcherRetryOnTimeout(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	fetcher := NewFetcher(ctx, addr, requester.doRequest, nil,true)
+	fetcher := NewFetcher(ctx, addr, requester.doRequest, nil, true)
 	// set searchTimeOut to low value so the test is quicker
 	fetcher.searchTimeout = 250 * time.Millisecond
 
@@ -330,7 +330,7 @@ func TestFetcherRetryOnTimeout(t *testing.T) {
 func TestFetcherFactory(t *testing.T) {
 	requester := newMockRequester(100 * time.Millisecond)
 	addr := make([]byte, 32)
-	fetcherFactory := NewFetcherFactory(requester.doRequest, nil,false)
+	fetcherFactory := NewFetcherFactory(requester.doRequest, nil, false)
 
 	peersToSkip := &sync.Map{}
 
@@ -354,7 +354,7 @@ func TestFetcherRequestQuitRetriesRequest(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	fetcher := NewFetcher(ctx, addr, requester.doRequest, nil,true)
+	fetcher := NewFetcher(ctx, addr, requester.doRequest, nil, true)
 
 	// make sure the searchTimeout is long so it is sure the request is not
 	// retried because of timeout
@@ -461,7 +461,7 @@ func TestFetcherMaxHopCount(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	fetcher := NewFetcher(ctx, addr, requester.doRequest, nil,true)
+	fetcher := NewFetcher(ctx, addr, requester.doRequest, nil, true)
 
 	peersToSkip := &sync.Map{}
 

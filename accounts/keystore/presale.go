@@ -25,9 +25,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/pborman/uuid"
 	"github.com/plotozhu/MDCMainnet/accounts"
 	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/pborman/uuid"
 	"golang.org/x/crypto/pbkdf2"
 )
 

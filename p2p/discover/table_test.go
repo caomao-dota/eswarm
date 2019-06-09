@@ -43,7 +43,7 @@ func TestTable_pingReplace(t *testing.T) {
 	}
 
 	run(true, true)
-		run(false, true)
+	run(false, true)
 	run(true, false)
 	run(false, false)
 }
@@ -56,20 +56,19 @@ func testPingReplace(t *testing.T, newNodeIsResponding, lastInBucketIsResponding
 
 	defer tab.Close()
 
-//	<-tab.initDone
+	//	<-tab.initDone
 
 	// Fill up the sender's bucket.
 	pingKey, _ := crypto.HexToECDSA("45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8")
-	pingSender := wrapNode(enode.NewV4(&pingKey.PublicKey, net.IP{}, 99, 99,uint8(enode.NodeTypeFull),net.IP{}))
+	pingSender := wrapNode(enode.NewV4(&pingKey.PublicKey, net.IP{}, 99, 99, uint8(enode.NodeTypeFull), net.IP{}))
 	last := fillBucket(tab, pingSender)
-
 
 	// Add the sender as if it just pinged us. Revalidate should replace the last node in
 	// its bucket if it is unresponsive. Revalidate again to ensure that
 	transport.dead[last.ID()] = !lastInBucketIsResponding
 	transport.dead[pingSender.ID()] = !newNodeIsResponding
 	tab.AddSeenNode(pingSender)
-	refresh := time.NewTimer(30*time.Minute)
+	refresh := time.NewTimer(30 * time.Minute)
 	tab.doRevalidate(refresh)
 
 	tab.doRevalidate(refresh)
@@ -88,14 +87,13 @@ func testPingReplace(t *testing.T, newNodeIsResponding, lastInBucketIsResponding
 	if l := tab.bucket(pingSender.ID()).entries.Length(); l != wantSize {
 		t.Errorf("wrong bucket size after bond: got %d, want %d", l, wantSize)
 	}
-	if found := tab.bucket(pingSender.ID()).entries.Contains( last.ID()); found != lastInBucketIsResponding {
+	if found := tab.bucket(pingSender.ID()).entries.Contains(last.ID()); found != lastInBucketIsResponding {
 		t.Errorf("last entry found: %t, want: %t", found, lastInBucketIsResponding)
 	}
 	wantNewEntry := newNodeIsResponding && !lastInBucketIsResponding
-	if found := tab.bucket(pingSender.ID()).entries.Contains( pingSender.ID()); found != wantNewEntry {
+	if found := tab.bucket(pingSender.ID()).entries.Contains(pingSender.ID()); found != wantNewEntry {
 		t.Errorf("new entry found: %t, want: %t", found, wantNewEntry)
 	}
-
 
 	//go func (){close(tab.closed)}()
 
@@ -142,11 +140,10 @@ func TestBucket_bumpNoDuplicates(t *testing.T) {
 					}
 					return false
 				}
-			}else {
+			} else {
 				t.Logf("bucket has lost item %d/%d bumps:", i+1, len(bumps))
 				return false
 			}
-
 
 		}
 		checkIPLimitInvariant(t, tab)
@@ -246,7 +243,7 @@ func TestTable_closest(t *testing.T) {
 		// check that the result nodes have minimum distance to target.
 		for _, b := range tab.buckets {
 			for _, n := range b.entries.entries {
-				if nodeByDist.contains( n.ID()) {
+				if nodeByDist.contains(n.ID()) {
 					continue // don't run the check below for nodes in result
 				}
 				farthestResult := result[len(result)-1].ID()
@@ -280,7 +277,6 @@ func TestTable_ReadRandomNodesGetAll(t *testing.T) {
 
 		defer db.Close()
 		defer tab.Close()
-
 
 		for i := 0; i < len(buf); i++ {
 			ld := cfg.Rand.Intn(len(tab.buckets))
@@ -324,8 +320,6 @@ func (*closeTest) Generate(rand *rand.Rand, size int) reflect.Value {
 	return reflect.ValueOf(t)
 }
 
-
-
 func TestTable_addSeenNode(t *testing.T) {
 	tab, db := newTestTable(newPingRecorder())
 
@@ -339,7 +333,7 @@ func TestTable_addSeenNode(t *testing.T) {
 	tab.AddSeenNode(n2)
 
 	// Verify bucket content:
-	bcontent := make([]*node,2)
+	bcontent := make([]*node, 2)
 
 	bcontent[0] = n1
 	bcontent[1] = n2
@@ -355,7 +349,6 @@ func TestTable_addSeenNode(t *testing.T) {
 	tab.AddSeenNode(newn2)
 
 	//n2.AddNode(newn2,false)
-
 
 	// Check that bucket content is unchanged.
 	if !reflect.DeepEqual(tab.bucket(n1.ID()).entries.entries, bcontent) {
@@ -375,7 +368,7 @@ func TestTable_Lookup(t *testing.T) {
 	}
 	// seed table with initial node (otherwise lookup will terminate immediately)
 	seedKey, _ := decodePubkey(lookupTestnet.dists[256][0])
-	seed := wrapNode(enode.NewV4(seedKey, net.IP{127, 0, 0, 1}, 0, 256,0x24,net.IP{127, 0, 0, 1}))
+	seed := wrapNode(enode.NewV4(seedKey, net.IP{127, 0, 0, 1}, 0, 256, 0x24, net.IP{127, 0, 0, 1}))
 
 	seed.Set(enr.LUDP(256))
 	fillTable(tab, []*node{seed})
@@ -612,14 +605,16 @@ func (tn *preminedTestnet) findnode(toid enode.ID, toaddr *net.UDPAddr, target e
 	var result []*node
 	for i, ekey := range tn.dists[toaddr.Port] {
 		key, _ := decodePubkey(ekey)
-		node := wrapNode(enode.NewV4(key, net.ParseIP("127.0.0.1"), i, next,0x24,net.IP{}))
+		node := wrapNode(enode.NewV4(key, net.ParseIP("127.0.0.1"), i, next, 0x24, net.IP{}))
 		result = append(result, node)
 	}
 	return result, nil
 }
 
-func (*preminedTestnet) close()                                        {}
-func (*preminedTestnet) ping(toid enode.ID, toaddr *net.UDPAddr) (error,time.Duration) { return nil,10*time.Hour }
+func (*preminedTestnet) close() {}
+func (*preminedTestnet) ping(toid enode.ID, toaddr *net.UDPAddr) (error, time.Duration) {
+	return nil, 10 * time.Hour
+}
 
 var _ = (*preminedTestnet).mine // avoid linter warning about mine being dead code.
 

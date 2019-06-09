@@ -26,8 +26,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/log"
 	"github.com/mohae/deepcopy"
+	"github.com/plotozhu/MDCMainnet/log"
 	"github.com/rjeczalik/notify"
 )
 

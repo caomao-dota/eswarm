@@ -251,7 +251,7 @@ func (f *FakeChunkStore) Get(_ context.Context, ref Address) (Chunk, error) {
 // Close doesn't store anything it is just here to implement ChunkStore
 func (f *FakeChunkStore) Close() {
 }
-func (f *FakeChunkStore) Validate(ch []byte,addr Address) bool {
+func (f *FakeChunkStore) Validate(ch []byte, addr Address) bool {
 
 	return true
 }

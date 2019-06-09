@@ -55,6 +55,7 @@ func (d *Peer) NodeType() uint8 {
 	return uint8(enode.NodeTypeFull)
 
 }
+
 // HandleMsg is the message handler that delegates incoming messages
 func (d *Peer) HandleMsg(ctx context.Context, msg interface{}) error {
 	switch msg := msg.(type) {
@@ -96,7 +97,7 @@ func NotifyPeer(p *BzzAddr, k *Kademlia) {
 // 新节点地址A报告给连接点B
 func (d *Peer) NotifyPeer(a *BzzAddr, po uint8) {
 	// immediately return
-	if (po < d.getDepth() && pot.ProxCmp(d.kad.BaseAddr(), d, a) != 1) || d.seen(a)  {
+	if (po < d.getDepth() && pot.ProxCmp(d.kad.BaseAddr(), d, a) != 1) || d.seen(a) {
 		return
 	}
 	resp := &peersMsg{

@@ -71,7 +71,7 @@ func (m *MemStore) Put(_ context.Context, c Chunk) error {
 	}
 
 	m.cache.Add(string(c.Address()), c)
-	chunk,_ := m.cache.Get(string(c.Address()))
+	chunk, _ := m.cache.Get(string(c.Address()))
 	if chunk.(Chunk).Address().Hex() != c.Address().Hex() {
 		return ErrChunkInvalid
 	}

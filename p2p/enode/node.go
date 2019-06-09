@@ -29,51 +29,54 @@ import (
 
 	"github.com/plotozhu/MDCMainnet/p2p/enr"
 )
+
 type NodeTypeOption uint8
+
 const (
-	NodeTypeFull      NodeTypeOption = 0x24
-	NodeTypeLight     = 0x11
-	NodeTypeLightServer = 0x21
-	NodeTypeStorage    = 0x22
-	NodeTypeBoot     =  0x09
+	NodeTypeFull        NodeTypeOption = 0x24
+	NodeTypeLight                      = 0x11
+	NodeTypeLightServer                = 0x21
+	NodeTypeStorage                    = 0x22
+	NodeTypeBoot                       = 0x09
 )
 
-
 func GetRetrievalOptions(nodeType NodeTypeOption) RetrievalOption {
-	return RetrievalOption( (nodeType >> 3)&0x07 )
+	return RetrievalOption((nodeType >> 3) & 0x07)
 }
 
 func GetSyncingOptions(nodeType NodeTypeOption) SyncingOption {
-	return SyncingOption ((nodeType )&0x07)
+	return SyncingOption((nodeType) & 0x07)
 }
 
 func IsLightNode(nodeType NodeTypeOption) bool {
-	return GetRetrievalOptions(nodeType) == RetrievalClientOnly  && GetSyncingOptions(nodeType) == SyncingDisabled
+	return GetRetrievalOptions(nodeType) == RetrievalClientOnly && GetSyncingOptions(nodeType) == SyncingDisabled
 }
 
 func IsBootNode(nodeType NodeTypeOption) bool {
-	return GetRetrievalOptions(nodeType) == RetrievalDisabled  && GetSyncingOptions(nodeType) == SyncingDisabled
+	return GetRetrievalOptions(nodeType) == RetrievalDisabled && GetSyncingOptions(nodeType) == SyncingDisabled
 }
 func IsLightServer(nodeType NodeTypeOption) bool {
-	return GetRetrievalOptions(nodeType) == RetrievalEnabled  && GetSyncingOptions(nodeType) == SyncingDisabled
+	return GetRetrievalOptions(nodeType) == RetrievalEnabled && GetSyncingOptions(nodeType) == SyncingDisabled
 }
 func IsStorageNode(nodeType NodeTypeOption) bool {
-	return GetRetrievalOptions(nodeType) == RetrievalEnabled  && GetSyncingOptions(nodeType) == SyncingRegisterOnly
+	return GetRetrievalOptions(nodeType) == RetrievalEnabled && GetSyncingOptions(nodeType) == SyncingRegisterOnly
 }
 func IsFullNode(nodeType NodeTypeOption) bool {
-	return GetRetrievalOptions(nodeType) == RetrievalEnabled  && GetSyncingOptions(nodeType) == SyncingAutoSubscribe
+	return GetRetrievalOptions(nodeType) == RetrievalEnabled && GetSyncingOptions(nodeType) == SyncingAutoSubscribe
 }
+
 // Enumerate options for syncing and retrieval
 type SyncingOption uint8
 type RetrievalOption uint8
+
 // Syncing options
 const (
 	// Syncing disabled
 	SyncingDisabled SyncingOption = 1
 	// Register the client and the server but not subscribe
-	SyncingRegisterOnly SyncingOption= 2
+	SyncingRegisterOnly SyncingOption = 2
 	// Both client and server funcs are registered, subscribe sent automatically
-	SyncingAutoSubscribe SyncingOption=  4
+	SyncingAutoSubscribe SyncingOption = 4
 )
 
 const (
@@ -82,10 +85,11 @@ const (
 	// Only the client side of the retrieve request is registered.
 	// (light nodes do not serve retrieve requests)
 	// once the client is registered, subscription to retrieve request stream is always sent
-	RetrievalClientOnly RetrievalOption= 2
+	RetrievalClientOnly RetrievalOption = 2
 	// Both client and server funcs are registered, subscribe sent automatically
-	RetrievalEnabled RetrievalOption= 4
+	RetrievalEnabled RetrievalOption = 4
 )
+
 // Node represents a host on the network.
 type Node struct {
 	r  enr.Record
@@ -124,6 +128,7 @@ func (n *Node) Incomplete() bool {
 func (n *Node) Load(k enr.Entry) error {
 	return n.r.Load(k)
 }
+
 // IP returns the IP address of the node.
 func (n *Node) LIP() net.IP {
 	var ip net.IP
@@ -136,12 +141,14 @@ func (n *Node) LUDP() uint16 {
 	n.Load(&port)
 	return uint16(port)
 }
+
 // IP returns the IP address of the node.
 func (n *Node) IP() net.IP {
 	var ip net.IP
 	n.Load((*enr.IP)(&ip))
 	return ip
 }
+
 // IP returns the IP address of the node.
 func (n *Node) NodeType() enr.NodeType {
 	ln := uint8(0)
@@ -149,20 +156,21 @@ func (n *Node) NodeType() enr.NodeType {
 
 	return enr.NodeType(ln)
 }
+
 // IP returns the IP address of the node.
-func (n *Node) Set(val enr.Entry)  {
+func (n *Node) Set(val enr.Entry) {
 
 	n.r.Set(val)
 
-
 }
+
 // IP returns the IP address of the node.
-func (n *Node) SetNodeType(nodeType enr.NodeType)  {
+func (n *Node) SetNodeType(nodeType enr.NodeType) {
 
-	 n.r.Set((enr.NodeType)(nodeType))
-
+	n.r.Set((enr.NodeType)(nodeType))
 
 }
+
 // UDP returns the UDP port of the node.
 func (n *Node) UDP() int {
 	var port enr.UDP

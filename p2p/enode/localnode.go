@@ -36,8 +36,6 @@ const (
 	iptrackMinStatements = 10
 	iptrackWindow        = 5 * time.Minute
 	iptrackContactWindow = 10 * time.Minute
-
-
 )
 
 // LocalNode produces the signed node record of a local node, i.e. a node run in the
@@ -82,6 +80,7 @@ func (ln *LocalNode) Database() *DB {
 func (ln *LocalNode) NodeType() uint8 {
 	return ln.nodetype
 }
+
 // Node returns the current version of the local node record.
 func (ln *LocalNode) Node() *Node {
 	n := ln.cur.Load().(*Node)

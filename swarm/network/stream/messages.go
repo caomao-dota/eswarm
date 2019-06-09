@@ -294,7 +294,7 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 	//看看还有没有,因为不知道会不会还有，所以总是要发
 	from, to := c.nextBatch(req.To+1, c_live)
 
-	log.Debug("set next batch", "peer", p.ID(), "stream", req.Stream, "from", req.From, "to", req.To, "next from",from,"next to",to)
+	log.Debug("set next batch", "peer", p.ID(), "stream", req.Stream, "from", req.From, "to", req.To, "next from", from, "next to", to)
 	if from == to {
 		log.Debug("Sync finished", "peer", p.ID(), "stream", req.Stream, "from", from, "to", to, "addr", p.streamer.addr)
 		return nil

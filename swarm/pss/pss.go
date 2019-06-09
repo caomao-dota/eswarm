@@ -59,7 +59,7 @@ const (
 )
 
 var (
-	addressLength = len(pot.Address{})
+	addressLength    = len(pot.Address{})
 	ErrInvalidToSend = errors.New("Invalid node to send msg")
 )
 
@@ -706,8 +706,8 @@ func sendMsg(p *Pss, sp *network.Peer, msg *PssMsg) bool {
 
 		}
 		return err == nil
-	}else {
-		log.Error("A undeliver node found","id",sp.Info().ID,"err",ErrInvalidToSend)
+	} else {
+		log.Error("A undeliver node found", "id", sp.Info().ID, "err", ErrInvalidToSend)
 		return false
 	}
 }

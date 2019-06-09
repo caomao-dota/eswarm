@@ -35,12 +35,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang/snappy"
 	"github.com/plotozhu/MDCMainnet/common/bitutil"
 	"github.com/plotozhu/MDCMainnet/crypto"
 	"github.com/plotozhu/MDCMainnet/crypto/ecies"
 	"github.com/plotozhu/MDCMainnet/crypto/secp256k1"
 	"github.com/plotozhu/MDCMainnet/rlp"
-	"github.com/golang/snappy"
 	"golang.org/x/crypto/sha3"
 )
 
