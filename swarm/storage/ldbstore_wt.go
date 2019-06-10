@@ -186,7 +186,7 @@ func NewLDBStore(params *LDBStoreParams) (s *LDBStore, err error) {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to open cursor table: %v", err.Error()))
 	}
-	cursor, err := session.OpenCursor("table:rawchunks", nil, "")
+	cursor, err := session.OpenCursor("table:rawchunks", nil, "overwrite:true")
 
 	s.cursor = cursor
 	s.wtSession = session
@@ -1276,12 +1276,17 @@ func newWtEncodeDataFunc2(s *LDBStore) func(chunk Chunk) []byte {
 				}
 				err = cursor.SetValue(encodeData(chunk))
 				if err != nil {
-					log.Error("error in set data", "reason", err)
+					err = cursor.Update()
+					if err != nil {
+						log.Error("error in set data", "reason", err)
+					}
+
 				}
 				err = cursor.Insert()
 				if err != nil {
 					log.Error("Failed to insert", "error", err)
 				} else {
+
 					//			log.Info("Ok to insert","addr",chunk.Address(),"value",chunk.Data()[:10])
 				} //<- s.waitChan
 				//	}()
