@@ -366,8 +366,8 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 		//lastDelay,ok2 := p.lastDelay.Load(req.Stream)
 		if ok {
 			timeDelay := 5 * (time.Since(lastHashTime.(time.Time)))
-			if timeDelay > 25*time.Second {
-				timeDelay = 25 * time.Second
+			if timeDelay > 10*time.Second {
+				timeDelay = 10 * time.Second
 			}
 			//	p.lastDelay.Store(req.Stream,  timeDelay)
 			delay := time.NewTimer(timeDelay)

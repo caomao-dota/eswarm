@@ -40,7 +40,6 @@ import (
 	"github.com/plotozhu/MDCMainnet/rlp"
 	"github.com/plotozhu/MDCMainnet/swarm/log"
 	"github.com/plotozhu/MDCMainnet/swarm/storage/mock"
-	"github.com/plotozhu/wiredtiger-go/wiredtiger"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
@@ -133,9 +132,8 @@ type LDBStore struct {
 	//deleteChunkFunc is used to delete data from boltdb
 	deleteChunkFunc func(addr Address) (err error)
 
-	conn *wiredtiger.Connection
-	wtSession *wiredtiger.Session
-	cursor    *wiredtiger.Cursor
+	wiredtigerDB 	  *WiredtigerDB
+
 
 	mutex    sync.Mutex
 }
@@ -162,6 +160,7 @@ func NewLDBStore(params *LDBStoreParams) (s *LDBStore, err error) {
 
 	s.batch = newBatch()
 
+	go s.writeBatches()
 	s.db, err = NewLDBDatabase(params.Path)
 
 	if err != nil {
@@ -170,30 +169,13 @@ func NewLDBStore(params *LDBStoreParams) (s *LDBStore, err error) {
 	// associate encodeData with default functionality
 
 	// Set client options
-	s.conn, err = wiredtiger.Open(params.Path, "create")
+	s.wiredtigerDB = NewDatabase(params.Path, 4)
 
-	go s.writeBatches()
-	if err != nil {
-		log.Error(err.Error())
-	}
-	session, err := s.conn.OpenSession("")
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create session: %v", err.Error()))
 
-	}
 
-	err = session.Create("table:rawchunks", "key_format=u,value_format=u")
-	if err != nil {
-		panic(fmt.Sprintf("Failed to open cursor table: %v", err.Error()))
-	}
-	cursor, err := session.OpenCursor("table:rawchunks", nil, "overwrite:true")
-
-	s.cursor = cursor
-	s.wtSession = session
-
-	s.encodeDataFunc = newWtEncodeDataFunc(s)
-	s.getDataFunc = newWtGetDataFunc(s)
-	s.deleteChunkFunc = newWtDeleteDataFunc(s)
+	s.encodeDataFunc = s.wiredtigerDB.NewWtEncodeDataFunc()
+	s.getDataFunc = s.wiredtigerDB.NewWtGetDataFunc()
+	s.deleteChunkFunc = s.wiredtigerDB.NewWtDeleteDataFunc()
 
 	s.po = params.Po
 	s.setCapacity(params.DbCapacity)
@@ -541,28 +523,7 @@ func (s *LDBStore) Import(in io.Reader) (int64, error) {
 		}
 	}
 }
-func (s *LDBStore)closeSession(cursor *wiredtiger.Cursor){
-	session := cursor.GetSession()
-	cursor.Close()
-	session.Close("")
-}
-func (s *LDBStore)createAccessCursor() *wiredtiger.Cursor{
-	session, err := s.conn.OpenSession("")
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create session: %v", err.Error()))
 
-	}
-
-	err = session.Create("table:rawchunks", "key_format=u,value_format=u")
-	if err != nil {
-		panic(fmt.Sprintf("Failed to open cursor table: %v", err.Error()))
-	}
-	cursor, err := session.OpenCursor("table:rawchunks", nil, "")
-	if err != nil {
-		panic(fmt.Sprintf("Failed to open cursor table: %v", err.Error()))
-	}
-	return cursor
-}
 
 // Cleanup iterates over the database and deletes chunks if they pass the `f` condition
 func (s *LDBStore) Cleanup(f func(Chunk) bool) {
@@ -1165,9 +1126,7 @@ func (s *LDBStore) Close() {
 			s.chunkDb.Close()
 		}
 	*/
-	s.cursor.Close()
-	s.wtSession.Close("")
-	s.conn.Close("")
+	s.wiredtigerDB.Close()
 }
 
 // SyncIterator(start, stop, po, f) calls f on each hash of a bin po from start to stop
@@ -1255,203 +1214,3 @@ func newBoltDbDeleteDataFunc(db *bolt.DB) func(addr Address) (err error) {
 }
 */
 
-// newMockEncodeDataFunc returns a function that stores the chunk data
-// to a mock store to bypass the default functionality encodeData.
-// The constructed function always returns the nil data, as DbStore does
-// not need to store the data, but still need to create the index.
-func newWtEncodeDataFunc2(s *LDBStore) func(chunk Chunk) []byte {
-
-	start := make(chan Chunk)
-	result := make(chan struct{})
-	go func (){
-		cursor := s.createAccessCursor()
-		defer s.closeSession(cursor)
-		for {
-			select {
-			case chunk := <- start:
-				key := chunk.Address()
-				err := cursor.SetKey([]byte(key[:]))
-				if err != nil {
-					log.Error("error in set key", "reason", err)
-				}
-				err = cursor.SetValue(encodeData(chunk))
-				if err != nil {
-					err = cursor.Update()
-					if err != nil {
-						log.Error("error in set data", "reason", err)
-					}
-
-				}
-				err = cursor.Insert()
-				if err != nil {
-					log.Error("Failed to insert", "error", err)
-				} else {
-
-					//			log.Info("Ok to insert","addr",chunk.Address(),"value",chunk.Data()[:10])
-				} //<- s.waitChan
-				//	}()
-
-				result <- struct{}{}
-			case <- s.quit:
-				return
-			}
-		}
-
-
-	}()
-	return func(chunk Chunk) []byte {
-		start <- chunk
-		 <- result
-		return chunk.Address()[:]
-	}
-}
-type resultV struct {
-	data []byte
-	err error
-}
-func newWtGetDataFunc2(s *LDBStore) func(addr Address) (data []byte, err error) {
-
-	start := make(chan Address)
-	result := make(chan resultV)
-	go func (){
-		cursor := s.createAccessCursor()
-		defer s.closeSession(cursor)
-		for {
-			select {
-			case addr := <- start:
-				value := make([]byte, 0)
-				cursor.SetKey([]byte(addr[:]))
-				err := cursor.Search()
-				if err == nil {
-					err = cursor.GetValue(&value)
-				}
-				if err != nil {
-					log.Error("Failed to lookup", "addr", addr, "error", err.Error())
-				}
-
-				result <- resultV{value,err}
-			case <- s.quit:
-				return
-			}
-		}
-
-
-	}()
-	return func(addr Address) (data []byte, err error) {
-
-		start <- addr
-		res := <- result
-		return res.data,res.err
-
-	}
-}
-
-func newWtDeleteDataFunc2(s *LDBStore) func(addr Address) (err error) {
-	//创建一个删除线程
-
-
-	start := make(chan Address)
-	result := make(chan struct{})
-	go func (){
-		cursor := s.createAccessCursor()
-		defer s.closeSession(cursor)
-		for {
-			select {
-			case addr := <- start:
-				cursor.SetKey([]byte(addr[:]))
-				err := cursor.Remove()
-				if err != nil {
-					log.Error("Failed to delete", "error", err.Error())
-				} else {
-					log.Info("chunk deleted:", "addr", addr)
-
-				}
-
-				result <- struct{}{}
-			case <- s.quit:
-				return
-			}
-		}
-
-
-	}()
-
-
-	return func(addr Address) (err error) {
-		start <- addr
-		<- result
-		return
-
-	}
-}
-
-// newMockEncodeDataFunc returns a function that stores the chunk data
-// to a mock store to bypass the default functionality encodeData.
-// The constructed function always returns the nil data, as DbStore does
-// not need to store the data, but still need to create the index.
-func newWtEncodeDataFunc(s *LDBStore) func(chunk Chunk) []byte {
-	return func(chunk Chunk) []byte {
-		//go func() {
-		//	s.waitChan <- struct {}{}
-		s.mutex.Lock()
-		s.mutex.Unlock()
-		key := chunk.Address()
-		err := s.cursor.SetKey([]byte(key[:]))
-		if err != nil {
-			log.Error("error in set key", "reason", err)
-		}
-		err = s.cursor.SetValue(encodeData(chunk))
-		if err != nil {
-			log.Error("error in set data", "reason", err)
-		}
-		err = s.cursor.Insert()
-		if err != nil {
-			log.Error("Failed to insert", "error", err)
-		} else {
-			//			log.Info("Ok to insert","addr",chunk.Address(),"value",chunk.Data()[:10])
-		} //<- s.waitChan
-		//	}()
-
-		return chunk.Address()[:]
-	}
-}
-
-func newWtGetDataFunc(s *LDBStore) func(addr Address) (data []byte, err error) {
-	return func(addr Address) (data []byte, err error) {
-		s.mutex.Lock()
-		s.mutex.Unlock()
-		value := make([]byte, 0)
-		s.cursor.SetKey([]byte(addr[:]))
-		err = s.cursor.Search()
-		if err == nil {
-			err = s.cursor.GetValue(&value)
-		}
-		if err != nil {
-			log.Error("Failed to lookup", "addr", addr, "error", err.Error())
-		} else {
-			data = value
-			//log.Info("Ok to retrieve","addr",addr,"value",data[:10])
-		}
-		return
-
-	}
-}
-
-func newWtDeleteDataFunc(s *LDBStore) func(addr Address) (err error) {
-	return func(addr Address) (err error) {
-
-		s.mutex.Lock()
-		s.mutex.Unlock()
-		s.cursor.SetKey([]byte(addr[:]))
-		err = s.cursor.Remove()
-		if err != nil {
-			log.Error("Failed to delete", "error", err.Error())
-		} else {
-			log.Info("chunk deleted:", "addr", addr)
-
-		}
-
-		return
-
-	}
-}
