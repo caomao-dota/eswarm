@@ -55,6 +55,12 @@ func NewDatabase(filePath string,shardOverlay int) *WiredtigerDB {
 }
 
 func (db *WiredtigerDB)OpenDB(){
+	db.openDB()
+	//db.Close()
+	//db.openDB()
+	db.start()
+}
+func (db *WiredtigerDB)openDB(){
 	if db.conn != nil {
 		db.conn.Close("")
 	}
@@ -81,17 +87,21 @@ func (db *WiredtigerDB)OpenDB(){
 		}
 		cursor, err := session.OpenCursor(fmt.Sprintf("table:rawchunks%d",i), nil, "")
 
+
+
+
 		db.shardItems[i] = &oneShard{
 			session:session,
 			cursor:cursor,
 			inputChan:make(chan *requestItem),
 		}
 	}
-	db.start();
+	db.quitC = make(chan struct{})
+
 }
 
 func (db *WiredtigerDB)start(){
-	db.quitC = make(chan struct{})
+
 	for i := 0; i < db.shardsCount; i++{
 		go func (index int ){
 			for {
@@ -112,10 +122,12 @@ func (db *WiredtigerDB) Close(){
 		if db.shardItems[i] != nil {
 			db.shardItems[i].cursor.Close()
 			db.shardItems[i].session.Close("")
+			close(db.shardItems[i].inputChan)
 		}
 	}
 
 	db.conn.Close("")
+	db.conn = nil
 }
 
 func (db *WiredtigerDB)procRequest(shardItem *oneShard,request *requestItem){

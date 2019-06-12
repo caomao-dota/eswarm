@@ -4,19 +4,22 @@ ARG VERSION
 
 RUN apk add --update git gcc g++ linux-headers
 
-RUN mkdir -p $GOPATH/src/github.com/plotozhu/MDCMainnet/wiredtiger && \
-    cd $GOPATH/src/github.com/plotozhu && \
-    git clone https://github.com/wiredtiger/wiredtiger.git && \
-    cd $GOPATH/src/github.com/plotozhu/wiredtiger && \
-    sh autogen.sh           &&  \
-    ./configure --prefix=$GOPATH/src/github.com/plotozhu/MDCMainnet/wiredtiger
-     make  && make install
+
 
 RUN  cd $GOPATH/src/github.com/plotozhu && \
     git clone https://3823a1162e4a52f6e284610be5151c4204a900e7:@github.com/plotozhu/MDCMainnet && \
     cd $GOPATH/src/github.com/plotozhu/MDCMainnet && \
-    git checkout ${VERSION} && \
-    go install -ldflags "-X main.gitCommit=${VERSION}" ./cmd/swarm && \
+    git checkout ${VERSION}
+
+RUN mkdir -p $GOPATH/src/github.com/plotozhu/MDCMainnet/vendor/github.com/plotozhu/ && \
+    cd $GOPATH/src/github.com/plotozhu && \
+    git clone https://github.com/plotozhu/wiredtiger-go && \
+    cd $GOPATH/src/github.com/plotozhu/wiredtiger-go && \
+    sh install-deps.sh
+    cd  cd $GOPATH/src/github.com/plotozhu/MDCMainnet
+
+
+RUN    go install -ldflags "-X main.gitCommit=${VERSION}" ./cmd/swarm && \
     go install -ldflags "-X main.gitCommit=${VERSION}" ./cmd/swarm/swarm-smoke && \
     go install -ldflags "-X main.gitCommit=${VERSION}" ./cmd/swarm/global-store && \
     go install -ldflags "-X main.gitCommit=${VERSION}" ./cmd/geth
