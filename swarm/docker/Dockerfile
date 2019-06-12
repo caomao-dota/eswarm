@@ -1,25 +1,43 @@
-FROM golang:1.11-alpine as builder
+FROM ubuntu:latest as golang
+
+RUN apt-get update
+RUN apt-get install -y wget git gcc
+
+RUN wget -P /tmp https://dl.google.com/go/go1.11.5.linux-amd64.tar.gz
+
+RUN tar -C /usr/local -xzf /tmp/go1.11.5.linux-amd64.tar.gz
+RUN rm /tmp/go1.11.5.linux-amd64.tar.gz
+
+ENV GOPATH /go
+ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
+RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH"
+
+# WORKDIR $GOPATH
+
+#FROM golang:1.12.5-alpine as builder
 
 ARG VERSION
 
-RUN apk add --update git gcc g++ linux-headers
+RUN apt-get -y install git gcc g++   autoconf automake libtool make
 
 
 
-RUN  cd $GOPATH/src/github.com/plotozhu && \
+RUN  mkdir -p $GOPATH/src/github.com/plotozhu/ && \
+    cd $GOPATH/src/github.com/plotozhu && \
     git clone https://3823a1162e4a52f6e284610be5151c4204a900e7:@github.com/plotozhu/MDCMainnet && \
     cd $GOPATH/src/github.com/plotozhu/MDCMainnet && \
     git checkout ${VERSION}
 
 RUN mkdir -p $GOPATH/src/github.com/plotozhu/MDCMainnet/vendor/github.com/plotozhu/ && \
-    cd $GOPATH/src/github.com/plotozhu && \
+    cd $GOPATH/src/github.com/plotozhu/MDCMainnet/vendor/github.com/plotozhu/ && \
     git clone https://github.com/plotozhu/wiredtiger-go && \
-    cd $GOPATH/src/github.com/plotozhu/wiredtiger-go && \
+    cd $GOPATH/src/github.com/plotozhu/MDCMainnet/vendor/github.com/plotozhu/wiredtiger-go && \
     sh install-deps.sh
-    cd  cd $GOPATH/src/github.com/plotozhu/MDCMainnet
 
 
-RUN    go install -ldflags "-X main.gitCommit=${VERSION}" ./cmd/swarm && \
+
+RUN    cd  $GOPATH/src/github.com/plotozhu/MDCMainnet && \
+    go install -ldflags "-X main.gitCommit=${VERSION}" ./cmd/swarm && \
     go install -ldflags "-X main.gitCommit=${VERSION}" ./cmd/swarm/swarm-smoke && \
     go install -ldflags "-X main.gitCommit=${VERSION}" ./cmd/swarm/global-store && \
     go install -ldflags "-X main.gitCommit=${VERSION}" ./cmd/geth

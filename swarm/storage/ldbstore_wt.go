@@ -169,7 +169,7 @@ func NewLDBStore(params *LDBStoreParams) (s *LDBStore, err error) {
 	// associate encodeData with default functionality
 
 	// Set client options
-	s.wiredtigerDB = NewDatabase(params.Path, 4)
+	s.wiredtigerDB = NewDatabase(params.Path, 0)
 
 
 
@@ -837,6 +837,7 @@ func (s *LDBStore) Put(ctx context.Context, chunk Chunk) error {
 		s.doPut(chunk, &index, po)
 	} else {
 		decodeIndex(orgData, &index)
+		s.doPut(chunk, &index, po)
 
 	}
 	if index.Idx == 0 {

@@ -80,7 +80,7 @@ func (db *WiredtigerDB)openDB(){
 
 		}
 
-
+		session.Salvage(fmt.Sprintf("table:rawchunks%d",i),"")
 		err = session.Create(fmt.Sprintf("table:rawchunks%d",i), "key_format=u,value_format=u")
 		if err != nil {
 			panic(fmt.Sprintf("Failed to open cursor table: %v", err.Error()))
@@ -107,7 +107,10 @@ func (db *WiredtigerDB)start(){
 			for {
 				select {
 					case item := <- db.shardItems[index].inputChan:
-						db.procRequest(db.shardItems[index],item)
+						if item != nil {
+							db.procRequest(db.shardItems[index],item)
+						}
+
 					case <- db.quitC:
 							return
 				}
@@ -155,11 +158,10 @@ func (db *WiredtigerDB)procRequest(shardItem *oneShard,request *requestItem){
 		}
 		err = shardItem.cursor.SetValue(encodeData(NewChunk(request.address,request.data)))
 		if err != nil {
-			err = shardItem.cursor.Update()
-			if err != nil {
-				log.Error("error in set data", "reason", err)
-			}
+			log.Error("error in set data", "reason", err)
 
+		}else{
+			log.Info("OK to insert","insert",request.address,"data",len(request.data))
 		}
 		err = shardItem.cursor.Insert()
 		if err != nil {
