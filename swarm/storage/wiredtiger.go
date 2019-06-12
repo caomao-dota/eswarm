@@ -110,9 +110,12 @@ func (db *WiredtigerDB) Close(){
 	close(db.quitC)
 	for i := 0; i < db.shardsCount; i++{
 		if db.shardItems[i] != nil {
+			db.shardItems[i].cursor.Close()
 			db.shardItems[i].session.Close("")
 		}
 	}
+
+	db.conn.Close("")
 }
 
 func (db *WiredtigerDB)procRequest(shardItem *oneShard,request *requestItem){
