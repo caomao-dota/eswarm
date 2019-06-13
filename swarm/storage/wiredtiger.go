@@ -65,7 +65,7 @@ func (db *WiredtigerDB)openDB(){
 		db.conn.Close("")
 	}
 	var err error
-	db.conn,err = wiredtiger.Open(db.path,"create")
+	db.conn,err = wiredtiger.Open(db.path,"create,checkpoint=(log_size=20000000,wait=30)")
 
 	if err != nil {
 		log.Error(err.Error())
