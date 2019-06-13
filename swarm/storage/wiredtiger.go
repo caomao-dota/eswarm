@@ -160,8 +160,6 @@ func (db *WiredtigerDB)procRequest(shardItem *oneShard,request *requestItem){
 		if err != nil {
 			log.Error("error in set data", "reason", err)
 
-		}else{
-			log.Info("OK to insert","insert",request.address,"data",len(request.data))
 		}
 		err = shardItem.cursor.Insert()
 		if err != nil {
@@ -188,21 +186,21 @@ func (db *WiredtigerDB)procRequest(shardItem *oneShard,request *requestItem){
 }
 
 
-// newMockEncodeDataFunc returns a function that stores the chunk data
+// encodeDataFunc returns a function that stores the chunk data
 // to a mock store to bypass the default functionality encodeData.
 // The constructed function always returns the nil data, as DbStore does
 // not need to store the data, but still need to create the index.
-func (db *WiredtigerDB)NewWtEncodeDataFunc() func(chunk chunk.Chunk) []byte {
+func (db *WiredtigerDB)NewWtEncodeDataFunc() func(chunk chunk.Chunk) ([]byte,error) {
 
 
-	return func(chunk chunk.Chunk) []byte {
+	return func(chunk chunk.Chunk) ([]byte,error) {
 		shardId := int(chunk.Address()[0]) & db.shardMasks
 		shardItem := db.shardItems[shardId]
 		result :=make(chan *resultItem)
 		req := requestItem{T_UPDATE,chunk.Address(),chunk.Data(),result}
 		shardItem.inputChan <- &req
-		<- result
-		return chunk.Address()[:]
+		ret := <- result
+		return chunk.Address()[:],ret.err
 	}
 }
 type resultV struct {

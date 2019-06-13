@@ -34,6 +34,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 	"sync"
 
 	"github.com/plotozhu/MDCMainnet/metrics"
@@ -123,7 +124,7 @@ type LDBStore struct {
 	// Functions encodeDataFunc is used to bypass
 	// the default functionality of DbStore with
 	// mock.NodeStore for testing purposes.
-	encodeDataFunc func(chunk Chunk) []byte
+	encodeDataFunc func(chunk Chunk) ([]byte,error)
 	// If getDataFunc is defined, it will be used for
 	// retrieving the chunk data instead from the local
 	// LevelDB database.
@@ -832,59 +833,71 @@ func (s *LDBStore) Put(ctx context.Context, chunk Chunk) error {
 
 	//	log.Trace("ldbstore.put: s.db.Get", "key", chunk.Address(), "ikey", fmt.Sprintf("%x", ikey))
 	orgData, err := s.db.Get(ikey)
-
+	var putError error
 	if err != nil {
-		s.doPut(chunk, &index, po)
+		putError = s.doPut(chunk, &index, po)
 	} else {
 		decodeIndex(orgData, &index)
-		s.doPut(chunk, &index, po)
+		putError = s.doPut(chunk, &index, po)
 
 	}
-	if index.Idx == 0 {
-		log.Error("Error in db put", "index", 0)
-	}
-	idata := encodeIndex(&index)
-	s.batch.Put(ikey, idata)
+	if putError == nil {
 
-	// add the access-chunkindex index for garbage collection
-	gcIdxKey := getGCIdxKey(&index)
-	gcIdxData := getGCIdxValue(&index, po, chunk.Address())
-	s.batch.Put(gcIdxKey, gcIdxData)
-	s.lock.Unlock()
+		idata := encodeIndex(&index)
+		s.batch.Put(ikey, idata)
 
-	select {
-	case s.batchesC <- struct{}{}:
-	default:
-	}
+		// add the access-chunkindex index for garbage collection
+		gcIdxKey := getGCIdxKey(&index)
+		gcIdxData := getGCIdxValue(&index, po, chunk.Address())
+		s.batch.Put(gcIdxKey, gcIdxData)
+		s.lock.Unlock()
 
-	select {
-	case <-batch.c:
-		return batch.err
-	case <-ctx.Done():
-		return ctx.Err()
+		select {
+		case s.batchesC <- struct{}{}:
+		default:
+		}
+
+		select {
+		case <-batch.c:
+			return batch.err
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}else{
+		if strings.Contains(putError.Error(),"WT_PANIC:") {
+			panic(fmt.Sprintf("error found:%v",putError.Error()))
+		}
+		s.lock.Unlock()
 	}
+	return err
 }
 
 // force putting into db, does not check or update necessary indices
-func (s *LDBStore) doPut(chunk Chunk, index *dpaDBIndex, po uint8) {
+func (s *LDBStore) doPut(chunk Chunk, index *dpaDBIndex, po uint8) error {
 
 	/*if !s.VerifyHash(chunk.Data(),chunk.Address()) {
 		fmt.Println("Chunk not correct!",chunk.Address())
 	}*/
-	data := s.encodeDataFunc(chunk) //数据存入到boltdb,返回的是address
-	dkey := getDataKey(s.dataIdx, po)
-	s.batch.Put(dkey, data) //记录了address
-	index.Idx = s.dataIdx
-	s.bucketCnt[po] = s.dataIdx
-	s.entryCnt++
-	dbEntryCount.Inc(1)
-	s.dataIdx++
-	index.Access = s.accessCnt
-	s.accessCnt++
-	cntKey := make([]byte, 2)
-	cntKey[0] = keyDistanceCnt
-	cntKey[1] = po
-	s.batch.Put(cntKey, U64ToBytes(s.bucketCnt[po]))
+	data,err := s.encodeDataFunc(chunk) //数据存入到boltdb,返回的是address
+	if err == nil {
+		dkey := getDataKey(s.dataIdx, po)
+		s.batch.Put(dkey, data) //记录了address
+		index.Idx = s.dataIdx
+		s.bucketCnt[po] = s.dataIdx
+		s.entryCnt++
+		dbEntryCount.Inc(1)
+		s.dataIdx++
+		index.Access = s.accessCnt
+		s.accessCnt++
+		cntKey := make([]byte, 2)
+		cntKey[0] = keyDistanceCnt
+		cntKey[1] = po
+		s.batch.Put(cntKey, U64ToBytes(s.bucketCnt[po]))
+		return nil
+	}else {
+		return err
+	}
+
 }
 
 func (s *LDBStore) writeBatches() {
