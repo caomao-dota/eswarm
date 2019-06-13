@@ -80,7 +80,7 @@ func (db *WiredtigerDB)openDB(){
 
 		}
 
-		session.Salvage(fmt.Sprintf("table:rawchunks%d",i),"")
+		//session.Salvage(fmt.Sprintf("table:rawchunks%d",i),"")
 		err = session.Create(fmt.Sprintf("table:rawchunks%d",i), "key_format=u,value_format=u")
 		if err != nil {
 			panic(fmt.Sprintf("Failed to open cursor table: %v", err.Error()))

@@ -1,7 +1,7 @@
 FROM ubuntu:latest as golang
 
 RUN apt-get update
-RUN apt-get install -y wget git gcc
+RUN apt-get install -y wget git gcc apt-utils
 
 RUN wget -P /tmp https://dl.google.com/go/go1.11.5.linux-amd64.tar.gz
 
@@ -46,10 +46,10 @@ RUN    cd  $GOPATH/src/github.com/plotozhu/MDCMainnet && \
 FROM alpine:3.8 as esc
 RUN apk add iproute2
 WORKDIR /
-COPY --from=builder /go/bin/swarm /
-COPY --from=builder /go/bin/geth /
-COPY --from=builder /go/bin/swarm-smoke /
-COPY --from=builder /go/bin/global-store /
+COPY --from=golang /go/bin/swarm /
+COPY --from=golang /go/bin/geth /
+COPY --from=golang /go/bin/swarm-smoke /
+COPY --from=golang /go/bin/global-store /
 ADD run.sh /run.sh
 ADD run-smoke.sh /run-smoke.sh
 ENTRYPOINT ["/config/run.sh"]
