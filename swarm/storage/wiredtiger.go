@@ -77,17 +77,13 @@ func (db *WiredtigerDB)openDB(){
 		if err != nil {
 
 			panic(fmt.Sprintf("Failed to create session: %v", err.Error()))
-
 		}
-
 		//session.Salvage(fmt.Sprintf("table:rawchunks%d",i),"")
 		err = session.Create(fmt.Sprintf("table:rawchunks%d",i), "key_format=u,value_format=u")
 		if err != nil {
 			panic(fmt.Sprintf("Failed to open cursor table: %v", err.Error()))
 		}
 		cursor, err := session.OpenCursor(fmt.Sprintf("table:rawchunks%d",i), nil, "")
-
-
 
 
 		db.shardItems[i] = &oneShard{

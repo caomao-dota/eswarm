@@ -273,6 +273,24 @@ func SendDataToServer(url string, timeout time.Duration, data []byte) error {
 	return err
 }
 
+func GetDataFromServer(url string) (data []byte,err error){
+	resp, err := http.Get(url)
+	if err != nil {
+		// handle error
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		// handle error
+	}else {
+		data = []byte(body)
+	}
+
+
+	return
+}
+
 type Defs struct {
 	BootNodes  []string
 	ReportAddr string

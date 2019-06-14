@@ -224,7 +224,8 @@ func (d *Delivery) handleRetrieveRequestMsg(ctx context.Context, sp *Peer, req *
 			if err != nil {
 				log.Warn("ERROR in handleRetrieveRequestMsg", "err", err)
 			}
-			d.receiptStore.OnChunkDelivered(sp.Account(), uint32((len(chunk.Data())+4095)>>12))
+			hs, _ := d.bzz.GetOrCreateHandshake(sp.ID())
+			d.receiptStore.OnChunkDelivered(hs.Account, uint32((len(chunk.Data())+4095)>>12))
 			return
 		}
 		select {

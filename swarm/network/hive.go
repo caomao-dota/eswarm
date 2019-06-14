@@ -241,10 +241,13 @@ func (h *Hive) Run(p *BzzPeer) error {
 	h.trackPeer(p)
 	defer h.untrackPeer(p)
 	dp := NewPeer(p, h.Kademlia)
+
+
 	depth, changed, err := h.On(dp)
 	if err != nil {
 		return err
 	}
+
 	// if we want discovery, advertise change of depth
 	if h.Discovery {
 		if changed {

@@ -207,6 +207,8 @@ func init() {
 		SwarmStoreCapacity,
 		SwarmStoreCacheCapacity,
 		SwarmGlobalStoreAPIFlag,
+		SwarmReportIntervalFlag,
+		SwarmCheckBalanceFlag,
 	}
 	rpcFlags := []cli.Flag{
 		utils.WSEnabledFlag,
@@ -519,8 +521,9 @@ func setSwarmBootstrapNodes(ctx *cli.Context, bzzCfg *bzzapi.Config, cfg *node.C
 				if len(nodes) != 0 {
 					bootnodes = append(bootnodes, nodes...)
 				}
+				bzzCfg.ServerAddr = reportUrl
 			}
-			bzzCfg.ServerAddr = reportUrl
+
 		}
 		for _, url := range bootnodes {
 			node, err := enode.ParseV4(url)

@@ -102,6 +102,7 @@ type Kademlia struct {
 	peers        map[string]bool
 	filter       *p2p.FilterChain
 	blacklist    *lru.Cache
+
 }
 
 // NewKademlia creates a Kademlia table for base address addr
@@ -121,6 +122,7 @@ func NewKademlia(addr []byte, params *KadParams) *Kademlia {
 		peers:     make(map[string]bool),
 		blacklist: blacklist,
 		nDepth:    -1,
+
 	}
 }
 
@@ -531,6 +533,7 @@ func (k *Kademlia) On(p *Peer) (depth uint8, changed bool, err error) {
 		k.sendNeighbourhoodDepthChange()
 
 	} else {
+
 		k.lconns, _, _, _ = pot.Swap(k.lconns, p, Pof, func(v pot.Val) pot.Val {
 			// if not found live
 			if v == nil {

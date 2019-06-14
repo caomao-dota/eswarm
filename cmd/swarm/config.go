@@ -77,6 +77,8 @@ const (
 	SwarmEnvBootnodes            = "SWARM_BOOTNODES"
 	SwarmEnvPSSEnable            = "SWARM_PSS_ENABLE"
 	SwarmEnvStorePath            = "SWARM_STORE_PATH"
+	SwarmEnvReportInterval       = "SWARM_REPORT_INTERVAL"
+	SwarmEnvCheckBalance         = "SWARM_CHECK_BALANCE"
 	SwarmEnvStoreCapacity        = "SWARM_STORE_CAPACITY"
 	SwarmEnvStoreCacheCapacity   = "SWARM_STORE_CACHE_CAPACITY"
 	//SwarmEnvBootnodeMode         = "SWARM_BOOTNODE_MODE"
@@ -270,8 +272,13 @@ func cmdLineOverride(currentConfig *bzzapi.Config, ctx *cli.Context) *bzzapi.Con
 	if ctx.GlobalIsSet(SwarmBootnodesAddrFlag.Name) {
 		currentConfig.BootnodeRetriveAddr = ctx.GlobalString(SwarmBootnodesAddrFlag.Name)
 	}
-	if ctx.GlobalIsSet(SwarmBootnodesAddrFlag.Name) {
-		currentConfig.BootnodeRetriveAddr = ctx.GlobalString(SwarmBootnodesAddrFlag.Name)
+
+	if ctx.GlobalIsSet(SwarmCheckBalanceFlag.Name) {
+		currentConfig.CheckBalance = ctx.GlobalBool(SwarmCheckBalanceFlag.Name)
+	}
+
+	if ctx.GlobalIsSet(SwarmReportIntervalFlag.Name) {
+		currentConfig.ReportInterval = time.Duration(ctx.GlobalInt(SwarmReportIntervalFlag.Name)) * time.Minute
 	}
 	return currentConfig
 
@@ -381,7 +388,22 @@ func envVarsOverride(currentConfig *bzzapi.Config) (config *bzzapi.Config) {
 	if api := os.Getenv(SwarmGlobalstoreAPI); api != "" {
 		currentConfig.GlobalStoreAPI = api
 	}
+	if checkBalance := os.Getenv(SwarmEnvCheckBalance); checkBalance != "" {
 
+		check, err := strconv.ParseBool(checkBalance)
+		if err  ==  nil {
+			currentConfig.CheckBalance = check
+		}
+
+	}
+
+	if interval := os.Getenv(SwarmEnvReportInterval); interval != "" {
+		reportInterval, err := strconv.ParseUint(interval, 10, 16)
+		if err == nil {
+			currentConfig.ReportInterval = time.Duration(reportInterval) * time.Minute
+		}
+
+	}
 	return currentConfig
 }
 

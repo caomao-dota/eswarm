@@ -71,11 +71,17 @@ var (
 		EnvVar: SwarmEnvMaxStreamPeerServers,
 		Value:  10000, // A very large default value is possible as stream servers have very small memory footprint
 	}
-	/*SwarmLightNodeEnabled = cli.BoolFlag{
-		Name:   "lightnode",
-		Usage:  "Enable Swarm LightNode (default false)",
-		EnvVar: SwarmEnvLightNodeEnable,
-	}*/
+	SwarmReportIntervalFlag = cli.IntFlag{
+		Name:   "reportinterval",
+		Usage:  "Enable Receipts Report Level (default 60*minutes)",
+		EnvVar: SwarmEnvReportInterval,
+		Value : 60,
+	}
+	SwarmCheckBalanceFlag = cli.BoolFlag{
+		Name:   "checkbalance",
+		Usage:  "Enable node to check balance of lightnode (default false)",
+		EnvVar: SwarmEnvCheckBalance,
+	}
 	SwarmDeliverySkipCheckFlag = cli.BoolFlag{
 		Name:   "delivery-skip-check",
 		Usage:  "Skip chunk delivery check (default false)",

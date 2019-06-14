@@ -77,6 +77,8 @@ type Config struct {
 	CentralAddr         []string
 	BootnodeRetriveAddr string //获取bootnode的地址
 	NodeType            uint
+	ReportInterval      time.Duration		//提交收据的间隔
+	CheckBalance        bool 		//是否检查轻节点余额
 }
 
 //create a default config with all parameters to set to defaults
@@ -105,6 +107,8 @@ func NewConfig() (c *Config) {
 		NodeType:             36,
 		ServerAddr:           "http://124.156.115.14:4000/apis/v1",
 		CentralAddr:          []string{"http://124.156.115.14:8500"},
+		ReportInterval:       1 * time.Hour,
+		CheckBalance:         false,
 	}
 
 	return

@@ -3,14 +3,16 @@ package state
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"encoding/json"
 	"errors"
+	"github.com/plotozhu/MDCMainnet/common"
 	"github.com/plotozhu/MDCMainnet/crypto"
 	"github.com/plotozhu/MDCMainnet/swarm/util"
 	"golang.org/x/crypto/sha3"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -18,6 +20,7 @@ import (
 	"github.com/plotozhu/MDCMainnet/p2p/enode"
 	"github.com/plotozhu/MDCMainnet/rlp"
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/plotozhu/MDCMainnet/swarm/log"
 )
 
 var (
@@ -29,14 +32,17 @@ var (
 
 const (
 	MAX_C_REC_LIMIT = 4096 //当超过这个数目时，最长时间不用的C_记录，就是找了最久没有连接的节点
+
+	ReportRoute = "/receipts"
+	AccountRoute = "/account"
 )
 
 var (
 	CPREF = []byte("IN_CHUNK")
 	HPREF = []byte("IN_RECEIPT")
 	RPREF = []byte("UNREPORTED")
-
-	MAX_STIME_DURATION = 5 * time.Minute        //生成收据时，一个STIME允许的最长时间
+	BALNACE_PREFIX = "BL"
+	MAX_STIME_DURATION = 60 * time.Minute        //生成收据时，一个STIME允许的最长时间
 	MAX_STIME_JITTER   = 2 * MAX_STIME_DURATION //接收收据时，允许最长的时间差，超过这个时间的不再接收
 
 )
@@ -256,14 +262,19 @@ type ReceiptStore struct {
 	cmu           sync.RWMutex
 	hmu           sync.RWMutex
 	server        string
+	checkBalance  bool
 	receiptsLogs  []Receipts
+	balances       *lru.Cache
 }
 
-func NewReceiptsStore(filePath string, prvKey *ecdsa.PrivateKey, serverAddr string) (*ReceiptStore, error) {
+func NewReceiptsStore(filePath string, prvKey *ecdsa.PrivateKey, serverAddr string,duration time.Duration,checkBalance bool ) (*ReceiptStore, error) {
 	db, err := leveldb.OpenFile(filePath, nil)
-	return newReceiptsStore(db, prvKey, serverAddr+"/receipts"), err
+	MAX_STIME_DURATION = 5 * duration        //生成收据时，一个STIME允许的最长时间
+	MAX_STIME_JITTER   = 2 * MAX_STIME_DURATION //接收收据时，允许最长的时间差，超过这个时间的不再接收
+	return newReceiptsStore(db, prvKey, serverAddr,checkBalance), err
 }
-func newReceiptsStore(newDb *leveldb.DB, prvKey *ecdsa.PrivateKey, serverAddr string) *ReceiptStore {
+func newReceiptsStore(newDb *leveldb.DB, prvKey *ecdsa.PrivateKey, serverAddr string,checkBalance bool ) *ReceiptStore {
+	balances,_ :=lru.New(100)
 	store := ReceiptStore{
 		account:      crypto.PubkeyToAddress(prvKey.PublicKey),
 		hex:          crypto.PubkeyToAddress(prvKey.PublicKey).Hex(),
@@ -273,6 +284,8 @@ func newReceiptsStore(newDb *leveldb.DB, prvKey *ecdsa.PrivateKey, serverAddr st
 		allReceipts:  make(Receipts),
 		server:       serverAddr,
 		receiptsLogs: make([]Receipts, 0),
+		checkBalance:checkBalance,
+		balances:balances,
 	}
 	store.nodeCommCache, _ = lru.New(MAX_C_REC_LIMIT)
 
@@ -532,7 +545,7 @@ func (rs *ReceiptStore) SendDataToServer(url string, timeout time.Duration, resu
 
 	request, err := http.NewRequest("POST", url, bytes.NewReader(result))
 	if err != nil {
-		log.Fatal(err)
+		log.Error("error in post receipts","reason",err)
 	}
 	request.Header.Set("Connection", "Keep-Alive")
 	request.Header.Set("Content-Type", "text/plain")
@@ -549,7 +562,7 @@ func (rs *ReceiptStore) doAutoSubmit() error {
 	result, err := rs.createReportData(receipts)
 
 	timeout := time.Duration(5 * time.Second) //超时时间50ms
-	err = util.SendDataToServer(rs.server, timeout, result)
+	err = util.SendDataToServer(rs.server+ReportRoute, timeout, result)
 	rs.hmu.Lock()
 	defer rs.hmu.Unlock()
 	len := len(rs.receiptsLogs)
@@ -588,7 +601,80 @@ func (rs *ReceiptStore) submitRoutine() {
 		}
 	}
 }
+type BalanceInfoDb struct {
+	Second int64
+	Balance int64
+}
+type BalaceMessage struct {
+	Balance string `json:"balance"`
+	VBalance string `json:"vBalance"`
+}
+const InvalidBalance = 0xFFFFFFFFFFFFFFF
+//检查余额，以10^-12次方为单位
+func (rs *ReceiptStore)CheckBalance(nodeId [20]byte) int64 {
+	//如果不需要checkbalace，返回10个EUS，总是认为是有效的
+	if !rs.checkBalance {
+		return 10000000000000
+	}
+	hexId := common.Bytes2Hex(nodeId[:])
+	dataRaw,exist := rs.balances.Get(hexId)
+	var err error
+	var data []byte
+	if !exist  {
+		data,err = rs.db.Get([]byte(BALNACE_PREFIX+hexId),nil)
+	}else{
+		data = dataRaw.([]byte)
+	}
 
+	if err == nil {
+		var valInDb BalanceInfoDb
+		json.Unmarshal(data,&valInDb)
+		//数据库中的未超时
+		if time.Since(time.Unix(valInDb.Second,0)) < MAX_STIME_DURATION {
+			save,_ := json.Marshal(valInDb)
+			rs.balances.Add(hexId,save)
+			return int64(valInDb.Balance)
+		}
+	}
+	//Get balance from server
+	data,err = util.GetDataFromServer(rs.server + AccountRoute + hexId)
+	if err  == nil {
+		var m BalaceMessage
+		err = json.Unmarshal(data, &m)
+		if err != nil {
+			Balance := int64(InvalidBalance)
+			if m.VBalance != "" {
+				balance,err := strconv.ParseFloat(m.VBalance,64)
+				if err != nil {
+					Balance = int64(balance * 10000000000)
+				}
+
+			}else {
+				balance,err := strconv.ParseFloat(m.Balance,64)
+				if err != nil {
+					Balance = int64(balance * 10000000000)
+				}
+			}
+			if Balance !=InvalidBalance {
+				dataToStore := BalanceInfoDb{ time.Now().Unix(),Balance}
+				result,err := json.Marshal(dataToStore)
+				if err == nil {
+					rs.db.Put([]byte(BALNACE_PREFIX+hexId),result,nil)
+					rs.balances.Add(hexId,result)
+				}
+			}
+
+			return Balance
+		}else {
+			return InvalidBalance
+		}
+
+	}else {
+		log.Error("error in get balance","reason",err)
+		return InvalidBalance
+	}
+
+}
 /**
 	每次数据传输完成后，用这个通知ReceiptStore，用于计数某些节点发送的总Chunk和收到的收据
     本函数返回一个unpayed的值，用于表示该节点目前有多少个未支付（收据）的数据了
@@ -606,6 +692,7 @@ func (rs *ReceiptStore) OnChunkDelivered(nodeId [20]byte, amount4k uint32) uint3
 	} else {
 		rs.unpaidAmount[nodeId] += amount4k
 	}
+	go rs.CheckBalance(nodeId)
 	return rs.unpaidAmount[nodeId]
 }
 
