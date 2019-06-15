@@ -27,8 +27,11 @@ type resultItem struct {
 }
 
 type oneShard struct {
+	readSession *wiredtiger.Session
 	session *wiredtiger.Session
+	rdCursor *wiredtiger.Cursor
 	cursor  *wiredtiger.Cursor
+	rdInputChan   chan *requestItem
 	inputChan   chan *requestItem
 	lock    sync.Mutex
 }
@@ -65,7 +68,7 @@ func (db *WiredtigerDB)openDB(){
 		db.conn.Close("")
 	}
 	var err error
-	db.conn,err = wiredtiger.Open(db.path,"create,checkpoint=(log_size=20000000,wait=30)")
+	db.conn,err = wiredtiger.Open(db.path,"create,checkpoint=(log_size=20000000,wait=30),async=(enabled=true,threads=4)")
 
 	if err != nil {
 		log.Error(err.Error())
@@ -85,11 +88,25 @@ func (db *WiredtigerDB)openDB(){
 		}
 		cursor, err := session.OpenCursor(fmt.Sprintf("table:rawchunks%d",i), nil, "")
 
+		rdSession, err := db.conn.OpenSession("")
+		if err != nil {
+
+			panic(fmt.Sprintf("Failed to create session: %v", err.Error()))
+		}
+		//session.Salvage(fmt.Sprintf("table:rawchunks%d",i),"")
+		err = rdSession.Create(fmt.Sprintf("table:rawchunks%d",i), "key_format=u,value_format=u")
+		if err != nil {
+			panic(fmt.Sprintf("Failed to open cursor table: %v", err.Error()))
+		}
+		rdCursor, err := rdSession.OpenCursor(fmt.Sprintf("table:rawchunks%d",i), nil, "readonly=true")
 
 		db.shardItems[i] = &oneShard{
 			session:session,
 			cursor:cursor,
+			readSession:rdSession,
+			rdCursor:rdCursor,
 			inputChan:make(chan *requestItem),
+			rdInputChan:make(chan *requestItem),
 		}
 	}
 	db.quitC = make(chan struct{})
@@ -112,6 +129,20 @@ func (db *WiredtigerDB)start(){
 				}
 			}
 		}(i)
+		//read thread
+		go func (index int ){
+			for {
+				select {
+				case item := <- db.shardItems[index].rdInputChan:
+					if item != nil {
+						db.procRdRequest(db.shardItems[index],item)
+					}
+
+				case <- db.quitC:
+					return
+				}
+			}
+		}(i)
 	}
 }
 
@@ -128,23 +159,10 @@ func (db *WiredtigerDB) Close(){
 	db.conn.Close("")
 	db.conn = nil
 }
-
 func (db *WiredtigerDB)procRequest(shardItem *oneShard,request *requestItem){
 	shardItem.lock.Lock()
 	defer shardItem.lock.Unlock()
 	switch request._type {
-	case T_QUERY:
-		value := make([]byte, 0)
-		shardItem.cursor.SetKey([]byte(request.address[:]))
-		err := shardItem.cursor.Search()
-		if err == nil {
-			err = shardItem.cursor.GetValue(&value)
-		}
-		if err != nil {
-			log.Error("Failed to lookup", "addr", request.address, "error", err.Error())
-		}
-
-		request.ret <- &resultItem{err,value}
 	case T_UPDATE:
 		key := request.address
 
@@ -181,6 +199,23 @@ func (db *WiredtigerDB)procRequest(shardItem *oneShard,request *requestItem){
 	}
 }
 
+func (db *WiredtigerDB)procRdRequest(shardItem *oneShard,request *requestItem){
+	switch request._type {
+	case T_QUERY:
+		value := make([]byte, 0)
+		shardItem.cursor.SetKey([]byte(request.address[:]))
+		err := shardItem.cursor.Search()
+		if err == nil {
+			err = shardItem.cursor.GetValue(&value)
+		}
+		if err != nil {
+			log.Error("Failed to lookup", "addr", request.address, "error", err.Error())
+		}
+
+		request.ret <- &resultItem{err, value}
+	}
+}
+
 
 // encodeDataFunc returns a function that stores the chunk data
 // to a mock store to bypass the default functionality encodeData.
@@ -212,7 +247,7 @@ func (db *WiredtigerDB)NewWtGetDataFunc() func(addr chunk.Address) (data []byte,
 		shardItem := db.shardItems[shardId]
 		result :=make(chan *resultItem)
 		req := requestItem{T_QUERY,addr,[]byte{},result}
-		shardItem.inputChan <- &req
+		shardItem.rdInputChan <- &req
 		ret := <- result
 		return ret.data,ret.err
 
