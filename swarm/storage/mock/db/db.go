@@ -33,6 +33,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/util"
+	dberrors "github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 const (
@@ -57,6 +58,9 @@ func NewGlobalStore(path string) (s *GlobalStore, err error) {
 	errString := ""
 	for i := 0; i < BucketLen; i++ {
 		db, err := leveldb.OpenFile(path+fmt.Sprintf("/bucket%v", i), &opt.Options{CompactionTableSize: opt.DefaultCompactionTableSize * 32})
+		if _, iscorrupted := err.(*dberrors.ErrCorrupted); iscorrupted {
+			db, err = leveldb.RecoverFile(path, nil)
+		}
 		if err != nil {
 			errString += fmt.Sprintf("dbNumber:%v,err,%v", i, err.Error())
 		} else {

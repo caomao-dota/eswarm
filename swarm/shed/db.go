@@ -24,6 +24,7 @@ package shed
 
 import (
 	"fmt"
+	"github.com/syndtr/goleveldb/leveldb/errors"
 	"strconv"
 	"strings"
 	"time"
@@ -65,6 +66,9 @@ func NewDB(path string, metricsPrefix string) (db *DB, err error) {
 	ldb, err := leveldb.OpenFile(path, &opt.Options{
 		OpenFilesCacheCapacity: openFileLimit,
 	})
+	if _, iscorrupted := err.(*errors.ErrCorrupted); iscorrupted {
+		ldb, err = leveldb.RecoverFile(path, nil)
+	}
 	if err != nil {
 		return nil, err
 	}

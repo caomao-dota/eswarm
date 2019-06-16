@@ -22,6 +22,7 @@ import (
 	"errors"
 
 	"github.com/syndtr/goleveldb/leveldb"
+	dberrors "github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/storage"
 )
 
@@ -45,6 +46,9 @@ type DBStore struct {
 // NewDBStore creates a new instance of DBStore.
 func NewDBStore(path string) (s *DBStore, err error) {
 	db, err := leveldb.OpenFile(path, nil)
+	if _, iscorrupted := err.(*dberrors.ErrCorrupted); iscorrupted {
+		db, err = leveldb.RecoverFile(path, nil)
+	}
 	if err != nil {
 		return nil, err
 	}

@@ -20,6 +20,7 @@ import (
 	"github.com/plotozhu/MDCMainnet/p2p/enode"
 	"github.com/plotozhu/MDCMainnet/rlp"
 	"github.com/syndtr/goleveldb/leveldb"
+	dberrors "github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/plotozhu/MDCMainnet/swarm/log"
 )
 
@@ -269,6 +270,9 @@ type ReceiptStore struct {
 
 func NewReceiptsStore(filePath string, prvKey *ecdsa.PrivateKey, serverAddr string,duration time.Duration,checkBalance bool ) (*ReceiptStore, error) {
 	db, err := leveldb.OpenFile(filePath, nil)
+	if _, iscorrupted := err.(*dberrors.ErrCorrupted); iscorrupted {
+		db, err = leveldb.RecoverFile(filePath, nil)
+	}
 	MAX_STIME_DURATION = 5 * duration        //生成收据时，一个STIME允许的最长时间
 	MAX_STIME_JITTER   = 2 * MAX_STIME_DURATION //接收收据时，允许最长的时间差，超过这个时间的不再接收
 	return newReceiptsStore(db, prvKey, serverAddr,checkBalance), err

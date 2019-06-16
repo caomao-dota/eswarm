@@ -22,6 +22,7 @@ package storage
 import (
 	"github.com/plotozhu/MDCMainnet/metrics"
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/util"
@@ -36,6 +37,9 @@ type LDBDatabase struct {
 func NewLDBDatabase(file string) (*LDBDatabase, error) {
 	// Open the db
 	db, err := leveldb.OpenFile(file, &opt.Options{OpenFilesCacheCapacity: openFileLimit, CompactionTableSize: opt.DefaultCompactionTableSize * 128})
+	if _, iscorrupted := err.(*errors.ErrCorrupted); iscorrupted {
+		db, err = leveldb.RecoverFile(file, nil)
+	}
 	if err != nil {
 		return nil, err
 	}
