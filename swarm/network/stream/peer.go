@@ -157,7 +157,7 @@ func (p *Peer) Deliver(ctx context.Context, chunk storage.Chunk, priority uint8,
 	}
 
 	ctx = context.WithValue(ctx, "stream_send_tag", nil)
-	log.Info("Send request:", "send id", p.ID(), "hash", chunk.Address())
+	log.Info("Send response:", "send id", p.ID(), "hash", chunk.Address())
 	return p.SendPriority(ctx, msg, priority)
 }
 

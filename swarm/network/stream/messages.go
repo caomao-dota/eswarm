@@ -371,7 +371,7 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 			}
 			//	p.lastDelay.Store(req.Stream,  timeDelay)
 			delay := time.NewTimer(timeDelay)
-			log.Info("Delayed Sync:", "delayed", timeDelay, "stream", req.Stream)
+			log.Info("Delayed Sync:", "delayed", timeDelay,"Peer",p.ID(), "stream", req.Stream)
 			select {
 			case <-delay.C:
 			}

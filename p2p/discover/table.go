@@ -1349,7 +1349,7 @@ func (tab *Table) doRemoveUnusedNode(n *node) {
 	b.entries.RemoveNodeItem(n.ID())
 	b.replacements.RemoveNodeItem(n.ID())
 	index := fmt.Sprintf("%v:%v", n.IP().String(), n.UDP())
-	log.Info("Remove unused node:", "id", n.ID(), "ip", n.IP(), "porrt", n.UDP())
+	log.Info("Remove unused node:", "id", n.ID(), "ip", n.IP(), "port", n.UDP())
 	nodes := tab.nodeByIp[index]
 	if nodes != nil {
 		delete(nodes, n.ID())

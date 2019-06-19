@@ -868,6 +868,7 @@ func (s *LDBStore) Put(ctx context.Context, chunk Chunk) error {
 			panic(fmt.Sprintf("error found:%v",putError.Error()))
 		}
 		s.lock.Unlock()
+		log.Error("Put Data error","reason",putError)
 	}
 	return err
 }
