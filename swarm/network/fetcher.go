@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	defaultSearchTimeout = 1 * time.Second
+	defaultSearchTimeout = 8 * time.Second
 	// maximum number of forwarded requests (hops), to make sure requests are not
 	// forwarded forever in peer loops
 	maxHopCount uint8 = 20
@@ -177,7 +177,9 @@ func (f *Fetcher) Request(hopCount uint8) {
 		//fmt.Printf("fetcher done :%v, %v\r\n",tm,ok)
 	}
 }
-
+/**
+ *
+ */
 // start prepares the Fetcher
 // it keeps the Fetcher alive within the lifecycle of the passed context
 func (f *Fetcher) run(peers *sync.Map) {
@@ -197,6 +199,9 @@ func (f *Fetcher) run(peers *sync.Map) {
 	// requesting again extends the search. ie.,
 	// if a peer we requested from is gone we issue a new request, so the number of active
 	// requests never decreases
+	// requested is set on fetcher.Request
+	// doRequest: if on requesting (request == true)  doRequest should be false, which means it will wait for timeout
+	//            else it should be same as request
 	for {
 		select {
 
@@ -210,10 +215,10 @@ func (f *Fetcher) run(peers *sync.Map) {
 			doRequest = requested
 
 		// incoming request
-		case hopCount = <-f.requestC:
+		case hopCount = <-f.requestC: //第二次请求，需要看看当前是不是已经在请求中了，如果已经在请求中了，就可以延时到下一个timeout
 			//log.Trace("new request", "request addr", f.addr)
 			// 2) chunk is requested, set requested flag
-			// launch a request iff none been launched yet
+			// launch a request if none been launched yet
 			doRequest = !requested
 			requested = true
 

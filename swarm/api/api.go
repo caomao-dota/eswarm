@@ -49,7 +49,7 @@ import (
 	"github.com/plotozhu/MDCMainnet/swarm/storage/feed"
 	"github.com/plotozhu/MDCMainnet/swarm/storage/feed/lookup"
 
-	opentracing "github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go"
 )
 
 var (
@@ -199,6 +199,8 @@ type API struct {
 	dns       Resolver
 	Decryptor func(context.Context, string) DecryptFunc
 	counter   Counter
+	current   int
+	total     int
 }
 
 // NewAPI the api constructor initialises a new API instance.
@@ -714,9 +716,13 @@ func (a *API) UploadTar(ctx context.Context, bodyReader io.ReadCloser, manifestP
 	var contentKey storage.Address
 	tr := tar.NewReader(bodyReader)
 	defer bodyReader.Close()
+	defer func() {a.SetUploadStatus(-1,-1) }()
 	var defaultPathFound bool
+	current := 0
 	for {
 		hdr, err := tr.Next()
+		a.SetUploadStatus(current,current)
+		current++
 		if err == io.EOF {
 			break
 		} else if err != nil {
@@ -1071,4 +1077,12 @@ func (a *API) GetNodeCount(ctx context.Context) (int, int) {
 		return a.counter.GetConnectedNodes()
 	}
 
+}
+func (a *API)SetUploadStatus(current int ,total int){
+	a.current = current
+	a.total = total
+}
+//获取当前正在上传/下载的第几个/总数，如果总数是0，表示没有正在传输的
+func (a *API)GetTransferStatus(ctx context.Context)(int,int){
+	return a.current,a.total
 }

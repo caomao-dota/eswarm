@@ -63,6 +63,9 @@ func (fs *FileSystem) Upload(lpath, index string, toEncrypt bool) (string, error
 		return "", err
 	}
 
+	defer func(){
+		fs.api.SetUploadStatus(0,0)
+	}()
 	var start int
 	if stat.IsDir() {
 		start = len(localpath)
@@ -101,6 +104,7 @@ func (fs *FileSystem) Upload(lpath, index string, toEncrypt bool) (string, error
 	defer close(sem)
 
 	for i, entry := range list {
+		fs.api.SetUploadStatus(i,len(list))
 		sem <- true
 		go func(i int, entry *manifestTrieEntry) {
 			defer func() { <-sem }()
@@ -142,6 +146,8 @@ func (fs *FileSystem) Upload(lpath, index string, toEncrypt bool) (string, error
 
 		}(i, entry)
 	}
+
+
 	for i := 0; i < cap(sem); i++ {
 		sem <- true
 	}
@@ -196,6 +202,9 @@ func (fs *FileSystem) Download(bzzpath, localpath string) error {
 	if err != nil {
 		return err
 	}
+	defer func(){
+		fs.api.SetUploadStatus(0,0)
+	}()
 	path := uri.Path
 
 	if len(path) > 0 {
@@ -240,6 +249,7 @@ func (fs *FileSystem) Download(bzzpath, localpath string) error {
 	errC := make(chan error)
 	done := make(chan bool, maxParallelFiles)
 	for i, entry := range list {
+		fs.api.SetUploadStatus(i,len(list))
 		select {
 		case done <- true:
 			wg.Add(1)

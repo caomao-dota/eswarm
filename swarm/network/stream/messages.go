@@ -412,7 +412,6 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 			} else {
 				log.Error("Retrieve deliver data error:", "addr", hash, "error", err)
 			}
-
 		}
 	}
 

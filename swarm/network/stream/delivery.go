@@ -314,8 +314,7 @@ func (d *Delivery) RequestFromPeers(ctx context.Context, req *network.Request) (
 		}
 	} else {
 		//从KAD网络中，由近及远找到一个节点，向这个节点请求查询数据
-
-		//比较容易理解的时，由于近的桶里的节点是直接连接好的，不需要重新连接，因此从最近的桶里找快一些，这个后面优化的时候分析一下
+		
 		d.kad.EachConn(req.Addr[:], 255, func(p *network.Peer, po int) bool {
 			id := p.ID()
 			if enode.GetRetrievalOptions(enode.NodeTypeOption(p.NodeType())) != (enode.RetrievalEnabled) {

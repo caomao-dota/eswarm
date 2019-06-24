@@ -1067,13 +1067,16 @@ type receiptResult struct {
 type NodeCountInfo struct {
 	Full  int
 	Light int
+	Current int
+	Total  int
 }
 
 // HandleGetFile handles a GET request to bzz://<manifest>/<path> and responds
 // with the content of the file at <path> from the given <manifest>
 func (s *Server) HandleGetNodes(w http.ResponseWriter, r *http.Request) {
-	ret := NodeCountInfo{0, 0}
+	ret := NodeCountInfo{0, 0,0,0}
 	ret.Full, ret.Light = s.api.GetNodeCount(r.Context())
+	ret.Current, ret.Total = s.api.GetTransferStatus(r.Context())
 	json.NewEncoder(w).Encode(&ret)
 }
 

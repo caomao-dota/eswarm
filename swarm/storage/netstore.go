@@ -322,6 +322,7 @@ func (f *fetcher) Fetch(rctx context.Context) (Chunk, error) {
 
 	hopCount, _ := rctx.Value("hopcount").(uint8)
 
+	//收到的是offeredHashes
 	if sourceIF != nil { //如果有source，说明是同步过程中，对方通过OfferedMsg来的信息，后续处理的时候，直接给fetcher的offerC通道这个地址
 		var source enode.ID
 		if err := source.UnmarshalText([]byte(sourceIF.(string))); err != nil {
