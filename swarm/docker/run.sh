@@ -22,5 +22,5 @@ echo $VERSION
 
 export BZZACCOUNT="`echo -n $KEYFILE | tail -c 40`" || true
 if [ "$BZZACCOUNT" == "" ]; then echo "Could not parse BZZACCOUNT from keyfile." && exit 1; fi
-tc qdisc add dev eth0 root tbf rate 25kbps latency 50ms burst 2500
+# tc qdisc add dev eth0 root tbf rate 25kbps latency 50ms burst 2500
 exec /swarm --bzzaccount=$BZZACCOUNT --password /password --datadir $DATADIR $@ 2>&1
