@@ -17,5 +17,5 @@ fi
 
 
 sh autogen.sh
-./configure --prefix=$SHELL_FOLDER/wdlibs/libs 
+./configure --prefix=$SHELL_FOLDER/wdlibs/libs
 make  && make install
