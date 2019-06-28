@@ -469,7 +469,7 @@ func (k *Kademlia) SuggestPeer() (suggestedPeer *BzzAddr, saturationDepth int, c
 		})
 	}
 	if suggestedPeer != nil {
-		log.Info("Suggested peer:", "uaddr", string(suggestedPeer.UAddr), "po", targetPO)
+		log.Trace("Suggested peer:", "uaddr", string(suggestedPeer.UAddr), "po", targetPO)
 	}
 
 	if uint8(saturationDepth) < k.depth {

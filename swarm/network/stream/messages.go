@@ -371,7 +371,7 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 			}
 			//	p.lastDelay.Store(req.Stream,  timeDelay)
 			delay := time.NewTimer(timeDelay)
-			log.Info("Delayed Sync:", "delayed", timeDelay,"Peer",p.ID(), "stream", req.Stream)
+			log.Trace("Delayed Sync:", "delayed", timeDelay,"Peer",p.ID(), "stream", req.Stream)
 			select {
 			case <-delay.C:
 			}
@@ -388,7 +388,7 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 	// go p.SendOfferedHashes(s, req.From, req.To)
 	l := len(hashes) / HashSize
 
-	log.Info("wanted batch length", "peer", p.ID(), "stream", req.Stream, "from", req.From, "to", req.To, "lenhashes", len(hashes), "l", l)
+	log.Trace("wanted batch length", "peer", p.ID(), "stream", req.Stream, "from", req.From, "to", req.To, "lenhashes", len(hashes), "l", l)
 	want, err := bv.NewFromBytes(req.Want, l)
 	if err != nil {
 		return fmt.Errorf("error initiaising bitvector of length %v: %v", l, err)

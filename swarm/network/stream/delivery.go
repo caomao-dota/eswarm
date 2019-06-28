@@ -178,7 +178,7 @@ func (d *Delivery) GetReceivedChunkInfo() map[common.Address]int64 {
 
 //收到了某个节点来的查询数据的请求
 func (d *Delivery) handleRetrieveRequestMsg(ctx context.Context, sp *Peer, req *RetrieveRequestMsg) error {
-	log.Info("received request", "peer", sp.ID(), "hash", req.Addr)
+	log.Trace("received request", "peer", sp.ID(), "hash", req.Addr)
 	handleRetrieveRequestMsgCount.Inc(1)
 
 	//记录
@@ -263,7 +263,7 @@ func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *Ch
 	spanId := fmt.Sprintf("stream.send.request.%v.%v", sp.ID(), req.Addr)
 	span := tracing.ShiftSpanByKey(spanId)
 
-	log.Info(" chunk received:", "info", spanId)
+	log.Trace(" chunk received:", "info", spanId)
 	go func() {
 		if span != nil {
 			defer span.(opentracing.Span).Finish()
@@ -343,7 +343,7 @@ func (d *Delivery) RequestFromPeers(ctx context.Context, req *network.Request) (
 	// this span will finish only when delivery is handled (or times out)
 	ctx = context.WithValue(ctx, tracing.StoreLabelId, "stream.send.request")
 	ctx = context.WithValue(ctx, tracing.StoreLabelMeta, fmt.Sprintf("%v.%v", sp.ID(), req.Addr))
-	log.Info("Send Request:", "addr", req.Addr, "Hop", req.HopCount, "target:", sp.ID())
+	log.Trace("Send Request:", "addr", req.Addr, "Hop", req.HopCount, "target:", sp.ID())
 	err := sp.SendPriority(ctx, &RetrieveRequestMsg{
 		Addr:      req.Addr,
 		SkipCheck: req.SkipCheck,
