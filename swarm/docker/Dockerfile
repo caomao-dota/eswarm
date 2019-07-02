@@ -30,7 +30,7 @@ RUN  mkdir -p $GOPATH/src/github.com/plotozhu/ && \
     mkdir -p vendor && mv vendor.json vendor/vendor.json
 
 RUN     cd $GOPATH/src/github.com/plotozhu/MDCMainnet &&\
-        govendor migrate && govendor sync
+         govendor sync
 
 RUN     cd $GOPATH/src/github.com/plotozhu/MDCMainnet/vendor/github.com/plotozhu/wiredtiger-go && \
         git pull  && sh install-deps.sh
