@@ -27,7 +27,7 @@ RUN  mkdir -p $GOPATH/src/github.com/plotozhu/ && \
     git clone https://3823a1162e4a52f6e284610be5151c4204a900e7:@github.com/plotozhu/MDCMainnet && \
     cd $GOPATH/src/github.com/plotozhu/MDCMainnet && \
     git checkout ${VERSION}    && cd $GOPATH/src/github.com/plotozhu/MDCMainnet &&\
-    mkdir -p vendor && cp vendor.json vendor/vendor.json
+    mkdir -p vendor && mv vendor.json vendor/vendor.json
 
 RUN     cd $GOPATH/src/github.com/plotozhu/MDCMainnet &&\
         govendor migrate && govendor sync
