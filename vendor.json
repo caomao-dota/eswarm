@@ -407,16 +407,10 @@
 			"revisionTime": "2019-02-27T00:00:51Z"
 		},
 		{
-			"checksumSHA1": "Ntcne1YrRnQUvLLT/bNPpSTnwXM=",
+			"checksumSHA1": "JS/LQFhqSRsSAcUAAXTg64mm0NU=",
 			"path": "github.com/plotozhu/wiredtiger-go",
-			"revision": "e14c4d5e897dff3f15dd59c1e13555ddec8dc205",
-			"revisionTime": "2019-06-09T10:04:40Z"
-		},
-		{
-			"checksumSHA1": "1utImQpZT7YkoyK30tt3cZICFAk=",
-			"path": "github.com/plotozhu/wiredtiger-go/wiredtiger",
-			"revision": "cc158f86436e3a349187d28ce1c4c1e1ec3fc364",
-			"revisionTime": "2019-06-09T06:50:44Z"
+			"revision": "d45c15f5c4febb87cd1198bce0d24f8c05590089",
+			"revisionTime": "2019-06-13T03:09:34Z"
 		},
 		{
 			"checksumSHA1": "LuFv4/jlrmFNnDb/5SCSEPAM9vU=",

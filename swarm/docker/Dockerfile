@@ -27,10 +27,13 @@ RUN  mkdir -p $GOPATH/src/github.com/plotozhu/ && \
     git clone https://3823a1162e4a52f6e284610be5151c4204a900e7:@github.com/plotozhu/MDCMainnet && \
     cd $GOPATH/src/github.com/plotozhu/MDCMainnet && \
     git checkout ${VERSION}    && cd $GOPATH/src/github.com/plotozhu/MDCMainnet &&\
-    mkdir -p vendor && cp vendor.json vendor/vendor.json && \
-    govendor migrate && govendor sync  && \
-    cd $GOPATH/src/github.com/plotozhu/MDCMainnet/vendor/github.com/plotozhu/wiredtiger-go && \
-    sh install-deps.sh
+    mkdir -p vendor && cp vendor.json vendor/vendor.json
+
+RUN     cd $GOPATH/src/github.com/plotozhu/MDCMainnet &&\
+        govendor migrate && govendor sync
+
+RUN     cd $GOPATH/src/github.com/plotozhu/MDCMainnet/vendor/github.com/plotozhu/wiredtiger-go && \
+        git pull  && sh install-deps.sh
 
 
 
