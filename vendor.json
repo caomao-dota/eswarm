@@ -21,11 +21,6 @@
 			"revisionTime": "2016-08-11T21:22:31Z"
 		},
 		{
-			"path": "git",
-			"revision": "github.com:apilayer/freegeoip.git",
-			"version": "github.com:apilayer/freegeoip.git"
-		},
-		{
 			"checksumSHA1": "oKluEwtvvBjw/U7HuxJerq9zM6c=",
 			"path": "github.com/Azure/azure-pipeline-go/pipeline",
 			"revision": "105d6349faa1dec531c0b932b5863540c1f6aafb",
