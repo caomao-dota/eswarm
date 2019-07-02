@@ -51,7 +51,7 @@ tempDir
 private*
 reportData
 vendor/**/
-#/!vendor/vendor.json
+!vendor/vendor.json
 
 
 
