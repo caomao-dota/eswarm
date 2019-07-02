@@ -1,5 +1,7 @@
 #!/bin/sh
 
+
+sudo apt install -y autoconf automake libtool git 
 SHELL_FOLDER=$(pwd)
 echo ${SHELL_FOLDER}
 mkdir -p $SHELL_FOLDER/wdlibs/libs
