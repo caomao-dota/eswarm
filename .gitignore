@@ -50,6 +50,8 @@ profile.cov
 tempDir
 private*
 reportData
+vendor/
+!vendor/vendor.json
 
 
 
