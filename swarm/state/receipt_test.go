@@ -515,7 +515,7 @@ func loadReceiptStore(t *testing.T, dbPath string) *ReceiptStore {
 
 func Test_ReadExternData(t *testing.T) {
 
-	rs := loadReceiptStore(t,"/Users/aegon/Downloads/receipts.db")
+	rs := loadReceiptStore(t,"/Users/aegon/Downloads/Potato Desktop/receipts.db/receipts.db_04")
 	receipts := rs.GetReceiptsToReport()
 	log.Info("receipts is:",receipts)
 }
