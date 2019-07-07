@@ -7,9 +7,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/rlp"
 	"io"
 	"io/ioutil"
 	"net"
@@ -19,6 +16,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/plotozhu/MDCMainnet/rlp"
 )
 
 // createHTTPClient for connection re-use
@@ -267,17 +268,18 @@ func SendDataToServer(url string, timeout time.Duration, data []byte) error {
 	if err == nil { //提交成功，本地删除
 		defer res.Body.Close()
 		if res.StatusCode != 200 {
+			log.Error("error response in send receipts", "error", res.StatusCode, "url", url)
 			err = errors.New(res.Status)
-		}else{
-			log.Error("error response in send receipts","error",res.StatusCode,"url",url)
+		} else {
+
 		}
-	}else{
-		log.Error("error in send receipts","error",err,"url",url)
+	} else {
+		log.Error("error in send receipts", "error", err, "url", url)
 	}
 	return err
 }
 
-func GetDataFromServer(url string) (data []byte,err error){
+func GetDataFromServer(url string) (data []byte, err error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		// handle error
@@ -287,10 +289,9 @@ func GetDataFromServer(url string) (data []byte,err error){
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		// handle error
-	}else {
+	} else {
 		data = []byte(body)
 	}
-
 
 	return
 }

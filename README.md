@@ -25,30 +25,25 @@
 *  [License](#license)
 
 ## Building the source
-### 下载编译wiredTiger
-    git clone https://github.com/wiredtiger/wiredtiger.git
-然后生成makefile文件：
-    
-    cd wiredtiger
-    sh autogen.sh
-    
-**备注** 
-* 成功编译wiredtiger 需要 git, autoconf, automake, libtool
 
-编译文件
-    
-    ./configure && make
-    
-安装到系统
-    
-    make install     
+### 处理vendor
+* 首先保证govendor已经安装，如果没有，使用`sudo apt install govendor`安装
+
+    cd MDCMainnet
+    mkdir vendor
+    mv vendor.json vendor
+    govendor sync
+### 下载编译wiredTiger
+    cd vendor/github.com/plotozhu/wiredtiger-go
+    ./install-deps.sh
+       
 
 ###  编译ESwarm
-Building ESwarm requires Go (version 1.10 or later).
+    回到主目录
+    cd ../../../../
 
-    go get -d github.com/plotozhu/MDCMainnet
-
-    go install github.com/plotozhu/MDCMainnet/cmd/swarm
+    make 
+    make swarm
 
 ## Running Swarm
 
