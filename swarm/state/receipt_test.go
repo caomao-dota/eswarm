@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"github.com/plotozhu/MDCMainnet/common"
 	"github.com/plotozhu/MDCMainnet/crypto"
+	"github.com/plotozhu/MDCMainnet/log"
 	"github.com/plotozhu/MDCMainnet/rlp"
 	"github.com/syndtr/goleveldb/leveldb"
 	"math/rand"
+	"net/http"
 	"os"
 	"testing"
 	"time"
@@ -498,4 +500,50 @@ func Test_Unordered2(t *testing.T) {
 	}
 	t.Log("Test  unordered receipts passed")
 	store4.mockAutoSubmit()
+}
+
+func loadReceiptStore(t *testing.T, dbPath string) *ReceiptStore {
+
+	db, err := leveldb.OpenFile(dbPath, nil)
+	if err != nil {
+		t.Error(err)
+	}
+	receiptStore := newReceiptsStore(db, getOrCreateKey(100), "",false)
+
+	return receiptStore
+}
+
+func Test_ReadExternData(t *testing.T) {
+
+	rs := loadReceiptStore(t,"/Users/aegon/Downloads/receipts.db")
+	receipts := rs.GetReceiptsToReport()
+	log.Info("receipts is:",receipts)
+}
+
+func  Test_Post(t *testing.T)  {
+
+	client := &http.Client{
+		Timeout: 5*time.Second,
+	}
+
+	request, err := http.NewRequest("POST", "http://127.0.0.1:3000", bytes.NewReader([]byte("{}")))
+	if err != nil {
+		log.Error("error in post receipts","reason",err)
+	}
+	//request.Header.Set("Connection", "Keep-Alive")
+	//request.Header.Set("Content-Type", "text/plain")
+
+	res, err := client.Do(request)
+	if err == nil { //提交成功，本地删除
+
+		defer res.Body.Close()
+		if res.StatusCode == 200 {
+			//return nil
+		}else {
+			log.Error("error in post receipts","status",res.Status,"code",res.StatusCode)
+			//return errors.New("status")
+		}
+	}
+	//return err
+
 }

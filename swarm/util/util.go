@@ -269,6 +269,8 @@ func SendDataToServer(url string, timeout time.Duration, data []byte) error {
 		if res.StatusCode != 200 {
 			err = errors.New(res.Status)
 		}
+	}else{
+		log.Error("error in send receipts","error",err,"url",url)
 	}
 	return err
 }

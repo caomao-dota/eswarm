@@ -556,7 +556,14 @@ func (rs *ReceiptStore) SendDataToServer(url string, timeout time.Duration, resu
 
 	res, err := client.Do(request)
 	if err == nil { //提交成功，本地删除
+
 		defer res.Body.Close()
+		if res.StatusCode == 200 {
+			return nil
+		}else {
+			log.Error("error in post receipts","status",res.Status,"code",res.StatusCode)
+			return errors.New("status")
+		}
 	}
 	return err
 }
@@ -570,8 +577,8 @@ func (rs *ReceiptStore) doAutoSubmit() error {
 	rs.hmu.Lock()
 	defer rs.hmu.Unlock()
 	len := len(rs.receiptsLogs)
-	if len > 100 {
-		rs.receiptsLogs = rs.receiptsLogs[len-100:]
+	if len > 1000 {
+		rs.receiptsLogs = rs.receiptsLogs[len-1000:]
 	}
 	if err == nil { //提交成功，本地删除
 		rs.receiptsLogs = append(rs.receiptsLogs, receipts)
