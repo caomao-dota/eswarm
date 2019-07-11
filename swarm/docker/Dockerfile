@@ -44,7 +44,7 @@ RUN    cd  $GOPATH/src/github.com/plotozhu/MDCMainnet && \
     go install -ldflags "-X main.gitCommit=${VERSION}" ./cmd/geth
 
 
-FROM alpine:3.8 as esc
+FROM ubuntu:latest as esc
 RUN apk add iproute2
 WORKDIR /
 COPY --from=golang /go/bin/swarm /
