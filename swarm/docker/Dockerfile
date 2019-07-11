@@ -45,12 +45,11 @@ RUN    cd  $GOPATH/src/github.com/plotozhu/MDCMainnet && \
 
 
 FROM ubuntu:latest as esc
-RUN apk add iproute2
+
 WORKDIR /
 COPY --from=golang /go/bin/swarm /
 COPY --from=golang /go/bin/geth /
 COPY --from=golang /go/bin/swarm-smoke /
 COPY --from=golang /go/bin/global-store /
-ADD run.sh /run.sh
-ADD run-smoke.sh /run-smoke.sh
+
 ENTRYPOINT ["/config/run.sh"]
