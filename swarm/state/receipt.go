@@ -423,7 +423,7 @@ func (rs *ReceiptStore) OnNewReceipt(receipt *Receipt) error {
 	}
 	//超过MAX_STIME_JITTER(默认2个小时)的不收
 	jitter := time.Since(receipt.Stime)
-	if jitter > 7*MAX_STIME_JITTER || jitter < -7*MAX_STIME_JITTER {
+	if jitter > 24*time.Hour || jitter < -24*time.Hour {
 		log.Error("signed time is :", "time", receipt.Stime)
 		return ErrInvalidSTime
 	}
