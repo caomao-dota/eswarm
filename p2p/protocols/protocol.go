@@ -258,6 +258,7 @@ func (p *Peer) Run(handler func(ctx context.Context, msg interface{}) error) err
 // if they are useful for other protocols
 //Ploto TODO: 目前Drop断开了连接，是否只要有错误就断开连接，还是仅仅删除对应的协议？后面需要处理
 func (p *Peer) Drop(err error) {
+	log.Error("error to drop peer","reason",err)
 	p.Disconnect(p2p.DiscSubprotocolError)
 }
 

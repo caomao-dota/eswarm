@@ -250,7 +250,7 @@ loop:
 		}
 	}
 
-	log.Info("peer closed:", "id", p.ID())
+	log.Info("peer closed:", "id", p.ID(),"reason",reason)
 	close(p.closed)
 	p.rw.close(reason)
 	p.wg.Wait()

@@ -1167,7 +1167,7 @@ func (tab *Table) updateNodeStatus(nodeId enode.ID, b *bucket, alive bool, nextT
 		}
 	} else {
 		//新的东西，其实不应该出现
-		log.Error("Received an unknown node respone")
+		log.Error("Received an unknown node respone","id",nodeId,"nexttime",nextTimeToTest)
 	}
 
 }

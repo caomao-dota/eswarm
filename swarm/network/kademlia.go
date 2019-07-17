@@ -162,6 +162,7 @@ func (k *Kademlia) IsBlocked(id enode.ID, inbound bool) bool {
 	idStr := fmt.Sprintf("%v-%v", id, inbound)
 	val, ok := k.blacklist.Get(idStr)
 	if ok && !inbound && !time.Now().After(val.(p2p.BlackItem).DiscTime) {
+		log.Info("block of black list","id",id)
 		return true
 	} else if inbound {
 
@@ -196,6 +197,7 @@ func (k *Kademlia) ClearDelay(id enode.ID, inbound bool) {
 func (k *Kademlia) SetDelay(id enode.ID, inbound bool) {
 	idStr := fmt.Sprintf("%v-%v", id, inbound)
 	val, exist := k.blacklist.Get(idStr)
+	log.Info("add to blacklist:","id",idStr)
 	item := p2p.BlackItem{time.Now().Add(30 * time.Second), 1}
 	if exist {
 		item = val.(p2p.BlackItem)

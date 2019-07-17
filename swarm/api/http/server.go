@@ -218,9 +218,6 @@ func NewServer(api *api.API, corsString string) *Server {
 		),
 	})
 	server.Handler = c.Handler(mux)
-	go func() {
-		http.ListenAndServe("0.0.0.0:8080", nil)
-	}()
 	server.entries, _ = lru.New(10000)
 	server.httpClient = util.CreateHttpReader()
 
