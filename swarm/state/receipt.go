@@ -423,7 +423,7 @@ func (rs *ReceiptStore) OnNewReceipt(receipt *Receipt) error {
 	}
 	//超过MAX_STIME_JITTER(默认2个小时)的不收
 	jitter := time.Since(receipt.Stime)
-	if jitter > 7*MAX_STIME_JITTER || jitter < -7*MAX_STIME_JITTER {
+	if jitter > 24*time.Hour || jitter < -24*time.Hour {
 		log.Error("signed time is :", "time", receipt.Stime)
 		return ErrInvalidSTime
 	}
@@ -587,6 +587,7 @@ func (rs *ReceiptStore) SendDataToServer(url string, timeout time.Duration, resu
 	return err
 }
 func (rs *ReceiptStore) doAutoSubmit() error {
+	log.Info("report receipts to server 1")
 	receipts := rs.GetReceiptsToReport()
 
 	result, err := rs.createReportData(receipts)
@@ -621,6 +622,7 @@ func (rs *ReceiptStore) mockAutoSubmit() error {
 	return err
 }
 func (rs *ReceiptStore) submitRoutine() {
+	log.Info("Setup subroutine ", "time", MAX_STIME_DURATION)
 	timer := time.NewTimer(MAX_STIME_DURATION)
 	rs.doAutoSubmit()
 	for {

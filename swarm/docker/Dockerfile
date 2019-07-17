@@ -27,7 +27,7 @@ RUN  mkdir -p $GOPATH/src/github.com/plotozhu/ && \
     git clone https://3823a1162e4a52f6e284610be5151c4204a900e7:@github.com/plotozhu/MDCMainnet && \
     cd $GOPATH/src/github.com/plotozhu/MDCMainnet && \
     git checkout ${VERSION}    && cd $GOPATH/src/github.com/plotozhu/MDCMainnet &&\
-    mkdir -p vendor && mv vendor.json vendor/vendor.json
+    mkdir -p vendor && mv vendor_bak.json vendor/vendor.json
 
 RUN     cd $GOPATH/src/github.com/plotozhu/MDCMainnet &&\
          govendor sync
@@ -45,12 +45,11 @@ RUN    cd  $GOPATH/src/github.com/plotozhu/MDCMainnet && \
 
 
 FROM ubuntu:latest as esc
-RUN apk add iproute2
+
 WORKDIR /
 COPY --from=golang /go/bin/swarm /
 COPY --from=golang /go/bin/geth /
 COPY --from=golang /go/bin/swarm-smoke /
 COPY --from=golang /go/bin/global-store /
-ADD run.sh /run.sh
-ADD run-smoke.sh /run-smoke.sh
+
 ENTRYPOINT ["/config/run.sh"]
