@@ -197,7 +197,7 @@ func (k *Kademlia) ClearDelay(id enode.ID, inbound bool) {
 func (k *Kademlia) SetDelay(id enode.ID, inbound bool) {
 	idStr := fmt.Sprintf("%v-%v", id, inbound)
 	val, exist := k.blacklist.Get(idStr)
-	log.Info("add to blacklist:","id",idStr)
+	log.Trace("add to blacklist:","id",idStr)
 	item := p2p.BlackItem{time.Now().Add(30 * time.Second), 1}
 	if exist {
 		item = val.(p2p.BlackItem)
@@ -207,7 +207,7 @@ func (k *Kademlia) SetDelay(id enode.ID, inbound bool) {
 		}
 
 	}
-	log.Info("block peer", "peer", idStr, "time to", item.DiscTime)
+	log.Trace("block peer", "peer", idStr, "time to", item.DiscTime)
 
 	k.blacklist.Add(idStr, item)
 
@@ -518,7 +518,7 @@ func (k *Kademlia) On(p *Peer) (depth uint8, changed bool, err error) {
 				return a
 			})
 			// send new address count value only if the peer is inserted
-			log.Info("Update addr counts", "size", k.addrs.Size(), "channel", k.peerChangedC != nil)
+			log.Trace("Update addr counts", "size", k.addrs.Size(), "channel", k.peerChangedC != nil)
 			if k.peerChangedC != nil {
 				k.peerChangedC <- k.conns.Size()
 			}
