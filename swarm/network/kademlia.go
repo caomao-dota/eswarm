@@ -162,13 +162,13 @@ func (k *Kademlia) IsBlocked(id enode.ID, inbound bool) bool {
 	idStr := fmt.Sprintf("%v-%v", id, inbound)
 	val, ok := k.blacklist.Get(idStr)
 	if ok && !inbound && !time.Now().After(val.(p2p.BlackItem).DiscTime) {
-		log.Info("block of black list","id",id)
+		log.Trace("block of black list","id",id)
 		return true
 	} else if inbound {
 
 		bin, _ := Pof(k.BaseAddr(), id[:], 0)
 
-		log.Info(" test for bucket", "id", id, "bucket", bin, "size", k.conns.SizeOfBin(bin))
+		log.Trace(" test for bucket", "id", id, "bucket", bin, "size", k.conns.SizeOfBin(bin))
 		return k.conns.SizeOfBin(bin) >= k.MaxBinSize
 
 	}
