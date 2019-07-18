@@ -1052,10 +1052,10 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 	}
 	c.caps, c.name = phs.Caps, phs.Name
 
-	if !srv.ntab.CanAddNode(c.node) {
+	/*if !srv.ntab.CanAddNode(c.node) {
 		log.Info(" unable to add node to kad network", "id", c.node.String(), "ip", c.node.IP(), "port", c.node.TCP())
 		return errors.New("break peer and waiting for ping/pong first")
-	}
+	}*/
 	err = srv.checkpoint(c, srv.addpeer)
 	if err != nil {
 		clog.Trace("Rejected peer", "err", err)
