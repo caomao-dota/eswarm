@@ -30,9 +30,13 @@
 * 首先保证govendor已经安装，如果没有，使用`sudo apt install govendor`安装
 
     cd MDCMainnet
+    
     mkdir vendor
-    mv vendor.json vendor
+    
+    mv vendor_bak.json vendor
+    
     govendor sync
+    
 ### 下载编译wiredTiger
     cd vendor/github.com/plotozhu/wiredtiger-go
     ./install-deps.sh
