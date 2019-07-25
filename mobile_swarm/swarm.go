@@ -95,6 +95,7 @@ type ActivatePost struct {
 	Appid      string
 	Credential string
 	Account    string
+	ClientId   string
 }
 
 type RespData struct {
@@ -102,7 +103,7 @@ type RespData struct {
 	Error      string
 }
 
-func PostToServer(urlstr string, timeout time.Duration, data *ActivatePost) (int64, error) {
+func PostToServer(urlStr string, timeout time.Duration, data *ActivatePost) (int64, error) {
 
 	client := &http.Client{
 		Timeout: timeout * time.Second,
@@ -112,7 +113,8 @@ func PostToServer(urlstr string, timeout time.Duration, data *ActivatePost) (int
 	postdata.Set("appId", data.Appid)
 	postdata.Set("account", data.Account)
 	postdata.Set("credential", data.Credential)
-	resp, err := client.PostForm(urlstr, postdata)
+	postdata.Set("clientId", data.ClientId)
+	resp, err := client.PostForm(urlStr, postdata)
 	if err != nil {
 		return 0, err
 	}
@@ -212,6 +214,10 @@ func PathExists(path string) (bool, error) {
 }
 
 func Activate(path string, appId string, credential string, addr string, newAccount bool, password string, arg int) (int64, error) {
+	return ActivateR(path, appId, "", credential, addr, newAccount, password, arg)
+}
+
+func ActivateR(path string, appId string, clientId string, credential string, addr string, newAccount bool, password string, arg int) (int64, error) {
 
 	if path == "" {
 		return 0, errors.New("Must input path ...")
@@ -224,7 +230,7 @@ func Activate(path string, appId string, credential string, addr string, newAcco
 	}
 
 	if addr == "" {
-		addr = "http://172.16.1.10:4000/apis/v1/activate"
+		addr = "https://service.cdscfund.org/apis/v1/activate"
 	}
 
 	if password == "" {
@@ -274,7 +280,7 @@ func Activate(path string, appId string, credential string, addr string, newAcco
 		bzzAccount = account
 	}
 
-	activatePost := &ActivatePost{appId, credential, bzzAccount}
+	activatePost := &ActivatePost{appId, credential, bzzAccount, clientId}
 	ti, err := PostToServer(addr, 5, activatePost)
 	if err != nil {
 		return 0, err
