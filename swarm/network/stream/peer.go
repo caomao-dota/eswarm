@@ -66,8 +66,12 @@ type Peer struct {
 	// on creating a new client in offered hashes handler.
 	clientParams map[Stream]*clientParams
 	quit         chan struct{}
-	lastHashTime sync.Map
-	lastDelay    sync.Map
+	lastHashTime 	sync.Map
+	lastDelay    	sync.Map
+	lastOHTime    	sync.Map
+	lastOHDelay    	sync.Map
+
+	segments        int
 }
 
 type WrappedPriorityMsg struct {
@@ -158,7 +162,26 @@ func (p *Peer) Deliver(ctx context.Context, chunk storage.Chunk, priority uint8,
 
 	ctx = context.WithValue(ctx, "stream_send_tag", nil)
 	log.Trace("Send response:", "send id", p.ID(), "hash", chunk.Address())
-	return p.SendPriority(ctx, msg, priority)
+	p.segments += len(chunk.Data())
+	//根据priority队列中的情况，作一个处理
+	//如果priority队列中有排队的数据，那么就延时1ms发送
+	queueLen := p.pq.GetQueueLen(int(priority))
+	if queueLen >0 {
+		go func() {
+			timeC := time.NewTimer(time.Duration(queueLen) * time.Millisecond)
+			select {
+			case <- timeC.C:
+				p.SendPriority(ctx, msg, priority)
+			}
+
+		}()
+		return nil
+	}else{
+		return p.SendPriority(ctx, msg, priority)
+	}
+
+
+
 }
 
 // SendPriority sends message to the peer using the outgoing priority queue
