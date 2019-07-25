@@ -131,7 +131,7 @@ func (p *Peer) handleSubscribeMsg(ctx context.Context, req *SubscribeMsg) (err e
 	}
 
 	go func() {
-		if err := p.SendOfferedHashes(os, from, to,0); err != nil {
+		if err := p.SendOfferedHashes(os, from, to); err != nil {
 			log.Warn("SendOfferedHashes error", "peer", p.ID().TerminalString(), "err", err)
 		}
 
@@ -149,7 +149,7 @@ func (p *Peer) handleSubscribeMsg(ctx context.Context, req *SubscribeMsg) (err e
 			return err
 		}
 		go func() {
-			if err := p.SendOfferedHashes(os, req.History.From, req.History.To,0); err != nil {
+			if err := p.SendOfferedHashes(os, req.History.From, req.History.To); err != nil {
 				log.Warn("SendOfferedHashes error", "peer", p.ID().TerminalString(), "err", err)
 			}
 
@@ -190,7 +190,7 @@ type OfferedHashesMsg struct {
 	Stream         Stream // name of Stream
 	From, To       uint64 // peer and db-specific entry count
 	Hashes         []byte // stream of hashes (128)
-	Delayed        uint64
+	//Delayed        uint64
 	*HandoverProof        // HandoverProof
 }
 
@@ -243,7 +243,7 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 		errC := make(chan error)
 		ctx, cancel := context.WithTimeout(ctx, syncBatchTimeout)
 
-	lastOHTime, ok := p.lastOHTime.Load(req.Stream)
+	/*lastOHTime, ok := p.lastOHTime.Load(req.Stream)
 	//lastDelay,ok2 := p.lastDelay.Load(req.Stream)
 	timeDelay := time.Duration(0)
 	if ok {
@@ -260,12 +260,12 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 		}
 		p.lastOHDelay.Store(req.Stream, timeDelay)
 		//	p.lastDelay.Store(req.Stream,  timeDelay)
-	}
+	}*/
 		go func(){
 
 
 			//lastDelay,ok2 := p.lastDelay.Load(req.Stream)
-			if timeDelay != time.Duration(0) {
+		/*	if timeDelay != time.Duration(0) {
 
 				delay := time.NewTimer(timeDelay)
 
@@ -278,7 +278,7 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 			}
 
 			p.lastOHTime.Store(req.Stream, time.Now())
-			ctx = context.WithValue(ctx, "source", p.ID().String())
+*/			ctx = context.WithValue(ctx, "source", p.ID().String())
 			for i := 0; i < lenHashes; i += HashSize {
 				hash := hashes[i : i+HashSize]
 				//wait是一个函数，要么是一个fetcher函数，要么是nil(数据已经取了）
@@ -348,7 +348,7 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 			Want:   want.Bytes(),
 			From:   from,
 			To:     to,
-			Delayed:uint64(timeDelay),
+		//	Delayed:uint64(timeDelay),
 		}
 		//		log.Debug("waiting for sending want batch", "peer", p.ID(), "stream", msg.Stream, "from", msg.From, "to", msg.To)
 		select {
@@ -432,7 +432,7 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 
 		p.lastHashTime.Store(req.Stream, time.Now())
 
-		if err := p.SendOfferedHashes(s, req.From, req.To,uint64(timeDelay)); err != nil {
+		if err := p.SendOfferedHashes(s, req.From, req.To); err != nil {
 			log.Warn("SendOfferedHashes error", "peer", p.ID().TerminalString(), "err", err)
 		}
 	}()
