@@ -33,7 +33,7 @@
     
     mkdir vendor
     
-    mv vendor_bak.json vendor.json
+    mv vendor_bak.json vendor
     
     govendor sync
     

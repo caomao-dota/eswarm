@@ -214,10 +214,10 @@ func PathExists(path string) (bool, error) {
 }
 
 func Activate(path string, appId string, credential string, addr string, newAccount bool, password string, arg int) (int64, error) {
-	return ActivateR(path, appId, "", credential, addr, newAccount, password, arg)
+	return ActivateBase(path, appId, "", credential, addr, newAccount, password, arg)
 }
 
-func ActivateR(path string, appId string, clientId string, credential string, addr string, newAccount bool, password string, arg int) (int64, error) {
+func ActivateBase(path string, appId string, clientId string, credential string, addr string, newAccount bool, password string, arg int) (int64, error) {
 
 	if path == "" {
 		return 0, errors.New("Must input path ...")
