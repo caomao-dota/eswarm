@@ -380,7 +380,7 @@ type WantedHashesMsg struct {
 	Stream   Stream
 	Want     []byte // bitvector indicating which keys of the batch needed  当前想要的哈希的位映射表
 	From, To uint64 // next interval offset - empty if not to be continued  下一个要检查的区域
-	Delayed   uint64
+	//Delayed   uint64
 }
 
 // String pretty prints WantedHashesMsg
@@ -413,7 +413,7 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 			if ok {
 				lastDelay = delayed.(time.Duration)
 			}
-			timeDelay =  (time.Since(lastHashTime.(time.Time))-time.Duration(lastDelay) - time.Duration(req.Delayed))
+			timeDelay =  5*(time.Since(lastHashTime.(time.Time))-time.Duration(lastDelay) )
 			if timeDelay > 10*time.Second {
 				timeDelay = 10 * time.Second
 			}else if timeDelay < 0 {
