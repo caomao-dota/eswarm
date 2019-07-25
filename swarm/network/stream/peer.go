@@ -202,7 +202,7 @@ func (p *Peer) SendPriority(ctx context.Context, msg interface{}, priority uint8
 }
 
 // SendOfferedHashes sends OfferedHashesMsg protocol msg
-func (p *Peer) SendOfferedHashes(s *server, f, t uint64) error {
+func (p *Peer) SendOfferedHashes(s *server, f, t,delayed uint64) error {
 	var sp opentracing.Span
 	ctx, sp := spancontext.StartSpan(
 		context.TODO(),
@@ -231,6 +231,7 @@ func (p *Peer) SendOfferedHashes(s *server, f, t uint64) error {
 		From:          from,
 		To:            to,
 		Stream:        s.stream,
+		Delayed:       delayed,
 	}
 	//log.Trace
 	log.Debug("Send Offered batch", "peer", p.ID(), "stream", s.stream, "len", len(hashes), "from", from, "to", to)
