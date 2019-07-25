@@ -252,7 +252,7 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 		if ok {
 			lastDelay = delayed.(time.Duration)
 		}
-		timeDelay := 5 * (time.Since(lastOHTime.(time.Time)) - time.Duration(lastDelay) - time.Duration(req.Delayed))
+		timeDelay := (time.Since(lastOHTime.(time.Time)) - time.Duration(lastDelay) - time.Duration(req.Delayed))
 		if timeDelay > 10*time.Second {
 			timeDelay = 10 * time.Second
 		}else if timeDelay < 0 {
@@ -413,7 +413,7 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 			if ok {
 				lastDelay = delayed.(time.Duration)
 			}
-			timeDelay = 5 * (time.Since(lastHashTime.(time.Time))-time.Duration(lastDelay) - time.Duration(req.Delayed))
+			timeDelay =  (time.Since(lastHashTime.(time.Time))-time.Duration(lastDelay) - time.Duration(req.Delayed))
 			if timeDelay > 10*time.Second {
 				timeDelay = 10 * time.Second
 			}else if timeDelay < 0 {
