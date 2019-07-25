@@ -225,37 +225,66 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 		return err
 	}
 
-	hashes := req.Hashes
-	lenHashes := len(hashes)
-	if lenHashes%HashSize != 0 {
-		return fmt.Errorf("error invalid hashes length (len: %v)", lenHashes)
-	}
 
-	want, err := bv.New(lenHashes / HashSize)
-	if err != nil {
-		return fmt.Errorf("error initiaising bitvector of length %v: %v", lenHashes/HashSize, err)
-	}
 
-	ctr := 0
-	errC := make(chan error)
-	ctx, cancel := context.WithTimeout(ctx, syncBatchTimeout)
-
-	ctx = context.WithValue(ctx, "source", p.ID().String())
-	for i := 0; i < lenHashes; i += HashSize {
-		hash := hashes[i : i+HashSize]
-		//wait是一个函数，要么是一个fetcher函数，要么是nil(数据已经取了）
-		if wait := c.NeedData(ctx, hash); wait != nil {
-			ctr++
-			want.Set(i/HashSize, true)
-			// create request and wait until the chunk data arrives and is stored
-			go func(w func(context.Context) error) {
-				select {
-				case errC <- w(ctx): // 	fetcher函数，从对方去取数据
-				case <-ctx.Done(): //
-				}
-			}(wait)
+		hashes := req.Hashes
+		lenHashes := len(hashes)
+		if lenHashes%HashSize != 0 {
+			return fmt.Errorf("error invalid hashes length (len: %v)", lenHashes)
 		}
-	}
+
+		want, err := bv.New(lenHashes / HashSize)
+		if err != nil {
+			return fmt.Errorf("error initiaising bitvector of length %v: %v", lenHashes/HashSize, err)
+		}
+
+		ctr := 0
+		errC := make(chan error)
+		ctx, cancel := context.WithTimeout(ctx, syncBatchTimeout)
+		go func(){
+
+			lastOHTime, ok := p.lastOHTime.Load(req.Stream)
+			//lastDelay,ok2 := p.lastDelay.Load(req.Stream)
+			if ok {
+				delayed,ok := p.lastOHDelay.Load(req.Stream)
+				lastDelay := int32(0)
+				if ok {
+					lastDelay = delayed.(int32)
+				}
+				timeDelay := 5 * (time.Since(lastOHTime.(time.Time))-time.Duration(lastDelay))
+				if timeDelay > 10*time.Second {
+					timeDelay = 10 * time.Second
+				}
+				//	p.lastDelay.Store(req.Stream,  timeDelay)
+				delay := time.NewTimer(timeDelay)
+				p.lastOHDelay.Store(req.Stream,delay)
+				log.Trace("Delayed Sync:", "delayed", timeDelay,"Peer",p.ID(), "stream", req.Stream)
+				select {
+				case <-delay.C:
+				}
+			} else {
+
+			}
+
+			p.lastOHTime.Store(req.Stream, time.Now())
+			ctx = context.WithValue(ctx, "source", p.ID().String())
+			for i := 0; i < lenHashes; i += HashSize {
+				hash := hashes[i : i+HashSize]
+				//wait是一个函数，要么是一个fetcher函数，要么是nil(数据已经取了）
+				if wait := c.NeedData(ctx, hash); wait != nil {
+					ctr++
+					want.Set(i/HashSize, true)
+					// create request and wait until the chunk data arrives and is stored
+					go func(w func(context.Context) error) {
+						select {
+						case errC <- w(ctx): // 	fetcher函数，从对方去取数据
+						case <-ctx.Done(): //
+						}
+					}(wait)
+				}
+			}
+		}()
+
 
 	//重新建立了一个线程，管理所有的等待事宜
 	go func() {
@@ -299,16 +328,16 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 		log.Debug("Sync finished", "peer", p.ID(), "stream", req.Stream, "from", from, "to", to, "addr", p.streamer.addr)
 		return nil
 	}
-
-	//注意，from/to变成新的了，Want应该对应的旧的，这个的意思是就同时发送上一次的wantedhash和下一次的	from/to，这个在下面的处理函数里得到了验证要
-	msg := &WantedHashesMsg{
-		Stream: req.Stream,
-		Want:   want.Bytes(),
-		From:   from,
-		To:     to,
-	}
 	go func() {
 
+
+		//注意，from/to变成新的了，Want应该对应的旧的，这个的意思是就同时发送上一次的wantedhash和下一次的	from/to，这个在下面的处理函数里得到了验证要
+		msg := &WantedHashesMsg{
+			Stream: req.Stream,
+			Want:   want.Bytes(),
+			From:   from,
+			To:     to,
+		}
 		//		log.Debug("waiting for sending want batch", "peer", p.ID(), "stream", msg.Stream, "from", msg.From, "to", msg.To)
 		select {
 		case err := <-c.next:
@@ -365,12 +394,18 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 		lastHashTime, ok := p.lastHashTime.Load(req.Stream)
 		//lastDelay,ok2 := p.lastDelay.Load(req.Stream)
 		if ok {
-			timeDelay := 5 * (time.Since(lastHashTime.(time.Time)))
+			delayed,ok := p.lastDelay.Load(req.Stream)
+			lastDelay := int32(0)
+			if ok {
+				lastDelay = delayed.(int32)
+			}
+			timeDelay := 5 * (time.Since(lastHashTime.(time.Time))-time.Duration(lastDelay))
 			if timeDelay > 10*time.Second {
 				timeDelay = 10 * time.Second
 			}
 			//	p.lastDelay.Store(req.Stream,  timeDelay)
 			delay := time.NewTimer(timeDelay)
+			p.lastDelay.Store(req.Stream,delay)
 			log.Trace("Delayed Sync:", "delayed", timeDelay,"Peer",p.ID(), "stream", req.Stream)
 			select {
 			case <-delay.C:

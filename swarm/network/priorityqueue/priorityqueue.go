@@ -86,7 +86,12 @@ READ:
 		}
 	}
 }
-
+func (pq *PriorityQueue) GetQueueLen( p int) int {
+	if p < 0 || p >= len(pq.Queues) {
+		return 0
+	}
+	return len(pq.Queues[p])
+}
 // Push pushes an item to the appropriate queue specified in the priority argument
 // if context is given it waits until either the item is pushed or the Context aborts
 func (pq *PriorityQueue) Push(x interface{}, p int) error {
