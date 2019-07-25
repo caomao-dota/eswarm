@@ -261,40 +261,22 @@ func (p *Peer) handleOfferedHashesMsg(ctx context.Context, req *OfferedHashesMsg
 		p.lastOHDelay.Store(req.Stream, timeDelay)
 		//	p.lastDelay.Store(req.Stream,  timeDelay)
 	}*/
-		go func(){
-
-
-			//lastDelay,ok2 := p.lastDelay.Load(req.Stream)
-		/*	if timeDelay != time.Duration(0) {
-
-				delay := time.NewTimer(timeDelay)
-
-				log.Trace("Delayed Sync:", "delayed", timeDelay,"Peer",p.ID(), "stream", req.Stream)
+	ctx = context.WithValue(ctx, "source", p.ID().String())
+	for i := 0; i < lenHashes; i += HashSize {
+		hash := hashes[i : i+HashSize]
+		//wait是一个函数，要么是一个fetcher函数，要么是nil(数据已经取了）
+		if wait := c.NeedData(ctx, hash); wait != nil {
+			ctr++
+			want.Set(i/HashSize, true)
+			// create request and wait until the chunk data arrives and is stored
+			go func(w func(context.Context) error) {
 				select {
-				case <-delay.C:
+				case errC <- w(ctx): // 	fetcher函数，从对方去取数据
+				case <-ctx.Done(): //
 				}
-			} else {
-
-			}
-
-			p.lastOHTime.Store(req.Stream, time.Now())
-*/			ctx = context.WithValue(ctx, "source", p.ID().String())
-			for i := 0; i < lenHashes; i += HashSize {
-				hash := hashes[i : i+HashSize]
-				//wait是一个函数，要么是一个fetcher函数，要么是nil(数据已经取了）
-				if wait := c.NeedData(ctx, hash); wait != nil {
-					ctr++
-					want.Set(i/HashSize, true)
-					// create request and wait until the chunk data arrives and is stored
-					go func(w func(context.Context) error) {
-						select {
-						case errC <- w(ctx): // 	fetcher函数，从对方去取数据
-						case <-ctx.Done(): //
-						}
-					}(wait)
-				}
-			}
-		}()
+			}(wait)
+		}
+	}
 
 
 	//重新建立了一个线程，管理所有的等待事宜
@@ -422,7 +404,7 @@ func (p *Peer) handleWantedHashesMsg(ctx context.Context, req *WantedHashesMsg) 
 			//	p.lastDelay.Store(req.Stream,  timeDelay)
 			delay := time.NewTimer(timeDelay)
 			p.lastDelay.Store(req.Stream,timeDelay)
-			log.Trace("Delayed Sync:", "delayed", timeDelay,"Peer",p.ID(), "stream", req.Stream)
+			log.Info("Delayed Sync:", "delayed", timeDelay,"Peer",p.ID(), "stream", req.Stream)
 			select {
 			case <-delay.C:
 			}
