@@ -704,15 +704,13 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) 
 
 	n.Set(enr.LUDP(from.Port))
 	log.Trace("ping:", "ping.from ip", req.From.IP, "ping.from port", req.From.TCP, " from", from.IP, " udp", from.Port)
+	go t.tab.OnPingReceived(n, from.IP, uint16(from.Port))
 	if time.Since(t.db.LastPongReceived(n.ID(), from.IP)) > bondExpiration {
-		//
 		t.sendPing(fromID, from, func(latency int64) {
 
-			go t.tab.OnPingReceived(n, from.IP, uint16(from.Port))
+			go t.tab.DoPongResult(n,latency,true)
 			//pong 也receive了
 		})
-	} else {
-		go t.tab.OnPingReceived(n, from.IP, uint16(from.Port))
 	}
 
 	// Update node database and endpoint predictor.
@@ -737,6 +735,7 @@ func (req *pong) preverify(t *udp, from *net.UDPAddr, fromID enode.ID, fromKey e
 func (req *pong) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) {
 	log.Trace("pong:", "ip", req.To.IP, "port", req.To.TCP, " udp req:", req.To.UDP, " udp from", from.Port)
 	//	t.localNode.UDPEndpointStatement(from, &net.UDPAddr{IP: req.To.IP, Port: int(req.To.UDP)})
+
 	t.db.UpdateLastPongReceived(fromID, from.IP, time.Now())
 
 }
