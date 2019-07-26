@@ -49,7 +49,7 @@ var GitCommit string
 //      "0.3.1-unstable-21c059b6" for unstable releases
 func ArchiveVersion(gitCommit string) string {
 	vsn := Version
-	if VersionMeta != "stable" {
+	if VersionMeta  != "" {
 		vsn += "-" + VersionMeta
 	}
 	if len(gitCommit) >= 8 {
