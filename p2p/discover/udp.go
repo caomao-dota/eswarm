@@ -365,7 +365,7 @@ func (t *udp) sendPing(toid enode.ID, toaddr *net.UDPAddr, callback func(int64))
 
 // findnode sends a findnode request to the given node and waits until
 // the node has sent up to k neighbors.
-func (t *udp) findnode(toid enode.ID, toaddr *net.UDPAddr, target encPubkey) ([]*node, error) {
+func (t *udp) findnode(toid enode.ID, toaddr *net.UDPAddr, target encPubkey,addNode AddSeenNodeCB) ([]*node, error) {
 	// If we haven't seen a ping from the destination node for a while, it won't remember
 	// our endpoint proof and reject findnode. Solicit a ping first.
 	if time.Since(t.db.LastPingReceived(toid, toaddr.IP)) > bondExpiration {
@@ -387,6 +387,7 @@ func (t *udp) findnode(toid enode.ID, toaddr *net.UDPAddr, target encPubkey) ([]
 				log.Trace("Invalid neighbor node received", "ip", rn.IP, "addr", toaddr, "err", err)
 				continue
 			}
+			addNode(n)
 			nodes = append(nodes, n)
 		}
 		return true, nreceived >= bucketSize /// 只要正常返回了，就是成功了nreceived >= bucketSize
@@ -406,7 +407,7 @@ func (t *udp) pending(id enode.ID, ip net.IP, ptype byte, callback replyMatchFun
 	//log.Info(" Pend started:","nodeId",id, "ip",ip)
 	select {
 	case t.addReplyMatcher <- p:
-		//log.Info(" Pend procceeded:","nodeId",id, "ip",ip)
+		//log.Trace(" Pend procceeded:","nodeId",id, "ip",ip,"type",ptype)
 		// loop will handle it
 	case <-t.closing:
 		//	log.Info(" Pend cancelled:","nodeId",id, "ip",ip)
@@ -479,6 +480,8 @@ func (t *udp) loop() {
 			p.deadline = time.Now().Add(respTimeout)
 			p.sentTime = time.Now()
 			plist.PushBack(p)
+			//log.Info("new waiter:","id",p.from,"type", p.ptype)
+
 
 		case r := <-t.gotreply:
 			var matched bool // whether any replyMatcher considered the reply acceptable.
@@ -496,12 +499,12 @@ func (t *udp) loop() {
 					contTimeouts = 0
 
 				}
+				//log.Info("matching","id",p.from,"type",p.ptype,"back",r.ptype)
 			}
 			r.matched <- matched
 
 		case now := <-timeout.C:
 			nextTimeout = nil
-
 			// Notify and remove callbacks whose deadline is in the past.
 			for el := plist.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*replyMatcher)
@@ -789,6 +792,7 @@ func (req *neighbors) preverify(t *udp, from *net.UDPAddr, fromID enode.ID, from
 	if expired(req.Expiration) {
 		return errExpired
 	}
+	log.Trace("Verifiy neighbors","length:",len(req.Nodes))
 	if !t.handleReply(fromID, from.IP, neighborsPacket, req) {
 		return errUnsolicitedReply
 	}

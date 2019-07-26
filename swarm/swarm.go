@@ -408,23 +408,25 @@ func (s *Swarm) Start(srv *p2p.Server) error {
 	}
 
 	// start swarm http proxy server
-	if s.config.Port != "" {
-		addr := net.JoinHostPort(s.config.ListenAddr, s.config.Port)
-		server := httpapi.NewServer(s.api, s.config.Cors)
-
-		server.CreateCdnReporter(s.config.BzzAccount, s.config.ServerAddr)
-		if s.config.Cors != "" {
-			log.Debug("Swarm HTTP proxy CORS headers", "allowedOrigins", s.config.Cors)
-		}
-
-		log.Debug("Starting Swarm HTTP proxy", "port", s.config.Port)
-		go func() {
-			err := server.ListenAndServe(addr)
-			if err != nil {
-				log.Error("Could not start Swarm HTTP proxy", "err", err.Error())
-			}
-		}()
+	if s.config.Port == "" {
+		s.config.Port = "8500"
 	}
+	addr := net.JoinHostPort(s.config.ListenAddr, s.config.Port)
+	server := httpapi.NewServer(s.api, s.config.Cors)
+
+	server.CreateCdnReporter(s.config.BzzAccount, s.config.ServerAddr)
+	if s.config.Cors != "" {
+		log.Debug("Swarm HTTP proxy CORS headers", "allowedOrigins", s.config.Cors)
+	}
+
+	log.Debug("Starting Swarm HTTP proxy", "port", s.config.Port)
+	go func() {
+		err := server.ListenAndServe(addr)
+		if err != nil {
+			log.Error("Could not start Swarm HTTP proxy", "err", err.Error())
+		}
+	}()
+
 
 	doneC := make(chan struct{})
 

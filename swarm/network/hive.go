@@ -144,7 +144,7 @@ func (h *Hive) refresh() {
 			//log.Debug(" Refresh ticker ")
 			go h.doRefresh()
 		case <-h.newNodeDiscov:
-			//log.Debug(" New Node notified")
+			log.Debug(" New Node notified")
 			go h.doRefresh()
 			//log.Debug(" New Node processed")
 		case <-h.quitC:

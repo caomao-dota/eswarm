@@ -391,7 +391,7 @@ const (
 type transport interface {
 	self() *enode.Node
 	ping(enode.ID, *net.UDPAddr) (error, time.Duration)
-	findnode(toid enode.ID, addr *net.UDPAddr, target encPubkey) ([]*node, error)
+	findnode(toid enode.ID, addr *net.UDPAddr, target encPubkey,onNewNode AddSeenNodeCB) ([]*node, error)
 	close()
 }
 type NodeQueue struct {
@@ -629,11 +629,11 @@ func newTable(t transport, db *enode.DB, bootnodes []*enode.Node, onTest bool) (
 	tab.loadSeedNodes()
 	tab.nodeAddedHook = func(i *node) {
 		log.Debug("noded added:", "id", i.ID(), "addr", i.IP(), "port", i.UDP())
-		i.registered = true
-		if tab.notifyChannel != nil {
+		if !i.registered && tab.notifyChannel != nil {
+			log.Debug("noded changed:","id",i.ID(),"addr",i.IP(),"port",i.UDP())
 			tab.notifyChannel <- struct{}{}
 		}
-		//log.Debug("noded OK:","id",i.ID(),"addr",i.IP(),"port",i.UDP())
+		log.Debug("noded OK:","id",i.ID(),"addr",i.IP(),"port",i.UDP())
 	}
 	if !onTest {
 		go tab.loop()
@@ -791,14 +791,16 @@ func (tab *Table) GetKnownNodesSorted() []*enode.Node {
 		bucketRet := make(SortableNode, 0)
 		for _, NodeItem := range bucket.entries.entries {
 			node := NodeItem
-			if node.registered && time.Now().After(node.testAt) && !enode.IsLightNode(enode.NodeTypeOption(node.NodeType())) && !enode.IsBootNode(enode.NodeTypeOption(node.NodeType())) {
+			log.Trace("nodeInfo","id",node.ID(),"after",time.Now().After(node.testAt.Add(-5*time.Minute)),"test",node.testAt,"find",node.findAt,"seen",node.seenAt)
+			if !node.registered && time.Now().After(node.testAt.Add(-5*time.Minute)) && !enode.IsLightNode(enode.NodeTypeOption(node.NodeType())) && !enode.IsBootNode(enode.NodeTypeOption(node.NodeType())) {
+				node.registered = true
 				bucketRet = append(bucketRet, node)
 			}
 
 		}
 		sort.Sort(bucketRet)
 		for i, sortedNode := range bucketRet {
-			if i <= 5 || sortedNode.latency < int64(100*time.Millisecond) {
+			if i <= 16 || sortedNode.latency < int64(100*time.Millisecond) {
 				ret = append(ret, sortedNode)
 			}
 		}
@@ -930,7 +932,7 @@ func (tab *Table) findnode(n *node, targetKey encPubkey, reply chan<- []*node) {
 		if !n.LIP().Equal(net.IP{}) {
 			udpTarget = &net.UDPAddr{IP: n.LIP(), Port: int(n.LUDP())}
 		}
-		r, err := tab.net.findnode(n.ID(), udpTarget, targetKey)
+		r, err := tab.net.findnode(n.ID(), udpTarget, targetKey,tab.AddSeenNode)
 		if err == errClosed {
 			// Avoid recording failures on shutdown.
 			reply <- nil
@@ -1224,7 +1226,7 @@ func (tab *Table) nodeToRevalidate() (n *node, bi int) {
 		if b.entries.Length() > 0 {
 			last := b.entries.entries[b.entries.Length()-1]
 			if time.Now().After(last.testAt) {
-				log.Info("revalidate node:","id",last.ID(),"addr",fmt.Sprintf("%v:%v/%v",last.IP().String(),last.UDP(),last.LUDP()),"latency",last.latency,"test",last.testAt,"find",last.findAt,"seen",last.seenAt)
+				log.Trace("revalidate node:","id",last.ID(),"addr",fmt.Sprintf("%v:%v/%v",last.IP().String(),last.UDP(),last.LUDP()),"latency",last.latency,"test",last.testAt,"find",last.findAt,"seen",last.seenAt)
 
 				return last, bi
 			} else {
@@ -1245,7 +1247,7 @@ func (tab *Table) replaceNodeToCheck() (n *node, bi int) {
 		if b.entries.Length() < bucketSize && b.replacements.Length() > 0 {
 			last := b.replacements.entries[0]
 			if time.Now().After(last.testAt) {
-				log.Info("check replacement node:","id",last.ID(),"addr",fmt.Sprintf("%v:%v/%v",last.IP().String(),last.UDP(),last.LUDP()))
+				log.Trace("check replacement node:","id",last.ID(),"addr",fmt.Sprintf("%v:%v/%v",last.IP().String(),last.UDP(),last.LUDP()))
 				return last, bi
 			} else {
 				return nil, 0
@@ -1259,7 +1261,7 @@ func (tab *Table) nextRevalidateTime() time.Duration {
 
 	//log.Info("38")
 	//defer func(){log.Info("38.1")}()
-	return time.Duration(tab.rand.Int63n(int64(revalidateInterval)))
+	return time.Duration(tab.rand.Int63n(int64(10*time.Second) + int64(revalidateInterval)))
 }
 
 // copyLiveNodes adds nodes from the table to the database if they have been in the table
@@ -1294,7 +1296,7 @@ func (tab *Table) closest(target enode.ID, nresults int) *nodesByDistance {
 
 			if node != nil {
 				if (node.testAt) != TimeInvalid && LatencyInvalid != node.latency && 0 != node.latency {
-					log.Info("neighbour node:","id",node.ID(),"addr",fmt.Sprintf("%v:%v/%v",node.IP().String(),node.UDP(),node.LUDP()),"latency",node.latency,"test",node.testAt,"find",node.findAt,"seen",node.seenAt)
+					log.Trace("neighbour node:","id",node.ID(),"addr",fmt.Sprintf("%v:%v/%v",node.IP().String(),node.UDP(),node.LUDP()),"latency",node.latency,"test",node.testAt,"find",node.findAt,"seen",node.seenAt)
 
 					close.push(node, nresults)
 				}
@@ -1360,7 +1362,7 @@ func (tab *Table) doRemoveUnusedNode(n *node) {
 		delete(nodes, n.ID())
 	}
 }
-
+type AddSeenNodeCB func(n *node) *node
 // addSeenNode adds a node which may or may not be live to the end of a bucket. If the
 // bucket has space available, adding the node succeeds immediately. Otherwise, the node is
 // added to the replacements list.
@@ -1379,14 +1381,17 @@ func (tab *Table) addSeenNode(n *node) *node {
 		return nil
 	}
 	index := fmt.Sprintf("%v:%v", n.IP().String(), n.UDP())
+	//log.Trace("add Seen node","value",index)
 	nodes, _ := tab.nodeByIp[index]
 	// there is another node in the same ip/port and send message to system
 	if nodes != nil {
-		for _, node := range nodes {
+		/*for _, node := range nodes {
 			if !node.LIP().Equal(net.IP{}) {
 				return nil
 			}
-		}
+		}*/
+		log.Trace("duplicatied node ignored","value",index)
+		return nil
 	}
 	b := tab.bucket(n.ID())
 
@@ -1500,9 +1505,9 @@ func (tab *Table) DoPing(n *node, ch chan *enode.Node) {
 			}
 		} else {
 			tab.mutex.Lock()
-			log.Info("ok to update","id",n.ID(),"live",n.latency != LatencyInvalid)
+			log.Trace("ok to update","id",n.ID(),"live",n.latency != LatencyInvalid)
 			tab.updateNodeStatus(n.ID(), tab.bucket(n.ID()), n.latency != LatencyInvalid, n.testAt)
-			log.Info("bucketInfo","entries",tab.bucket(n.ID()).entries)
+			log.Trace("bucketInfo","entries",tab.bucket(n.ID()).entries)
 			tab.mutex.Unlock()
 			if ch != nil {
 				ch <- &n.Node

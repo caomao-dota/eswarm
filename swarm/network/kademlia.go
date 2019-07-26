@@ -162,13 +162,13 @@ func (k *Kademlia) IsBlocked(id enode.ID, inbound bool) bool {
 	idStr := fmt.Sprintf("%v-%v", id, inbound)
 	val, ok := k.blacklist.Get(idStr)
 	if ok && !inbound && !time.Now().After(val.(p2p.BlackItem).DiscTime) {
-		log.Trace("block of black list","id",id)
+		log.Debug("block of black list","id",id)
 		return true
 	} else if inbound {
 
 		bin, _ := Pof(k.BaseAddr(), id[:], 0)
 
-		log.Trace(" test for bucket", "id", id, "bucket", bin, "size", k.conns.SizeOfBin(bin))
+		log.Debug(" test for bucket", "id", id, "bucket", bin, "size", k.conns.SizeOfBin(bin))
 		return k.conns.SizeOfBin(bin) >= k.MaxBinSize
 
 	}
@@ -221,7 +221,7 @@ func (k *Kademlia) Register(peers ...*BzzAddr) error {
 	var known, size int
 
 	for _, p := range peers {
-		//log.Info("kad register","id",p.ID(),"register/unregister",toRegister,"Uaddr:",p.String())
+		log.Trace("kad register","id",p.ID(),"Uaddr:",p.String())
 		//log.Trace("kademlia trying to register", "addr", p)
 		// error if self received, peer should know better
 		// and should be punished for this

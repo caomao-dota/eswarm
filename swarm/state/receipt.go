@@ -622,7 +622,7 @@ func (rs *ReceiptStore) mockAutoSubmit() error {
 	return err
 }
 func (rs *ReceiptStore) submitRoutine() {
-	log.Info("Setup subroutine ", "time", MAX_STIME_DURATION)
+	log.Info("Setup report subroutine ", "time", MAX_STIME_DURATION)
 	timer := time.NewTimer(MAX_STIME_DURATION)
 	rs.doAutoSubmit()
 	for {
