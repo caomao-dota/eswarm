@@ -1224,6 +1224,8 @@ func (tab *Table) nodeToRevalidate() (n *node, bi int) {
 		if b.entries.Length() > 0 {
 			last := b.entries.entries[b.entries.Length()-1]
 			if time.Now().After(last.testAt) {
+				log.Info("revalidate node:","id",last.ID(),"addr",fmt.Sprintf("%v:%v/%v",last.IP().String(),last.UDP(),last.LUDP()),"latency",last.latency,"test",last.testAt,"find",last.findAt,"seen",last.seenAt)
+
 				return last, bi
 			} else {
 				return nil, 0
@@ -1243,6 +1245,7 @@ func (tab *Table) replaceNodeToCheck() (n *node, bi int) {
 		if b.entries.Length() < bucketSize && b.replacements.Length() > 0 {
 			last := b.replacements.entries[0]
 			if time.Now().After(last.testAt) {
+				log.Info("check replacement node:","id",last.ID(),"addr",fmt.Sprintf("%v:%v/%v",last.IP().String(),last.UDP(),last.LUDP()))
 				return last, bi
 			} else {
 				return nil, 0
@@ -1290,7 +1293,9 @@ func (tab *Table) closest(target enode.ID, nresults int) *nodesByDistance {
 		for _, node := range b.entries.entries {
 
 			if node != nil {
-				if (node.testAt) != TimeInvalid {
+				if (node.testAt) != TimeInvalid && LatencyInvalid != node.latency && 0 != node.latency {
+					log.Info("neighbour node:","id",node.ID(),"addr",fmt.Sprintf("%v:%v/%v",node.IP().String(),node.UDP(),node.LUDP()),"latency",node.latency,"test",node.testAt,"find",node.findAt,"seen",node.seenAt)
+
 					close.push(node, nresults)
 				}
 			}
@@ -1478,6 +1483,7 @@ func (tab *Table) DoPing(n *node, ch chan *enode.Node) {
 			} else {
 				toAddr = net.UDPAddr{IP: lip, Port: int(n.LUDP())}
 			}
+
 			err, duration := tab.net.ping(n.ID(), &toAddr)
 
 			if err == nil {
