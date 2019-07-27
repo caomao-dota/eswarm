@@ -49,7 +49,7 @@ func GetSyncingOptions(nodeType NodeTypeOption) SyncingOption {
 }
 
 func IsLightNode(nodeType NodeTypeOption) bool {
-	return nodeType == 0 || (GetRetrievalOptions(nodeType) == RetrievalClientOnly && GetSyncingOptions(nodeType) == SyncingDisabled)
+	return  GetRetrievalOptions(nodeType) == RetrievalClientOnly && GetSyncingOptions(nodeType) == SyncingDisabled
 }
 
 func IsBootNode(nodeType NodeTypeOption) bool {
