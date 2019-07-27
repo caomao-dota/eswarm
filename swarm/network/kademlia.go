@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/hashicorp/golang-lru"
-//	"github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"github.com/plotozhu/MDCMainnet/p2p"
 	"github.com/plotozhu/MDCMainnet/p2p/enode"
 	"math"
@@ -489,15 +489,20 @@ func (k *Kademlia) On(p *Peer) (depth uint8, changed bool, err error) {
 	changed = false
 	k.peers[string(p.UAddr)] = true
 	if p.NodeType() != enode.NodeTypeLight {
-		//po := int(0)
+		po := int(0)
 
-		k.conns, _, _, _ = pot.Swap(k.conns, p, Pof, func(v pot.Val) pot.Val {
+		k.conns, po, _, _ = pot.Swap(k.conns, p, Pof, func(v pot.Val) pot.Val {
 			// if not found live
 			if v == nil {
 
-				ins = true
-				// insert new online peer into conns
-				return p
+				if k.conns.SizeOfBin(po) < k.KadParams.MaxBinSize {
+					ins = true
+					// insert new online peer into conns
+					return p
+				} else {
+					err = errors.New(fmt.Sprintf("Full bucket id:=%v  po:=%v", common.Bytes2Hex(p.OAddr), po))
+					return v
+				}
 
 			}
 			// found among live peers, do nothing

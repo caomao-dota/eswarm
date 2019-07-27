@@ -190,7 +190,7 @@ type OfferedHashesMsg struct {
 	Stream         Stream // name of Stream
 	From, To       uint64 // peer and db-specific entry count
 	Hashes         []byte // stream of hashes (128)
-	Delayed        uint64
+//	Delayed        uint64
 	*HandoverProof        // HandoverProof
 }
 

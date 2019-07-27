@@ -254,6 +254,17 @@ func SendDataToServer(url string, timeout time.Duration, data []byte) error {
 
 	client := &http.Client{
 		Timeout: timeout,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			Proxy:           http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 300 * time.Second,
+			}).DialContext,
+			MaxIdleConns:        2,
+			MaxIdleConnsPerHost: 2,
+			IdleConnTimeout:     1000 * time.Second,
+		},
 	}
 
 	request, err := http.NewRequest("POST", url, bytes.NewReader(data))

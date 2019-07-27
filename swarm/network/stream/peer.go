@@ -38,14 +38,15 @@ import (
 type notFoundError struct {
 	t string
 	s Stream
+	p *Peer
 }
 
-func newNotFoundError(t string, s Stream) *notFoundError {
-	return &notFoundError{t: t, s: s}
+func newNotFoundError(t string, s Stream,p *Peer) *notFoundError {
+	return &notFoundError{t: t, s: s,p:p}
 }
 
 func (e *notFoundError) Error() string {
-	return fmt.Sprintf("%s not found for stream %q", e.t, e.s)
+	return fmt.Sprintf("id: %v,%s not found for stream %q", e.p.ID(),e.t, e.s)
 }
 
 // ErrMaxPeerServers will be returned if peer server limit is reached.
@@ -243,7 +244,7 @@ func (p *Peer) getServer(s Stream) (*server, error) {
 
 	server := p.servers[s]
 	if server == nil {
-		return nil, newNotFoundError("server", s)
+		return nil, newNotFoundError("server", s,p)
 	}
 	return server, nil
 }
@@ -280,7 +281,7 @@ func (p *Peer) removeServer(s Stream) error {
 
 	server, ok := p.servers[s]
 	if !ok {
-		return newNotFoundError("server", s)
+		return newNotFoundError("server", s,p)
 	}
 	server.Close()
 	delete(p.servers, s)
@@ -317,7 +318,7 @@ func (p *Peer) getClient(ctx context.Context, s Stream) (c *client, err error) {
 	if c != nil {
 		return c, nil
 	}
-	return nil, newNotFoundError("client", s)
+	return nil, newNotFoundError("client", s,p)
 }
 
 func (p *Peer) getOrSetClient(s Stream, from, to uint64) (c *client, created bool, err error) {
@@ -404,7 +405,7 @@ func (p *Peer) removeClient(s Stream) error {
 
 	client, ok := p.clients[s]
 	if !ok {
-		return newNotFoundError("client", s)
+		return newNotFoundError("client", s,p)
 	}
 	client.close()
 	delete(p.clients, s)
@@ -437,7 +438,7 @@ func (p *Peer) getClientParams(s Stream) (*clientParams, error) {
 func (p *Peer) removeClientParams(s Stream) error {
 	_, ok := p.clientParams[s]
 	if !ok {
-		return newNotFoundError("client params", s)
+		return newNotFoundError("client params", s,p)
 	}
 	delete(p.clientParams, s)
 	return nil
