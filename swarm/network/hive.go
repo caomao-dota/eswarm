@@ -326,13 +326,13 @@ func (h *Hive) loadPeers() error {
 // savePeers, savePeer implement persistence callback/
 func (h *Hive) savePeers() error {
 	var peers []*BzzAddr
-	h.Kademlia.EachAddr(nil, 256, func(pa *BzzAddr, i int) bool {
+	h.Kademlia.EachConn(nil, 256, func(pa *Peer, i int) bool {
 		if pa == nil {
 			log.Warn(fmt.Sprintf("empty addr: %v", i))
 			return true
 		}
 		log.Trace("saving peer", "peer", pa)
-		peers = append(peers, pa)
+		peers = append(peers, pa.BzzAddr)
 		return true
 	})
 	if err := h.Store.Put("peers", peers); err != nil {

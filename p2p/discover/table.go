@@ -43,7 +43,7 @@ import (
 
 const (
 	alpha           = 3  // Kademlia concurrency factor
-	bucketSize      = 16 // Kademlia bucket size
+	bucketSize      = 48 // Kademlia bucket size
 	maxReplacements = 10 // Size of per-bucket replacement list
 
 	// We keep buckets for the upper 1/15 of distances because
@@ -791,7 +791,7 @@ func (tab *Table) GetKnownNodesSorted() []*enode.Node {
 		bucketRet := make(SortableNode, 0)
 		for _, NodeItem := range bucket.entries.entries {
 			node := NodeItem
-			log.Trace("nodeInfo","id",node.ID(),"after",time.Now().After(node.testAt.Add(-5*time.Minute)),"test",node.testAt,"find",node.findAt,"seen",node.seenAt)
+			//log.Trace("nodeInfo","id",node.ID(),"after",time.Now().After(node.testAt.Add(-5*time.Minute)),"test",node.testAt,"find",node.findAt,"seen",node.seenAt)
 			if !node.registered && time.Now().After(node.testAt.Add(-5*time.Minute)) && !enode.IsLightNode(enode.NodeTypeOption(node.NodeType())) && !enode.IsBootNode(enode.NodeTypeOption(node.NodeType())) {
 				node.registered = true
 				bucketRet = append(bucketRet, node)
@@ -1225,7 +1225,7 @@ func (tab *Table) nodeToRevalidate() (n *node, bi int) {
 		b := tab.buckets[bi]
 		if b.entries.Length() > 0 {
 			last := b.entries.entries[b.entries.Length()-1]
-			if time.Now().After(last.testAt) {
+			if time.Now().After(last.testAt) && !enode.IsLightNode(enode.NodeTypeOption(last.NodeType())){
 				log.Trace("revalidate node:","id",last.ID(),"addr",fmt.Sprintf("%v:%v/%v",last.IP().String(),last.UDP(),last.LUDP()),"latency",last.latency,"test",last.testAt,"find",last.findAt,"seen",last.seenAt)
 
 				return last, bi
@@ -1246,7 +1246,7 @@ func (tab *Table) replaceNodeToCheck() (n *node, bi int) {
 		b := tab.buckets[bi]
 		if b.entries.Length() < bucketSize && b.replacements.Length() > 0 {
 			last := b.replacements.entries[0]
-			if time.Now().After(last.testAt) {
+			if time.Now().After(last.testAt) && !enode.IsLightNode(enode.NodeTypeOption(last.NodeType())) {
 				log.Trace("check replacement node:","id",last.ID(),"addr",fmt.Sprintf("%v:%v/%v",last.IP().String(),last.UDP(),last.LUDP()))
 				return last, bi
 			} else {
@@ -1295,7 +1295,7 @@ func (tab *Table) closest(target enode.ID, nresults int) *nodesByDistance {
 		for _, node := range b.entries.entries {
 
 			if node != nil {
-				if (node.testAt) != TimeInvalid && LatencyInvalid != node.latency && 0 != node.latency {
+				if (node.testAt) != TimeInvalid && LatencyInvalid != node.latency && 0 != node.latency  && !enode.IsLightNode(enode.NodeTypeOption(node.NodeType())){
 					log.Trace("neighbour node:","id",node.ID(),"addr",fmt.Sprintf("%v:%v/%v",node.IP().String(),node.UDP(),node.LUDP()),"latency",node.latency,"test",node.testAt,"find",node.findAt,"seen",node.seenAt)
 
 					close.push(node, nresults)
@@ -1468,7 +1468,7 @@ func (tab *Table) RequestPing(node *enode.Node, ch chan *enode.Node) {
 		if n != nil {
 			tab.DoPing(n, ch)
 		} else {
-			log.Warn("want to connect an unping node:", "id", node.ID())
+			log.Warn("want to connect an unping node:", "id", node.ID(),"addr",node.IP().String(),"port",node.UDP())
 			n := wrapNode(node)
 			tab.addSeenNode(n)
 			tab.DoPing(n, ch)
@@ -1505,9 +1505,9 @@ func (tab *Table) DoPing(n *node, ch chan *enode.Node) {
 			}
 		} else {
 			tab.mutex.Lock()
-			log.Trace("ok to update","id",n.ID(),"live",n.latency != LatencyInvalid)
+//			log.Trace("ok to update","id",n.ID(),"live",n.latency != LatencyInvalid)
 			tab.updateNodeStatus(n.ID(), tab.bucket(n.ID()), n.latency != LatencyInvalid, n.testAt)
-			log.Trace("bucketInfo","entries",tab.bucket(n.ID()).entries)
+//			log.Trace("bucketInfo","entries",tab.bucket(n.ID()).entries)
 			tab.mutex.Unlock()
 			if ch != nil {
 				ch <- &n.Node
@@ -1574,9 +1574,11 @@ func (tab *Table) DoPongResult(n *enode.Node, duration int64, ok bool) {
 		oldNode.latency = duration
 
 	} else {
-		b.replacements.AddNode(wrapNode(n))
-		oldNode := b.replacements.Get(n.ID())
-		oldNode.latency = duration
+		_,oldNode := b.replacements.AddNode(wrapNode(n))
+		if oldNode != nil {
+			oldNode.latency = duration
+		}
+
 	}
 
 	tab.updateNodeStatus(n.ID(), b, ok, time.Now().Add(30*time.Second))
