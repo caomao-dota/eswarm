@@ -262,7 +262,7 @@ func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *Ch
 	// retrieve the span for the originating retrieverequest
 	spanId := fmt.Sprintf("stream.send.request.%v.%v", sp.ID(), req.Addr)
 	span := tracing.ShiftSpanByKey(spanId)
-
+	sp.EndRetrieve(req.Addr)
 	log.Trace(" chunk received:", "info", spanId)
 	go func() {
 		if span != nil {
@@ -314,7 +314,7 @@ func (d *Delivery) RequestFromPeers(ctx context.Context, req *network.Request) (
 		}
 	} else {
 		//从KAD网络中，由近及远找到一个节点，向这个节点请求查询数据
-		
+		protentialNodes := make([]*enode.ID,0)
 		d.kad.EachConn(req.Addr[:], 255, func(p *network.Peer, po int) bool {
 			id := p.ID()
 			if enode.GetRetrievalOptions(enode.NodeTypeOption(p.NodeType())) != (enode.RetrievalEnabled) {
@@ -326,16 +326,28 @@ func (d *Delivery) RequestFromPeers(ctx context.Context, req *network.Request) (
 				log.Trace("Delivery.RequestFromPeers: skip peer", "peer id", id)
 				return true
 			}
-			sp = d.getPeer(id)
-			// sp is nil, when we encounter a peer that is not registered for delivery, i.e. doesn't support the `stream` protocol
-			if sp == nil {
-				return true
-			}
-			spID = &id
-			return false
+				//sp = d.getPeer(id)
+				//// sp is nil, when we encounter a peer that is not registered for delivery, i.e. doesn't support the `stream` protocol
+				//if sp == nil {
+				//	return true
+				//}
+			protentialNodes = append(protentialNodes,&id)
+			//spID = &id
+			return true
 		})
-		if sp == nil {
+
+
+		if len(protentialNodes) == 0 {
 			return nil, nil, errors.New("no peer found")
+		}
+		minDelay := time.Hour
+		for _,id := range protentialNodes{
+			p := d.getPeer(*id)
+			if p.GetDelay() < minDelay {
+				minDelay = p.GetDelay()
+				sp = p
+				spID = id
+			}
 		}
 	}
 
@@ -344,6 +356,7 @@ func (d *Delivery) RequestFromPeers(ctx context.Context, req *network.Request) (
 	ctx = context.WithValue(ctx, tracing.StoreLabelId, "stream.send.request")
 	ctx = context.WithValue(ctx, tracing.StoreLabelMeta, fmt.Sprintf("%v.%v", sp.ID(), req.Addr))
 	log.Trace("Send Request:", "addr", req.Addr, "Hop", req.HopCount, "target:", sp.ID())
+	sp.StartRetrieve(req.Addr)
 	err := sp.SendPriority(ctx, &RetrieveRequestMsg{
 		Addr:      req.Addr,
 		SkipCheck: req.SkipCheck,

@@ -35,6 +35,10 @@ import (
 	"github.com/plotozhu/MDCMainnet/swarm/storage"
 )
 
+const (
+	MAX_DELAY_CNT=10
+)
+
 type notFoundError struct {
 	t string
 	s Stream
@@ -70,7 +74,12 @@ type Peer struct {
 	lastHashTime 	sync.Map
 	lastDelay    	sync.Map
 
-	segments        int
+	//segments        int
+	retrieveTime      sync.Map     //读取一个片断的延时
+
+	delayArray        []int64
+
+	averageDelay      time.Duration
 }
 
 type WrappedPriorityMsg struct {
@@ -89,6 +98,7 @@ func NewPeer(peer *protocols.Peer, streamer *Registry) *Peer {
 		clients:      make(map[Stream]*client),
 		clientParams: make(map[Stream]*clientParams),
 		quit:         make(chan struct{}),
+		delayArray:   make([]int64,0),
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	go p.pq.Run(ctx, func(i interface{}) {
@@ -134,7 +144,32 @@ func NewPeer(peer *protocols.Peer, streamer *Registry) *Peer {
 	}()
 	return p
 }
+func (p *Peer) StartRetrieve(address storage.Address){
+	p.retrieveTime.Store(address.String(),time.Now())
+}
 
+func (p *Peer) EndRetrieve(address storage.Address){
+	start,ok := p.retrieveTime.Load(address.String())
+	if ok  {
+		duration := int64(time.Now().Sub(start.(time.Time)))
+		log.Info("NewDuration","value",duration,"id",p.ID())
+		p.delayArray = append(p.delayArray,duration)
+
+		if len(p.delayArray) > MAX_DELAY_CNT {
+			p.delayArray = p.delayArray[len(p.delayArray)-MAX_DELAY_CNT:]
+		}
+		totalDuration := int64(0)
+		for _,delayTime := range p.delayArray {
+			totalDuration += delayTime
+		}
+		p.averageDelay = time.Duration(totalDuration /int64(len(p.delayArray)))
+	}
+
+}
+func (p *Peer)GetDelay() time.Duration{
+	//log.Info("Get Delay:","Id",p.ID(),"delay",p.averageDelay)
+	return p.averageDelay
+}
 // Deliver sends a storeRequestMsg protocol message to the peer
 // Depending on the `syncing` parameter we send different message types
 func (p *Peer) Deliver(ctx context.Context, chunk storage.Chunk, priority uint8, syncing bool) error {
@@ -161,7 +196,7 @@ func (p *Peer) Deliver(ctx context.Context, chunk storage.Chunk, priority uint8,
 
 	ctx = context.WithValue(ctx, "stream_send_tag", nil)
 	log.Trace("Send response:", "send id", p.ID(), "hash", chunk.Address())
-	p.segments += len(chunk.Data())
+	//p.segments += len(chunk.Data())
 	//根据priority队列中的情况，作一个处理
 	//如果priority队列中有排队的数据，那么就延时1ms发送
 	queueLen := p.pq.GetQueueLen(int(priority))

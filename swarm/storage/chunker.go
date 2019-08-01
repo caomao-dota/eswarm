@@ -633,7 +633,7 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 			//测试是否文件已经读完的两个条件：
 			// 1. buffer已经指向了addr/url对应的文件尾
 			// 2. b的缓冲区长度加上开始的位置已经超过buffer里面末尾的大小了
-			if(buffer.(*DataCache).end  && (int(startOffset) + len(b) >= len(cacheBuffer))){
+			if buffer.(*DataCache).end  && (int(startOffset) + len(b) >= len(cacheBuffer)){
 				err=io.EOF
 			}
 			copy(b, cacheBuffer[startOffset:startOffset+int64(totalLen)])
@@ -747,7 +747,7 @@ func (r *LazyChunkReader) join(ctx context.Context, b []byte, off int64, eoff in
 
 // Read keeps a cursor so cannot be called simulateously, see ReadAt
 func (r *LazyChunkReader) Read(b []byte) (read int, err error) {
-	log.Debug("lazychunkreader.read", "key", r.addr)
+	//log.Debug("lazychunkreader.read", "key", r.addr)
 	metrics.GetOrRegisterCounter("lazychunkreader.read", nil).Inc(1)
 
 	read, err = r.ReadAt(b, r.off)
