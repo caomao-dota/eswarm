@@ -1390,7 +1390,7 @@ func (tab *Table) addSeenNode(n *node) *node {
 				return nil
 			}
 		}*/
-		log.Trace("duplicatied node ignored","value",index)
+		//log.Trace("duplicatied node ignored","value",index)
 		return nil
 	}
 	b := tab.bucket(n.ID())

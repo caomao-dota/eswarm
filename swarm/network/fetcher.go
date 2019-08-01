@@ -184,11 +184,11 @@ func (f *Fetcher) Request(hopCount uint8) {
 // it keeps the Fetcher alive within the lifecycle of the passed context
 func (f *Fetcher) run(peers *sync.Map) {
 	var (
-		doRequest bool             // determines if retrieval is initiated in the current iteration
+		shouldPerformRequest bool             // determines if retrieval is initiated in the current iteration
 		wait      *time.Timer      // timer for search timeout
 		waitC     <-chan time.Time // timer channel
 		sources   []*enode.ID      // known sources, ie. peers that offered the chunk
-		requested bool             // true if the chunk was actually requested
+		inRetrieving bool             // true if the chunk was actually requested
 		hopCount  uint8
 	)
 	gone := make(chan *enode.ID) // channel to signal that a peer we requested from disconnected
@@ -200,8 +200,14 @@ func (f *Fetcher) run(peers *sync.Map) {
 	// if a peer we requested from is gone we issue a new request, so the number of active
 	// requests never decreases
 	// requested is set on fetcher.Request
-	// doRequest: if on requesting (request == true)  doRequest should be false, which means it will wait for timeout
+	// shouldPerformRequest: if on requesting (request == true)  doRequest should be false, which means it will wait for timeout
 	//            else it should be same as request
+
+	/**	其实这是一个状态机，它拥有两个状态 idle(inRetrieving == false ) , retrieving( inRetrieving = true)
+		多个事件 offerC(某个节点说他这个哈希的数据） requestC（请求读取数据） gone （当前节点已经丢失）  waitC （定时器超时） ctxDone （fetch超时取消）
+
+
+	 */
 	for {
 		select {
 
@@ -212,28 +218,28 @@ func (f *Fetcher) run(peers *sync.Map) {
 			// add to known sources
 			sources = append(sources, source)
 			// launch a request to the source iff the chunk was requested (not just expected because its offered by a syncing peer)
-			doRequest = requested
+			shouldPerformRequest = inRetrieving
 
 		// incoming request
 		case hopCount = <-f.requestC: //第二次请求，需要看看当前是不是已经在请求中了，如果已经在请求中了，就可以延时到下一个timeout
 			//log.Trace("new request", "request addr", f.addr)
 			// 2) chunk is requested, set requested flag
 			// launch a request if none been launched yet
-			doRequest = !requested
-			requested = true
+			shouldPerformRequest = !inRetrieving
+			inRetrieving = true
 
 			// peer we requested from is gone. fall back to another
 			// and remove the peer from the peers map
 		case id := <-gone:
 			//log.Trace("peer gone", "peer id", id.String(), "request addr", f.addr)
 			peers.Delete(id.String())
-			doRequest = requested
+			shouldPerformRequest = inRetrieving
 
 		// search timeout: too much time passed since the last request,
 		// extend the search to a new peer if we can find one
 		case <-waitC:
 			//log.Trace("search timed out: requesting", "request addr", f.addr)
-			doRequest = requested
+			shouldPerformRequest = inRetrieving
 
 			// all Fetcher context closed, can quit
 		case <-f.ctx.Done():
@@ -244,7 +250,7 @@ func (f *Fetcher) run(peers *sync.Map) {
 		}
 
 		// need to issue a new request
-		if doRequest {
+		if shouldPerformRequest {
 			var err error
 			sources, err = f.doRequest(gone, peers, sources, hopCount)
 			if err != nil {
@@ -253,7 +259,7 @@ func (f *Fetcher) run(peers *sync.Map) {
 		}
 
 		// if wait channel is not set, set it to a timer
-		if requested {
+		if inRetrieving {
 			if wait == nil {
 				wait = time.NewTimer(f.searchTimeout)
 				defer wait.Stop()
@@ -270,7 +276,7 @@ func (f *Fetcher) run(peers *sync.Map) {
 				wait.Reset(f.searchTimeout)
 			}
 		}
-		doRequest = false
+		shouldPerformRequest = false
 	}
 
 }

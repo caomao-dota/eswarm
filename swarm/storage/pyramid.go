@@ -176,7 +176,7 @@ func (pc *PyramidChunker) Join(addr Address, getter Getter, depth int) LazySecti
 		addr:      addr,
 		depth:     depth,
 		chunkSize: pc.chunkSize,
-		branches:  pc.branches,
+		branchesOfChunk:  pc.branches,
 		hashSize:  pc.hashSize,
 		getter:    getter,
 	}

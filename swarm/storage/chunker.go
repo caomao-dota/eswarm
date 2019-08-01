@@ -55,9 +55,9 @@ data_{i} := size(subtree_{i}) || key_{j} || key_{j+1} .... || key_{j+n-1}
 4 if data size is not more than maximum chunksize, the data is stored in a single chunk
   key = hash(int64(size) + data)
 
-5 if data size is more than chunksize*branches^l, but no more than chunksize*
-  branches^(l+1), the data vector is split into slices of chunksize*
-  branches^l length (except the last one).
+5 if data size is more than chunksize*branchesOfChunk^l, but no more than chunksize*
+  branchesOfChunk^(l+1), the data vector is split into slices of chunksize*
+  branchesOfChunk^l length (except the last one).
   key = hash(int64(size) + key(slice0) + key(slice1) + ...)
 
  The underlying hash function is configurable
@@ -71,6 +71,9 @@ If all is well it is possible to implement this by simply composing readers so t
 The hashing itself does use extra copies and allocation though, since it does need it.
 */
 
+const (
+	MAX_FILE_CACHE=26214500 //256*1024*100+100
+)
 type ChunkerParams struct {
 	chunkSize int64
 	hashSize  int64
@@ -100,7 +103,7 @@ type JoinerParams struct {
 type TreeChunker struct {
 	ctx context.Context
 
-	branches int64
+	branchesOfChunk int64
 	dataSize int64
 	data     io.Reader
 	// calculated
@@ -163,15 +166,15 @@ func TreeSplit(ctx context.Context, data io.Reader, size int64, putter Putter) (
 	}
 	return NewTreeSplitter(tsp).Split(ctx)
 }
-
+//
 func NewTreeJoiner(params *JoinerParams) *TreeChunker {
 	tc := &TreeChunker{}
-	tc.hashSize = params.hashSize
-	tc.branches = params.chunkSize / params.hashSize
-	tc.addr = params.addr
-	tc.getter = params.getter
-	tc.depth = params.depth
-	tc.chunkSize = params.chunkSize
+	tc.hashSize = params.hashSize     //每个哈希的大小（32字节）
+	tc.branchesOfChunk = params.chunkSize / params.hashSize //每个区块可以容纳多少个分支，分支用哈希值表示，因此分支=区块/哈希大小
+	tc.addr = params.addr			//块的地址
+	tc.getter = params.getter		//数据读取器
+	tc.depth = params.depth			//这个为什么需要预设未知
+	tc.chunkSize = params.chunkSize	//每个区块的大小
 	tc.workerCount = 0
 	tc.jobC = make(chan *hashJob, 2*ChunkProcessors)
 	tc.wg = &sync.WaitGroup{}
@@ -188,7 +191,7 @@ func NewTreeSplitter(params *TreeSplitterParams) *TreeChunker {
 	tc.data = params.reader
 	tc.dataSize = params.size
 	tc.hashSize = params.hashSize
-	tc.branches = params.chunkSize / params.hashSize
+	tc.branchesOfChunk = params.chunkSize / params.hashSize
 	tc.addr = params.addr
 	tc.chunkSize = params.chunkSize
 	tc.putter = params.putter
@@ -238,7 +241,7 @@ func (tc *TreeChunker) Split(ctx context.Context) (k Address, wait func(context.
 
 	// takes lowest depth such that chunksize*HashCount^(depth+1) > size
 	// power series, will find the order of magnitude of the data size in base hashCount or numbers of levels of branching in the resulting tree.
-	for ; treeSize < tc.dataSize; treeSize *= tc.branches {
+	for ; treeSize < tc.dataSize; treeSize *= tc.branchesOfChunk {
 		depth++
 	}
 
@@ -246,7 +249,7 @@ func (tc *TreeChunker) Split(ctx context.Context) (k Address, wait func(context.
 	// this waitgroup member is released after the root hash is calculated
 	tc.wg.Add(1)
 	//launch actual recursive function passing the waitgroups
-	go tc.split(ctx, depth, treeSize/tc.branches, key, tc.dataSize, tc.wg)
+	go tc.split(ctx, depth, treeSize/tc.branchesOfChunk, key, tc.dataSize, tc.wg)
 
 	// closes internal error channel if all subprocesses in the workgroup finished
 	go func() {
@@ -274,7 +277,7 @@ func (tc *TreeChunker) split(ctx context.Context, depth int, treeSize int64, add
 	//
 
 	for depth > 0 && size < treeSize {
-		treeSize /= tc.branches
+		treeSize /= tc.branchesOfChunk
 		depth--
 	}
 
@@ -319,7 +322,7 @@ func (tc *TreeChunker) split(ctx context.Context, depth int, treeSize int64, add
 		subTreeAddress := chunk[8+i*tc.hashSize : 8+(i+1)*tc.hashSize]
 
 		childrenWg.Add(1)
-		tc.split(ctx, depth-1, treeSize/tc.branches, subTreeAddress, secSize, childrenWg)
+		tc.split(ctx, depth-1, treeSize/tc.branchesOfChunk, subTreeAddress, secSize, childrenWg)
 
 		i++
 		pos += treeSize
@@ -398,15 +401,15 @@ func (rd *ReportData) DecodeRLP(s *rlp.Stream) error {
 type LazyChunkReader struct {
 	ctx       context.Context
 	addr      Address // root address
-	chunkData ChunkData
+	chunkData ChunkData  //这个是addr对应的根数据，（8字节长度)+chunk哈希值或者chunk数据
 	off       int64 // offset
 	chunkSize int64 // inherit from chunker
-	branches  int64 // inherit from chunker
+	branchesOfChunk  int64 // inherit from chunker
 	hashSize  int64 // inherit from chunker
 	depth     int
 	getter    Getter
 	sizeCache *lru.Cache
-	ts_buffer *lru.Cache
+	ts_buffer *lru.Cache //这个从中心化服务器预读取的片断
 }
 
 func (tc *TreeChunker) Join(ctx context.Context) *LazyChunkReader {
@@ -418,7 +421,7 @@ func (tc *TreeChunker) Join(ctx context.Context) *LazyChunkReader {
 	return &LazyChunkReader{
 		addr:      tc.addr,
 		chunkSize: tc.chunkSize,
-		branches:  tc.branches,
+		branchesOfChunk:  tc.branchesOfChunk,
 		hashSize:  tc.hashSize,
 		depth:     tc.depth,
 		getter:    tc.getter,
@@ -503,44 +506,7 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 	if len(b) == 0 {
 		return 0, nil
 	}
-	quitC := make(chan bool)
-	size, err := r.Size(cctx, quitC)
-	if err == nil {
 
-		errC := make(chan error)
-
-		// }
-		var treeSize int64
-		var depth int
-		// calculate depth and max treeSize
-		treeSize = r.chunkSize
-		for ; treeSize < size; treeSize *= r.branches {
-			depth++
-		}
-
-		length := int64(len(b))
-		for d := 0; d < r.depth; d++ {
-			off *= r.chunkSize
-			length *= r.chunkSize
-		}
-
-		go r.join(cctx, b, off, off+length, depth, treeSize/r.branches, r.chunkData, errC)
-
-		err = <-errC
-		if err == nil {
-
-			//val := cctx.Value("req")
-			//if val == nil   { for test only
-			if off+int64(len(b)) >= size {
-				log.Trace("lazychunkreader.readat.return at end", "size", size, "off", off)
-				return int(size - off), io.EOF
-			}
-			log.Trace("lazychunkreader.readat.errc", "buff", len(b))
-			return len(b), nil
-			//}
-
-		}
-	}
 
 	defer func() { // 必须要先声明defer，否则不能捕获到panic异常
 
@@ -553,10 +519,14 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 	}()
 
 	requestInfo := cctx.Value("request")
+	var url string
+	var req *rawHttp.Request
 	if requestInfo != nil && !reflect.ValueOf(requestInfo).IsNil() {
-		req := requestInfo.(*rawHttp.Request)
-		url := cctx.Value("url").(string)
-
+		req = requestInfo.(*rawHttp.Request)
+		url = cctx.Value("url").(string)
+	}else {
+		url = r.addr.String()
+	}
 		buffer, OK := r.ts_buffer.Get(url)
 		needRetrieve := !OK
 		//检查是否需要
@@ -568,57 +538,122 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 
 			}
 		}
-		var cacheBuffer []byte
+
 		startOffset := int64(0)
 		if needRetrieve {
-			httpClient := cctx.Value("reporter")
-			if httpClient != nil && !reflect.ValueOf(httpClient).IsNil() {
-				hash := cctx.Value("hash")
-				var hashValue common.Hash
-				if hash != nil && reflect.ValueOf(hash).IsValid() {
-					hashValue = hash.(common.Hash)
-				} else {
-					hashValue = common.Hash{0}
+
+
+			//////------- first read from P2P network--------/////
+			quitC := make(chan bool)
+			size, err := r.Size(cctx, quitC)
+			if err == nil {
+
+				errC := make(chan error)
+
+				/**
+					通过size获得tree应该是几层
+				 */
+				var treeSize int64
+				var depth int
+				// calculate depth and max treeSize
+				treeSize = r.chunkSize
+				//指数级增长，这个方案避免了使用log函数
+				for ; treeSize < size; treeSize *= r.branchesOfChunk {
+					depth++
 				}
-				//	fmt.Printf("Read hash from central node: %v len:%v from: %v\r\n",url,len(b),off)
-				dataBuf, end := httpClient.(*util.HttpReader).GetChunkFromCentral(url, off, hashValue[:], req)
-				if dataBuf != nil && len(dataBuf) > 0 {
-					r.ts_buffer.Add(url, &DataCache{start: off, value: dataBuf, end: end})
-					cacheBuffer = dataBuf
-					err = nil
-				} else {
-					cacheBuffer = nil
-					err = errors.New("Read Central Found")
+
+				max_read := size-off;
+				fileEnd := false
+				if max_read > MAX_FILE_CACHE {//256*1024*100+100
+					max_read = MAX_FILE_CACHE
+				}else{
+					fileEnd = true
 				}
-				startOffset = 0
-			} else {
-				cacheBuffer = nil
-				err = errors.New("No Central Found")
+				data_buffer := make([]byte,max_read)
+				length := int64(len(data_buffer))
+				for d := 0; d < r.depth; d++ {
+					off *= r.chunkSize
+					length *= r.chunkSize
+				}
+
+				go r.join(cctx, data_buffer, off, off+length, depth, treeSize/r.branchesOfChunk, r.chunkData, errC)
+
+				err = <-errC
+				if err == nil { //replace cache and return data from cache
+
+					buffer = &DataCache{start: off, value: data_buffer, end: fileEnd}
+					r.ts_buffer.Add(url, buffer)
+					//}
+
+				}
+			}else if req !=nil {
+				/////------------fallback read from center server --------///////////////
+				httpClient := cctx.Value("reporter")
+				if httpClient != nil && !reflect.ValueOf(httpClient).IsNil() {
+					hash := cctx.Value("hash")
+					var hashValue common.Hash
+					if hash != nil && reflect.ValueOf(hash).IsValid() {
+						hashValue = hash.(common.Hash)
+					} else {
+						hashValue = common.Hash{0}
+					}
+					//	fmt.Printf("Read hash from central node: %v len:%v from: %v\r\n",url,len(b),off)
+					dataBuf, end := httpClient.(*util.HttpReader).GetChunkFromCentral(url, off, hashValue[:], req)
+					if dataBuf != nil && len(dataBuf) > 0 {
+
+						buffer = DataCache{start: off, value: dataBuf, end: end}
+						r.ts_buffer.Add(url, buffer)
+						err = nil
+					} else {
+						buffer = nil
+						err = errors.New("Read Central Failed")
+					}
+					startOffset = 0
+				} else {
+					buffer = nil
+					err = errors.New("No Central Found")
+				}
 			}
 
 		} else {
-			cacheBuffer = buffer.(*DataCache).value
+
 			startOffset = off - buffer.(*DataCache).start
 			err = nil
+
+		}
+		if buffer != nil {
+			cacheBuffer := buffer.(*DataCache).value
+			totalLen := len(cacheBuffer) - int(startOffset)
+			if totalLen > len(b) {
+				totalLen = len(b)
+
+			} else if totalLen < 0 {
+				totalLen = 0
+			}
+			//测试是否文件已经读完的两个条件：
+			// 1. buffer已经指向了addr/url对应的文件尾
+			// 2. b的缓冲区长度加上开始的位置已经超过buffer里面末尾的大小了
+			if(buffer.(*DataCache).end  && (int(startOffset) + len(b) >= len(cacheBuffer))){
+				err=io.EOF
+			}
+			copy(b, cacheBuffer[startOffset:startOffset+int64(totalLen)])
+			read = totalLen
+		}else{
+			read = 0;
+
 		}
 
-		totalLen := len(cacheBuffer) - int(startOffset)
-		if totalLen > len(b) {
-			totalLen = len(b)
-		} else if totalLen < 0 {
-			totalLen = 0
-		}
-		copy(b, cacheBuffer[startOffset:startOffset+int64(totalLen)])
-		read = totalLen
 		return
-	}
-	read = 0
-	err = errors.New("Data Chunk not Found")
-	return
+
+
 
 }
+/**
+	获取从off开始到eoff中一段数据，放置到b中，数据根是chunkData,chunksAccount是这个r的实际数据的chunks个数
+	off/eoff是原始的 offset和length映射到depth层的的结果
 
-func (r *LazyChunkReader) join(ctx context.Context, b []byte, off int64, eoff int64, depth int, treeSize int64, chunkData ChunkData, errC chan error) {
+ */
+func (r *LazyChunkReader) join(ctx context.Context, b []byte, off int64, eoff int64, depth int, chunksAccount int64, chunkData ChunkData, errC chan error) {
 	result := error(nil)
 
 	defer func() {
@@ -626,15 +661,15 @@ func (r *LazyChunkReader) join(ctx context.Context, b []byte, off int64, eoff in
 		errC <- result
 	}()
 	// find appropriate block level
-	for chunkData.Size() < uint64(treeSize) && depth > r.depth {
-		treeSize /= r.branches
+	for chunkData.Size() < uint64(chunksAccount) && depth > r.depth {
+		chunksAccount /= r.branchesOfChunk
 		depth--
 	}
 	//sec := time.Now().UnixNano()
 	//log.Info("Join Start","uuid",sec,"offset",off,"eoff",eoff,"depth",depth,"addr",chunkData[0:20])
 
 	//defer func() {log.Info("Join end","uuid",sec,"offset",off,"eoff",eoff,"depth",depth,"addr",chunkData[0:20])}()
-	// leaf chunk found
+	// leaf chunk found，最后一层，叶子节点
 	if depth == r.depth {
 		extra := 8 + eoff - int64(len(chunkData))
 		if extra > 0 {
@@ -645,8 +680,8 @@ func (r *LazyChunkReader) join(ctx context.Context, b []byte, off int64, eoff in
 	}
 
 	// subtree
-	start := off / treeSize
-	end := (eoff + treeSize - 1) / treeSize
+	start := off / chunksAccount
+	end := (eoff + chunksAccount - 1) / chunksAccount
 
 	// last non-leaf chunk can be shorter than default chunk size, let's not read it further then its end
 	currentBranches := int64(len(chunkData)-8) / r.hashSize
@@ -656,9 +691,9 @@ func (r *LazyChunkReader) join(ctx context.Context, b []byte, off int64, eoff in
 
 	errs := make(chan error, end-start)
 	for i := start; i < end; i++ {
-		soff := i * treeSize
+		soff := i * chunksAccount
 		roff := soff
-		seoff := soff + treeSize
+		seoff := soff + chunksAccount
 
 		if soff < off {
 			soff = off
@@ -675,7 +710,7 @@ func (r *LazyChunkReader) join(ctx context.Context, b []byte, off int64, eoff in
 				metrics.GetOrRegisterResettingTimer("lcr.getter.get.err", nil).UpdateSince(startTime)
 				log.Debug("lazychunkreader.join", "key", fmt.Sprintf("%x", childAddress), "err", err)
 				select {
-				case errs <- fmt.Errorf("chunk %v-%v not found; key: %s", off, off+treeSize, fmt.Sprintf("%x", childAddress)):
+				case errs <- fmt.Errorf("chunk %v-%v not found; key: %s", off, off+chunksAccount, fmt.Sprintf("%x", childAddress)):
 				case <-ctx.Done():
 					errs <- errors.New("quited")
 				}
@@ -684,7 +719,7 @@ func (r *LazyChunkReader) join(ctx context.Context, b []byte, off int64, eoff in
 			metrics.GetOrRegisterResettingTimer("lcr.getter.get", nil).UpdateSince(startTime)
 			if l := len(chunkData); l < 9 {
 				select {
-				case errs <- fmt.Errorf("chunk %v-%v incomplete; key: %s, data length %v", off, off+treeSize, fmt.Sprintf("%x", childAddress), l):
+				case errs <- fmt.Errorf("chunk %v-%v incomplete; key: %s, data length %v", off, off+chunksAccount, fmt.Sprintf("%x", childAddress), l):
 				case <-ctx.Done():
 					errs <- errors.New("quited")
 				}
@@ -693,7 +728,7 @@ func (r *LazyChunkReader) join(ctx context.Context, b []byte, off int64, eoff in
 			if soff < off {
 				soff = off
 			}
-			r.join(ctx, b[soff-off:seoff-off], soff-roff, seoff-roff, depth-1, treeSize/r.branches, chunkData, errs)
+			r.join(ctx, b[soff-off:seoff-off], soff-roff, seoff-roff, depth-1, chunksAccount/r.branchesOfChunk, chunkData, errs)
 		}(i)
 	} //for
 

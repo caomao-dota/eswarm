@@ -162,7 +162,7 @@ func (k *Kademlia) IsBlocked(id enode.ID, inbound bool) bool {
 	idStr := fmt.Sprintf("%v-%v", id, inbound)
 	val, ok := k.blacklist.Get(idStr)
 	if ok && !inbound && !time.Now().After(val.(p2p.BlackItem).DiscTime) {
-		log.Debug("block of black list","id",id)
+		//log.Debug("block of black list","id",id)
 		return true
 	} else if inbound {
 
@@ -832,7 +832,7 @@ func (k *Kademlia) callable(e *entry) bool {
 	e.retries++
 	e.seenAt = time.Now()
 	e.lastRetry = time.Now()
-	log.Trace(fmt.Sprintf("%08x: peer %v is callable", k.BaseAddr()[:4], e))
+//	log.Trace(fmt.Sprintf("%08x: peer %v is callable", k.BaseAddr()[:4], e))
 
 	return true
 }

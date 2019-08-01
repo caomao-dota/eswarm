@@ -167,6 +167,10 @@ func (p *Peer) Deliver(ctx context.Context, chunk storage.Chunk, priority uint8,
 	queueLen := p.pq.GetQueueLen(int(priority))
 	if queueLen >0 {
 		go func() {
+			if queueLen > 40 {
+				queueLen = 40
+			}
+
 			timeC := time.NewTimer(time.Duration(queueLen) * time.Millisecond)
 			select {
 			case <- timeC.C:
