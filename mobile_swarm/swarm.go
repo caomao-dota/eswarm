@@ -179,16 +179,19 @@ func Start(path string, password string, bootnodeAddrs string, bootnode string) 
 	if err != nil {
 		return nil, errors.New("NewSwarmNode func err...")
 	}
-	stack.Start()
 
-	if bootnode != "" {
-		bootnodes = append(bootnodes, bootnode)
+	go func() {
+		stack.Start()
 
-	}
+		if bootnode != "" {
+			bootnodes = append(bootnodes, bootnode)
 
-	for _, boot := range bootnodes {
-		stack.AddBootnode(boot)
-	}
+		}
+
+		for _, boot := range bootnodes {
+			stack.AddBootnode(boot)
+		}
+	}()
 
 	return stack, nil
 }
@@ -214,10 +217,10 @@ func PathExists(path string) (bool, error) {
 }
 
 func Activate(path string, appId string, credential string, addr string, newAccount bool, password string, arg int) (int64, error) {
-	return ActivateBase(path, appId, "", credential, addr, newAccount, password, arg)
+	return ActivateR(path, appId, "", credential, addr, newAccount, password, arg)
 }
 
-func ActivateBase(path string, appId string, clientId string, credential string, addr string, newAccount bool, password string, arg int) (int64, error) {
+func ActivateR(path string, appId string, clientId string, credential string, addr string, newAccount bool, password string, arg int) (int64, error) {
 
 	if path == "" {
 		return 0, errors.New("Must input path ...")
