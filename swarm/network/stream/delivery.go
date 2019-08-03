@@ -71,6 +71,8 @@ type Delivery struct {
 	trafficLoad  []*TrafficLoad
 	loadStartTime time.Time
 	bandLimit    int
+	currentLoad  int64
+	loadMu       sync.RWMutex
 }
 
 func NewDelivery(kad *network.Kademlia, chunkStore storage.SyncChunkStore, receiptStore *state.ReceiptStore) *Delivery {
@@ -259,16 +261,20 @@ func (d *Delivery)updateTrafficLoad(newDataLen int){
 		d.trafficLoad = append(d.trafficLoad,&TrafficLoad{current,newDataLen})
 	}
 	length := len(d.trafficLoad)
-	if  length > 50  {
-		d.trafficLoad = d.trafficLoad[length-50:]
+	if  length > 128  {
+		d.trafficLoad = d.trafficLoad[length-128:]
 	}
 
 	firstTime := current
+	d.loadMu.Lock()
+	defer d.loadMu.Unlock()
+	d.currentLoad = 0
+
 	for _,payload := range d.trafficLoad {
 		if payload.arrival.Before(firstTime) {
 			firstTime = payload.arrival
 		}
-
+		d.currentLoad += int64(payload.length)
 	}
 	d.loadStartTime = firstTime;
 
@@ -283,11 +289,9 @@ func (d *Delivery)SetSyncBandlimit(syncBandLimit int){
 }
 
 func (d *Delivery)SyncEnabled()  bool{
-	totalLoad := 0
-	for _,payload := range d.trafficLoad {
-		totalLoad += payload.length
-
-	}
+	d.loadMu.Lock()
+	defer d.loadMu.Unlock()
+	totalLoad := d.currentLoad
 	elasped := int64(time.Since(d.loadStartTime)+1)
 	currentBand  := int64(totalLoad) *int64(time.Millisecond) * 10 / int64(elasped)
 	return d.bandLimit == 0 || (int(currentBand) < d.bandLimit)
@@ -393,7 +397,7 @@ func (d *Delivery) RequestFromPeers(ctx context.Context, req *network.Request) (
 		minDelay := time.Hour
 		for _,id := range protentialNodes{
 			p := d.getPeer(*id)
-			if p.GetDelay() < minDelay {
+			if p != nil && p.GetDelay() < minDelay {
 				minDelay = p.GetDelay()
 				sp = p
 				spID = id
