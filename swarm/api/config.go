@@ -79,6 +79,7 @@ type Config struct {
 	NodeType            uint
 	ReportInterval      time.Duration		//提交收据的间隔
 	CheckBalance        bool 		//是否检查轻节点余额
+	SyncBandwith		int
 }
 
 //create a default config with all parameters to set to defaults
@@ -109,6 +110,7 @@ func NewConfig() (c *Config) {
 		CentralAddr:          []string{"http://124.156.115.14:8500"},
 		ReportInterval:       1 * time.Hour,
 		CheckBalance:         false,
+		SyncBandwith:		  10240,
 	}
 
 	return

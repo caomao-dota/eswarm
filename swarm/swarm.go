@@ -174,6 +174,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 	//// delivery响应fetcher的请求，将对应的数据返回
 	delivery := stream.NewDelivery(to, self.netStore, self.receiptsStore)
 	delivery.UpdateNodes(config.CentralAddr)
+	delivery.SetSyncBandlimit(config.SyncBandwith)
 	//创建一个fetcher工厂,然后传递给netStore，该工厂在需要读取chunk的时候，创建一个fetccher对象进行chunk读取，读取完毕后，销毁该对像
 	self.netStore.NewNetFetcherFunc = network.NewFetcherFactory(delivery.RequestFromPeers, delivery.GetDataFromCentral, config.DeliverySkipCheck).New
 

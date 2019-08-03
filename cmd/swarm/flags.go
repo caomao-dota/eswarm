@@ -153,6 +153,12 @@ var (
 		Usage:  "Number of chunks (5M is roughly 20-25GB) (default 5000000)",
 		EnvVar: SwarmEnvStoreCapacity,
 	}
+
+	SwarmSyncBandwidth = cli.Uint64Flag{
+		Name:   "bandwidth.sync",
+		Usage:  "Bandwith for sync download (default 20480kbps)",
+		EnvVar: SwarmEnvSyncBandWidth,
+	}
 	SwarmStoreCacheCapacity = cli.UintFlag{
 		Name:   "store.cache.size",
 		Usage:  "Number of recent chunks cached in memory (default 5000)",

@@ -54,7 +54,10 @@ var (
 	requestFromPeersCount     = metrics.NewRegisteredCounter("network.stream.request_from_peers.count", nil)
 	requestFromPeersEachCount = metrics.NewRegisteredCounter("network.stream.request_from_peers_each.count", nil)
 )
-
+type TrafficLoad struct {
+	arrival   time.Time
+	length    int
+}
 type Delivery struct {
 	chunkStore   storage.SyncChunkStore
 	kad          *network.Kademlia
@@ -65,6 +68,9 @@ type Delivery struct {
 	bzz          *network.Bzz
 	recvCount    map[common.Address]int64
 	rmu          sync.RWMutex
+	trafficLoad  []*TrafficLoad
+	loadStartTime time.Time
+	bandLimit    int
 }
 
 func NewDelivery(kad *network.Kademlia, chunkStore storage.SyncChunkStore, receiptStore *state.ReceiptStore) *Delivery {
@@ -73,6 +79,8 @@ func NewDelivery(kad *network.Kademlia, chunkStore storage.SyncChunkStore, recei
 		kad:          kad,
 		receiptStore: receiptStore,
 		recvCount:    make(map[common.Address]int64),
+		trafficLoad:  make([]*TrafficLoad,0),
+		loadStartTime:time.Now(),
 	}
 }
 
@@ -244,7 +252,46 @@ type ChunkDeliveryMsg struct {
 	SData []byte // the stored chunk Data (incl size)
 	peer  *Peer  // set in handleChunkDeliveryMsg
 }
+func (d *Delivery)updateTrafficLoad(newDataLen int){
+	current := time.Now()
 
+	if newDataLen != 0 {
+		d.trafficLoad = append(d.trafficLoad,&TrafficLoad{current,newDataLen})
+	}
+	length := len(d.trafficLoad)
+	if  length > 50  {
+		d.trafficLoad = d.trafficLoad[length-50:]
+	}
+
+	firstTime := current
+	for _,payload := range d.trafficLoad {
+		if payload.arrival.Before(firstTime) {
+			firstTime = payload.arrival
+		}
+
+	}
+	d.loadStartTime = firstTime;
+
+}
+
+/**
+	设置允许的流同步的速度，
+	syncBandLimit,同步的带宽，以Bytes/s为单位
+ */
+func (d *Delivery)SetSyncBandlimit(syncBandLimit int){
+	d.bandLimit = syncBandLimit
+}
+
+func (d *Delivery)SyncEnabled()  bool{
+	totalLoad := 0
+	for _,payload := range d.trafficLoad {
+		totalLoad += payload.length
+
+	}
+	elasped := int64(time.Since(d.loadStartTime)+1)
+	currentBand  := int64(totalLoad) *int64(time.Millisecond) * 10 / int64(elasped)
+	return d.bandLimit == 0 || (int(currentBand) < d.bandLimit)
+}
 //...but swap accounting needs to disambiguate if it is a delivery for syncing or for retrieval
 //as it decides based on message type if it needs to account for this message or not
 
@@ -269,6 +316,9 @@ func (d *Delivery) handleChunkDeliveryMsg(ctx context.Context, sp *Peer, req *Ch
 			defer span.(opentracing.Span).Finish()
 		}
 
+		if !replyReceipt  {
+			d.updateTrafficLoad(len(req.SData)+60)
+		}
 		req.peer = sp
 		err := d.chunkStore.Put(ctx, storage.NewChunk(req.Addr, req.SData))
 

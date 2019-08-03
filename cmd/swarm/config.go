@@ -80,6 +80,7 @@ const (
 	SwarmEnvReportInterval       = "SWARM_REPORT_INTERVAL"
 	SwarmEnvCheckBalance         = "SWARM_CHECK_BALANCE"
 	SwarmEnvStoreCapacity        = "SWARM_STORE_CAPACITY"
+	SwarmEnvSyncBandWidth        = "SWARM_SYNC_BANDWIDTH"
 	SwarmEnvStoreCacheCapacity   = "SWARM_STORE_CACHE_CAPACITY"
 	//SwarmEnvBootnodeMode         = "SWARM_BOOTNODE_MODE"
 	SwarmAccessPassword  = "SWARM_ACCESS_PASSWORD"
@@ -256,6 +257,9 @@ func cmdLineOverride(currentConfig *bzzapi.Config, ctx *cli.Context) *bzzapi.Con
 
 	if storeCapacity := ctx.GlobalUint64(SwarmStoreCapacity.Name); storeCapacity != 0 {
 		currentConfig.LocalStoreParams.DbCapacity = storeCapacity
+	}
+	if syncBandWidth := ctx.GlobalUint64(SwarmSyncBandwidth.Name); syncBandWidth != 0 {
+		currentConfig.SyncBandwith  = int(syncBandWidth)
 	}
 
 	if storeCacheCapacity := ctx.GlobalUint(SwarmStoreCacheCapacity.Name); storeCacheCapacity != 0 {

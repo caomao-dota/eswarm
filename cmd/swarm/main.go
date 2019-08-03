@@ -205,6 +205,7 @@ func init() {
 		// storage flags
 		SwarmStorePath,
 		SwarmStoreCapacity,
+		SwarmSyncBandwidth,
 		SwarmStoreCacheCapacity,
 		SwarmGlobalStoreAPIFlag,
 		SwarmReportIntervalFlag,
