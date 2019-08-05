@@ -255,6 +255,8 @@ type ChunkDeliveryMsg struct {
 	peer  *Peer  // set in handleChunkDeliveryMsg
 }
 func (d *Delivery)updateTrafficLoad(newDataLen int){
+	d.loadMu.Lock()
+	defer d.loadMu.Unlock()
 	current := time.Now()
 
 	if newDataLen != 0 {
@@ -266,8 +268,7 @@ func (d *Delivery)updateTrafficLoad(newDataLen int){
 	}
 
 	firstTime := current
-	d.loadMu.Lock()
-	defer d.loadMu.Unlock()
+
 	d.currentLoad = 0
 
 	for _,payload := range d.trafficLoad {
