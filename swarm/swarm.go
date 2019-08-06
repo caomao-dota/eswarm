@@ -408,11 +408,10 @@ func (s *Swarm) Start(srv *p2p.Server) error {
 		s.ps.Start(srv)
 	}
 
-	// start swarm http proxy server
-	if s.config.Port == "" {
-		s.config.Port = "8500"
-	}
+
+
 	addr := net.JoinHostPort(s.config.ListenAddr, s.config.Port)
+	log.Info("Starting http listen ","addr",addr)
 	server := httpapi.NewServer(s.api, s.config.Cors)
 
 	server.CreateCdnReporter(s.config.BzzAccount, s.config.ServerAddr)
@@ -422,6 +421,7 @@ func (s *Swarm) Start(srv *p2p.Server) error {
 
 	log.Debug("Starting Swarm HTTP proxy", "port", s.config.Port)
 	go func() {
+
 		err := server.ListenAndServe(addr)
 		if err != nil {
 			log.Error("Could not start Swarm HTTP proxy", "err", err.Error())

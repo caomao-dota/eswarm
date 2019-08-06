@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
+	"net"
 	"time"
 
 	"github.com/plotozhu/MDCMainnet/swarm/util"
@@ -311,6 +312,13 @@ func bzzd(ctx *cli.Context) error {
 	initSwarmNode(bzzconfig, stack, ctx)
 	//register BZZ as node.Service in the ethereum node
 	registerBzzService(bzzconfig, stack)
+	// start swarm http proxy server
+	if bzzconfig.Port == ""  || bzzconfig.Port == "0"{
+		l, _ := net.Listen("tcp", ":0") // listen on localhost
+		port := l.Addr().(*net.TCPAddr).Port
+		bzzconfig.Port = strconv.Itoa(port)
+	}
+
 	//start the node
 	utils.StartNode(stack)
 
@@ -375,6 +383,7 @@ func bzzd(ctx *cli.Context) error {
 	} else {
 		stack.Wait()
 	}
+
 	return nil
 }
 

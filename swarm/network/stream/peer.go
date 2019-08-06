@@ -152,7 +152,7 @@ func (p *Peer) EndRetrieve(address storage.Address){
 	start,ok := p.retrieveTime.Load(address.String())
 	if ok  {
 		duration := int64(time.Now().Sub(start.(time.Time)))
-		log.Info("NewDuration","value",duration,"id",p.ID())
+		log.Trace("NewDuration","value",duration,"id",p.ID())
 		p.delayArray = append(p.delayArray,duration)
 
 		if len(p.delayArray) > MAX_DELAY_CNT {
