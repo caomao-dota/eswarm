@@ -34,10 +34,12 @@ import (
 	bzzapi "github.com/plotozhu/MDCMainnet/swarm/api"
 	"github.com/plotozhu/MDCMainnet/swarm/util"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 )
 
@@ -180,18 +182,16 @@ func Start(path string, password string, bootnodeAddrs string, bootnode string) 
 		return nil, errors.New("NewSwarmNode func err...")
 	}
 
-	go func() {
-		stack.Start()
+	stack.Start()
 
-		if bootnode != "" {
-			bootnodes = append(bootnodes, bootnode)
+	if bootnode != "" {
+		bootnodes = append(bootnodes, bootnode)
 
-		}
+	}
 
-		for _, boot := range bootnodes {
-			stack.AddBootnode(boot)
-		}
-	}()
+	for _, boot := range bootnodes {
+		stack.AddBootnode(boot)
+	}
 
 	return stack, nil
 }
@@ -401,6 +401,14 @@ func NewSwarmNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 		return nil, err
 	}
 	bzzconfig := bzzapi.NewConfig()
+
+	// start swarm http proxy server
+	l, _ := net.Listen("tcp", ":0") // listen on localhost
+	port := l.Addr().(*net.TCPAddr).Port
+	l.Close()
+	bzzconfig.Port = strconv.Itoa(port)
+	rawStack.BzzPort = bzzconfig.Port
+
 	bzzconfig.Path = datadir
 	bzzconfig.NodeType = 17
 	bzzconfig.LocalStoreParams.DbCapacity = 20000  //5G
