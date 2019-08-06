@@ -25,6 +25,7 @@ import (
 	"math/big"
 	"net"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -408,7 +409,13 @@ func (s *Swarm) Start(srv *p2p.Server) error {
 		s.ps.Start(srv)
 	}
 
-
+	// start swarm http proxy server
+	if s.config.Port == ""  || s.config.Port == "0"{
+		l, _ := net.Listen("tcp", ":0") // listen on localhost
+		port := l.Addr().(*net.TCPAddr).Port
+		l.Close()
+		s.config.Port = strconv.Itoa(port)
+	}
 
 	addr := net.JoinHostPort(s.config.ListenAddr, s.config.Port)
 	log.Info("Starting http listen ","addr",addr)
