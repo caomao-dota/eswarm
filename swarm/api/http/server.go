@@ -872,8 +872,9 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 
 			s.entries.Add(path, hash)
 			actUri, err := api.Parse("m3u8:/" + url)
+			fullNodes,_ := s.api.GetNodeCount(r.Context())
 			//log.Info("read:","uri",actUri)
-			if err == nil {
+			if err == nil && fullNodes >2 {
 				//数据片断与哈希的对应关系应该已经存储在数据库里
 				newContext := context.WithValue(r.Context(), "url", string(path+act))
 				//newContext = context.WithValue(newContext,"server",*s)

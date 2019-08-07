@@ -198,11 +198,11 @@ func (k *Kademlia) SetDelay(id enode.ID, inbound bool) {
 	idStr := fmt.Sprintf("%v-%v", id, inbound)
 	val, exist := k.blacklist.Get(idStr)
 	log.Trace("add to blacklist:","id",idStr)
-	item := p2p.BlackItem{time.Now().Add(30 * time.Second), 1}
+	item := p2p.BlackItem{time.Now().Add(500 * time.Millisecond), 1}
 	if exist {
 		item = val.(p2p.BlackItem)
-		item.DiscTime = time.Now().Add(time.Duration(30*item.DiscCount) * time.Second)
-		if item.DiscCount < 60 {
+		item.DiscTime = time.Now().Add(time.Duration(500 * item.DiscCount)* time.Millisecond  )
+		if item.DiscCount < 32 {
 			item.DiscCount++
 		}
 
@@ -789,7 +789,7 @@ func depthForPot(p *pot.Pot, neighbourhoodSize int, pivotAddr []byte) (depth int
 // callable decides if an address entry represents a callable peer
 func (k *Kademlia) callable(e *entry) bool {
 	// not callable if peer is live or exceeded maxRetries
-	if e.conn != nil && time.Since(e.connectedAt) > 2*time.Minute && e.retries != 0 {
+	if e.conn != nil && time.Since(e.connectedAt) > 1*time.Minute && e.retries != 0 {
 		e.retries = 0
 		k.ClearDelay(e.ID(), false)
 	}
