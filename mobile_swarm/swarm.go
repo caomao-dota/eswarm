@@ -486,14 +486,18 @@ func (n *Node) GetHttpPort() string {
 	return n.httpPort
 }
 
-// getM3U8Url
+// getM3U8baseUrl
 func (n *Node) GetM3U8BaseUrl() string {
 
 	return fmt.Sprintf("http://localhost:%v/m3u8:/", n.httpPort)
 }
 
-// GetNodeInfo gathers and returns a collection of metadata known about the host.
+// getM3U8 url
 func (n *Node) GetM3U8Url(cdnUrl string, hash string) string {
+
+	if hash == "" {
+		return cdnUrl
+	}
 
 	index := strings.LastIndex(cdnUrl, "/")
 	baseUrl := n.GetM3U8BaseUrl()
