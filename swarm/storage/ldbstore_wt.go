@@ -76,15 +76,17 @@ var (
 
 type LDBStoreParams struct {
 	*StoreParams
-	Path string
+	ChunkPath string
+	InfoPath string
 	Po   func(Address) uint8
 }
 
 // NewLDBStoreParams constructs LDBStoreParams with the specified values.
-func NewLDBStoreParams(storeparams *StoreParams, path string) *LDBStoreParams {
+func NewLDBStoreParams(storeparams *StoreParams, path string,infoPath string) *LDBStoreParams {
 	return &LDBStoreParams{
 		StoreParams: storeparams,
-		Path:        path,
+		ChunkPath:        path,
+		InfoPath:	 infoPath,
 		Po:          func(k Address) (ret uint8) { return uint8(Proximity(storeparams.BaseKey, k[:])) },
 	}
 }
@@ -162,7 +164,7 @@ func NewLDBStore(params *LDBStoreParams) (s *LDBStore, err error) {
 	s.batch = newBatch()
 
 	go s.writeBatches()
-	s.db, err = NewLDBDatabase(params.Path)
+	s.db, err = NewLDBDatabase(params.InfoPath)
 
 	if err != nil {
 		return nil, err
@@ -170,7 +172,7 @@ func NewLDBStore(params *LDBStoreParams) (s *LDBStore, err error) {
 	// associate encodeData with default functionality
 
 	// Set client options
-	s.wiredtigerDB = NewDatabase(params.Path, 0)
+	s.wiredtigerDB = NewDatabase(params.ChunkPath, 0)
 
 
 

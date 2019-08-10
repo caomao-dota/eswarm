@@ -28,6 +28,7 @@ import (
 
 type LocalStoreParams struct {
 	*StoreParams
+	ChunkInfoPath string
 	ChunkDbPath string
 	Validators  []ChunkValidator `toml:"-"`
 }
@@ -41,8 +42,12 @@ func NewDefaultLocalStoreParams() *LocalStoreParams {
 //this can only finally be set after all config options (file, cmd line, env vars)
 //have been evaluated
 func (p *LocalStoreParams) Init(path string) {
+	p.ChunkInfoPath = path
 	if p.ChunkDbPath == "" {
 		p.ChunkDbPath = filepath.Join(path, "chunks")
+
+	}else {
+		p.ChunkInfoPath = filepath.Join(path, "infos")
 	}
 }
 
@@ -57,7 +62,7 @@ type LocalStore struct {
 
 // This constructor uses MemStore and DbStore as components
 func NewLocalStore(params *LocalStoreParams, mockStore *mock.NodeStore) (*LocalStore, error) {
-	ldbparams := NewLDBStoreParams(params.StoreParams, params.ChunkDbPath)
+	ldbparams := NewLDBStoreParams(params.StoreParams, params.ChunkDbPath,params.ChunkInfoPath)
 	dbStore, err := NewMockDbStore(ldbparams, mockStore)
 	if err != nil {
 		return nil, err
@@ -70,7 +75,7 @@ func NewLocalStore(params *LocalStoreParams, mockStore *mock.NodeStore) (*LocalS
 }
 
 func NewTestLocalStoreForAddr(params *LocalStoreParams) (*LocalStore, error) {
-	ldbparams := NewLDBStoreParams(params.StoreParams, params.ChunkDbPath)
+	ldbparams := NewLDBStoreParams(params.StoreParams, params.ChunkDbPath,params.ChunkInfoPath)
 	dbStore, err := NewLDBStore(ldbparams)
 	if err != nil {
 		return nil, err
