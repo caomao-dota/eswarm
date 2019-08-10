@@ -71,8 +71,6 @@ type Node struct {
 	lock sync.RWMutex
 
 	log log.Logger
-
-	BzzPort string
 }
 
 // New creates a new P2P node, ready for protocol registration.

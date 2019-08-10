@@ -22,7 +22,14 @@ func main() {
 	}
 	fmt.Println(expireTime)
 
-	_, err = csdc.Start(path, "123", "https://raw.githubusercontent.com/wiki/CSDCFund/csdc/nodeslist.txt", "")
+	node, err := csdc.Start(path, "123", "https://raw.githubusercontent.com/wiki/CSDCFund/csdc/nodeslist.txt", "")
+
+	fmt.Println(node.GetHttpPort())
+
+	fmt.Println(node.GetM3U8BaseUrl())
+
+	fmt.Println(node.GetM3U8Url("https://v.152878.com/vback/qYq5rD7Jq19gE/2358/0981B7353D085CA0AE868EA1DEE43067/0981B7353D085CA0AE868EA1DEE43067_ea6399f6616d4a60aa42487c2814e4c2.mp4/index.m3u8?token=cz05OWViYWFkZDI2MjI5NjBlOTM2ZTJjN2ZiMTQ2Nzg4ZiZpPTk5OTk5JnA9NSZ0PTE1NjUwOTIyOTImbj0wOTgxQjczNTNEMDg1Q0EwQUU4NjhFQTFERUU0MzA2N19lYTYzOTlmNjYxNmQ0YTYwYWE0MjQ4N2MyODE0ZTRjMi5tcDQvaW5kZXgubTN1OCZyPTEmdj0yLjAuMCZjPTImZT03MjA=", "00d534e271ae532aaaf05ff5a36e5e48b6193f7c8c6784c7a38653f462399243"))
+
 	if err != nil {
 		fmt.Println(err)
 		return

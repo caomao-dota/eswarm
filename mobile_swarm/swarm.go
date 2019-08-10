@@ -40,6 +40,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -90,7 +91,8 @@ func NewNodeConfig() *NodeConfig {
 
 // Node represents a Geth Ethereum node instance.
 type Node struct {
-	node *node.Node
+	node     *node.Node
+	httpPort string
 }
 
 type ActivatePost struct {
@@ -182,7 +184,11 @@ func Start(path string, password string, bootnodeAddrs string, bootnode string) 
 		return nil, errors.New("NewSwarmNode func err...")
 	}
 
-	stack.Start()
+	if swarmErr := stack.Start(); swarmErr != nil {
+		return nil, swarmErr
+	}
+
+	stack.GetNodeInfo()
 
 	if bootnode != "" {
 		bootnodes = append(bootnodes, bootnode)
@@ -407,7 +413,6 @@ func NewSwarmNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 	port := l.Addr().(*net.TCPAddr).Port
 	l.Close()
 	bzzconfig.Port = strconv.Itoa(port)
-	rawStack.BzzPort = bzzconfig.Port
 
 	bzzconfig.Path = datadir
 	bzzconfig.NodeType = 17
@@ -428,7 +433,7 @@ func NewSwarmNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 		return nil, fmt.Errorf("swarm init: %v", err)
 	}
 
-	return &Node{rawStack}, nil
+	return &Node{rawStack, bzzconfig.Port}, nil
 }
 
 // Close terminates a running node along with all it's services, tearing internal
@@ -474,4 +479,31 @@ func (n *Node) GetNodeInfo() *NodeInfo {
 // GetPeersInfo returns an array of metadata objects describing connected peers.
 func (n *Node) GetPeersInfo() *PeerInfos {
 	return &PeerInfos{n.node.Server().PeersInfo()}
+}
+
+// getBzzPort
+func (n *Node) GetHttpPort() string {
+	return n.httpPort
+}
+
+// getM3U8baseUrl
+func (n *Node) GetM3U8BaseUrl() string {
+
+	return fmt.Sprintf("http://localhost:%v/m3u8:/", n.httpPort)
+}
+
+// getM3U8 url
+func (n *Node) GetM3U8Url(cdnUrl string, hash string) string {
+
+	if hash == "" {
+		return cdnUrl
+	}
+
+	index := strings.LastIndex(cdnUrl, "/")
+	baseUrl := n.GetM3U8BaseUrl()
+
+	url := fmt.Sprintf("%v/{%v}%v", cdnUrl[:index], hash, cdnUrl[index:])
+	url = strings.Replace(url, "://", "/", -1)
+
+	return fmt.Sprintf("%v%v", baseUrl, url)
 }
