@@ -15,7 +15,7 @@ func main() {
 	//err := eswarm.Clean(path, 1)
 	//if err != nil { return }
 
-	expireTime, err := csdc.ActivateR(path, "5ca31612427e9a564c2089c2", "123", "123", "http://124.156.115.14:4000/apis/v1/activate", false, "123", 1)
+	expireTime, err := csdc.ActivateR(path, "5ca31612427e9a564c2089c2", "123", "123", "https://7001.bfbos.com/apis/v1/activate", false, "123", 1)
 	if err != nil {
 		fmt.Println(expireTime, err)
 		//return

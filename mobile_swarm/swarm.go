@@ -399,7 +399,8 @@ func NewSwarmNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 			MaxPeers:    config.MaxPeers,
 			NodeType:    17,
 		},
-		NoUSB: true,
+		NoUSB:    true,
+		NodeType: 17,
 	}
 
 	rawStack, err := node.New(nodeConf)
