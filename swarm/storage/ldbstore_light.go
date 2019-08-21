@@ -80,7 +80,7 @@ type LDBStoreParams struct {
 }
 
 // NewLDBStoreParams constructs LDBStoreParams with the specified values.
-func NewLDBStoreParams(storeparams *StoreParams, path string) *LDBStoreParams {
+func NewLDBStoreParams(storeparams *StoreParams, path string, infoPath string) *LDBStoreParams {
 	return &LDBStoreParams{
 		StoreParams: storeparams,
 		Path:        path,
