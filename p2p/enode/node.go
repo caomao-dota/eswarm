@@ -34,7 +34,7 @@ type NodeTypeOption uint8
 
 const (
 	NodeTypeFull        NodeTypeOption = 0x24
-	NodeTypeLight                      = 0x11
+	//NodeTypeLight                      = 0x11
 	NodeTypeLightServer                = 0x21
 	NodeTypeStorage                    = 0x22
 	NodeTypeBoot                       = 0x09
@@ -49,7 +49,10 @@ func GetSyncingOptions(nodeType NodeTypeOption) SyncingOption {
 }
 
 func IsLightNode(nodeType NodeTypeOption) bool {
-	return  GetRetrievalOptions(nodeType) == RetrievalClientOnly && GetSyncingOptions(nodeType) == SyncingDisabled
+	return  !(IsBootNode(nodeType) || IsFullNode(nodeType) || IsLightServer(nodeType) || IsStorageNode(nodeType))
+}
+func IsConnectableNode(nodeType NodeTypeOption) bool {
+	return  IsBootNode(nodeType) || IsFullNode(nodeType) || IsLightServer(nodeType) || IsStorageNode(nodeType)
 }
 
 func IsBootNode(nodeType NodeTypeOption) bool {

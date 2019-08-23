@@ -488,7 +488,7 @@ func (k *Kademlia) On(p *Peer) (depth uint8, changed bool, err error) {
 	var ins bool
 	changed = false
 	k.peers[string(p.UAddr)] = true
-	if p.NodeType() != enode.NodeTypeLight {
+	if enode.IsConnectableNode(enode.NodeTypeOption(p.NodeType())) {
 		po := int(0)
 
 		k.conns, po, _, _ = pot.Swap(k.conns, p, Pof, func(v pot.Val) pot.Val {
@@ -627,7 +627,7 @@ func (k *Kademlia) Off(p *Peer) {
 	var del bool
 	delete(k.peers, string(p.UAddr))
 	k.SetDelay(p.ID(), false)
-	if p.NodeType() != enode.NodeTypeLight {
+	if enode.IsConnectableNode(enode.NodeTypeOption(p.NodeType()))  {
 		k.addrs, _, _, _ = pot.Swap(k.addrs, p, Pof, func(v pot.Val) pot.Val {
 			// v cannot be nil, must check otherwise we overwrite entry
 			if v == nil {

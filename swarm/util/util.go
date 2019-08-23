@@ -266,7 +266,6 @@ func SendDataToServer(url string, timeout time.Duration, data []byte) error {
 			IdleConnTimeout:     1000 * time.Second,
 		},
 	}
-
 	request, err := http.NewRequest("POST", url, bytes.NewReader(data))
 	if err != nil {
 		log.Info("error to send data", "reason", err)
