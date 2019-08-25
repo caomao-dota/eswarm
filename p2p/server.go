@@ -879,9 +879,11 @@ func (srv *Server) protoHandshakeChecks(peers map[enode.ID]*Peer, inboundCount i
 	case len(srv.Protocols) > 0 && countMatchingProtocols(srv.Protocols, c.caps) == 0:
 		return DiscUselessPeer
 
-	case !c.is(trustedConn) && (fullPeerCnt >= srv.MaxPeers && !isLightNode) || (lightPeerCnt >= srv.MaxPeers && isLightNode):
+	case !c.is(trustedConn) && ((fullPeerCnt >= srv.MaxPeers && !isLightNode) || (lightPeerCnt >= srv.MaxPeers && isLightNode)):
+		log.Info("too many peers","full:",fullPeerCnt,"light:",lightPeerCnt,"is light:",isLightNode)
 		return DiscTooManyPeers
 	case !c.is(trustedConn) && c.is(inboundConn) && !isLightNode && inboundCount >= srv.maxInboundConns():
+		log.Info("too many peers of inbound","full:",fullPeerCnt,"inboundCount:",inboundCount,"is light:",isLightNode)
 		return DiscTooManyPeers
 	case srv.FilterChain.IsBlocked(c.node.ID(), c.is(inboundConn)):
 		return DiscBlockedPeer
