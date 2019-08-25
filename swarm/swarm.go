@@ -92,7 +92,7 @@ type Swarm struct {
 // If mockStore is not nil, it will be used as the storage for chunk data.
 // MockStore should be used only for testing.
 func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err error) {
-	log.Info("Starting eswarm now!", "version", "082301")
+	log.Info("Starting eswarm now!", "version", "082501")
 	if bytes.Equal(common.FromHex(config.PublicKey), storage.ZeroAddr) {
 		return nil, fmt.Errorf("empty public key")
 	}

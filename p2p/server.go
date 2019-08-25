@@ -795,7 +795,7 @@ running:
 				srv.log.Info("Adding p2p peer", "name", name, "addr", c.fd.RemoteAddr(), "peers", len(peers)+1,"inbound",p.Inbound())
 				go srv.runPeer(p)
 				peers[c.node.ID()] = p
-				if p.Inbound() {
+				if p.Inbound() && enode.IsConnectableNode(enode.NodeTypeOption(p.Node().NodeType())){
 					inboundCount++
 				}
 			}
