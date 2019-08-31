@@ -599,7 +599,7 @@ func (rs *ReceiptStore) doAutoSubmit() (error,int) {
 	result, err := rs.createReportData(receipts)
 
 	timeout := time.Duration(30 * time.Second) //超时时间50ms
-	log.Info("report receipts to server", "total amount", receipts.Amount())
+	log.Info("report receipts to server", "total amount", receipts.Amount(),"items:",totalCnt)
 	err = util.SendDataToServer(rs.server+ReportRoute, timeout, result)
 	rs.hmu.Lock()
 	defer rs.hmu.Unlock()
@@ -630,7 +630,12 @@ func (rs *ReceiptStore) mockAutoSubmit() error {
 func (rs *ReceiptStore) submitRoutine() {
 	log.Info("Setup report subroutine ", "time", MAX_STIME_DURATION)
 	timer := time.NewTimer(MAX_STIME_DURATION)
-	rs.doAutoSubmit()
+	_,totalCnt := rs.doAutoSubmit()
+	if totalCnt >= MAX_ITEM_PER_REPORT { //说明还有数据没有传完，过两分钟再上传
+		timer.Reset(2*time.Minute)
+	}else{//数据上传完了，一个小时候后再上传
+		timer.Reset(MAX_STIME_DURATION)
+	}
 	for {
 		select {
 		case <-timer.C:
