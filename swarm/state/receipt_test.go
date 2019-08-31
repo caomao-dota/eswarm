@@ -506,18 +506,31 @@ func loadReceiptStore(t *testing.T, dbPath string) *ReceiptStore {
 
 	db, err := leveldb.OpenFile(dbPath, nil)
 	if err != nil {
-		t.Error(err)
+		panic(err)
 	}
-	receiptStore := newReceiptsStore(db, getOrCreateKey(100), "",false)
+	receiptStore := newReceiptsStore(db, getOrCreateKey(100), "http://192.168.1.10:4000/apis/v1",false)
 
 	return receiptStore
 }
 
 func Test_ReadExternData(t *testing.T) {
 
-	rs := loadReceiptStore(t,"/Users/aegon/Downloads/Potato Desktop/receipts.db/receipts.db_04")
-	receipts := rs.GetReceiptsToReport()
-	log.Info("receipts is:",receipts)
+	rs := loadReceiptStore(t,"/Users/aegon/Downloads/Potato Desktop/receipts.db 2")
+	receipts,_ := rs.GetReceiptsToReport()
+	result, err := rs.createReportData(receipts)
+	if err == nil {
+		resultLen := len(result)
+		log.Info("receipts is:",receipts,"len",resultLen)
+	}
+
+	tm := time.NewTicker(5*time.Millisecond)
+
+	for i := range tm.C {
+		log.Info("ok","i",i)
+	}
+
+
+
 }
 
 func  Test_Post(t *testing.T)  {

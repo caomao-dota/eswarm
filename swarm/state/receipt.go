@@ -484,7 +484,10 @@ func (rs *ReceiptStore) GetReceiptsToReport() (Receipts,int) {
 			toReport[nodeId] = items
 		} else {
 			for stime, data := range items {
-				newItems[stime] = data
+				if int(data.Amount) > MAX_ITEM_PER_REPORT {
+					newItems[stime] = data
+				}
+
 			}
 		}
 	}
@@ -505,7 +508,7 @@ func (rs *ReceiptStore) extractReportReceipts() (Receipts,int) {
 	total := 0
 	for nodeId, receipts := range rs.allReceipts {
 		for stime, receiptItem := range receipts {
-			if time.Since(stime) > MAX_STIME_JITTER  && total < MAX_ITEM_PER_REPORT{ //超过两小时的
+			if time.Since(stime) > MAX_STIME_JITTER  { //超过两小时的
 				receiptItems, ok := result[nodeId]
 				if !ok {
 					receiptItems = make(ReceiptItems)
@@ -540,31 +543,44 @@ type ReceiptsOfReport struct {
 	Receipts []rlpRD
 }
 
-func (rs *ReceiptStore) createReportData(receipts Receipts) ([]byte, error) {
-	receiptsArray := make([]rlpRD, 0)
+func (rs *ReceiptStore) createReportData(receipts Receipts) (result [][]byte, err error) {
+
+
+	totalSeg := (len(receipts)+4095) >> 12
+	receiptsArrays := make([][]rlpRD, totalSeg)
+	index := 0
 	for _, item := range receipts {
+		seg := (index >>12)
+		//offset := (index & 0xFFF)
 		for stime, val := range item {
-			receiptsArray = append(receiptsArray, rlpRD{uint32(stime.Unix()), val.Amount, val.Sign})
+			receiptsArrays[seg] = append(receiptsArrays[seg], rlpRD{uint32(stime.Unix()), val.Amount, val.Sign})
+		}
+		index++
+	}
+	encoded := make([][]byte,totalSeg)
+	for i := 0; i < totalSeg; i++{
+
+		toReport := ReceiptsOfReport{
+			1,
+			rs.account,
+			receiptsArrays[i],
+		}
+		encoded[i],_ = rlp.EncodeToBytes(toReport)
+
+		h := rlpHash(encoded[i])
+		sig, err := crypto.Sign(h[:], rs.prvKey)
+		if err == nil {
+			encoded[i] = append(sig, encoded[i]...)
 		}
 
-	}
-	toReport := ReceiptsOfReport{
-		1,
-		rs.account,
-		receiptsArray,
-	}
-	encoded, err := rlp.EncodeToBytes(toReport)
-
-	h := rlpHash(encoded)
-	sig, err := crypto.Sign(h[:], rs.prvKey)
-	if err == nil {
-		encoded = append(sig, encoded...)
 	}
 	id := crypto.PubkeyToAddress(rs.prvKey.PublicKey)
 	if id != rs.account {
 		err = ErrInvalidNode
 	}
-	return encoded, err
+	result = encoded
+	return
+
 }
 func (rs *ReceiptStore) SendDataToServer(url string, timeout time.Duration, result []byte) error {
 
@@ -596,16 +612,22 @@ func (rs *ReceiptStore) doAutoSubmit() (error,int) {
 	log.Info("report receipts to server 1")
 	receipts,totalCnt := rs.GetReceiptsToReport()
 
-	result, err := rs.createReportData(receipts)
+	results, err := rs.createReportData(receipts)
 
-	timeout := time.Duration(30 * time.Second) //超时时间50ms
-	log.Info("report receipts to server", "total amount", receipts.Amount(),"items:",totalCnt)
-	err = util.SendDataToServer(rs.server+ReportRoute, timeout, result)
-	rs.hmu.Lock()
-	defer rs.hmu.Unlock()
-	len := len(rs.receiptsLogs)
-	if len > 1000 {
-		rs.receiptsLogs = rs.receiptsLogs[len-1000:]
+	for i := 0; i < len(results); i ++ {
+		timeout := time.Duration(10 * time.Second) //超时时间50ms
+		log.Info("report receipts to server", "total amount", receipts.Amount(),"items:",totalCnt)
+		err = util.SendDataToServer(rs.server+ReportRoute, timeout, results[i])
+		rs.hmu.Lock()
+
+		len := len(rs.receiptsLogs)
+		if len > 1000 {
+			rs.receiptsLogs = rs.receiptsLogs[len-1000:]
+		}
+		rs.hmu.Unlock()
+		if err != nil {
+			break;
+		}
 	}
 	if err == nil { //提交成功，本地删除
 		rs.receiptsLogs = append(rs.receiptsLogs, receipts)
@@ -619,11 +641,11 @@ func (rs *ReceiptStore) doAutoSubmit() (error,int) {
 func (rs *ReceiptStore) mockAutoSubmit() error {
 	result, err := rs.createReportData(rs.allReceipts)
 
-	ioutil.WriteFile("./reportData", result, 0644)
+	ioutil.WriteFile("./reportData", result[0], 0644)
 
 	url := "http://127.0.0.1:8088/receipts"
 	timeout := time.Duration(50 * time.Millisecond) //超时时间50ms
-	err = rs.SendDataToServer(url, timeout, result)
+	err = rs.SendDataToServer(url, timeout, result[0])
 
 	return err
 }
