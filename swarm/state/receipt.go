@@ -46,6 +46,7 @@ var (
 	BALNACE_PREFIX     = "BL"
 	MAX_STIME_DURATION = 60 * time.Minute       //生成收据时，一个STIME允许的最长时间
 	MAX_STIME_JITTER   = 2 * MAX_STIME_DURATION //接收收据时，允许最长的时间差，超过这个时间的不再接收
+	MAX_ITEM_PER_REPORT = 2000
 
 )
 
@@ -457,9 +458,9 @@ func (rs *ReceiptStore) OnNewReceipt(receipt *Receipt) error {
 	//持久化
 	return rs.saveHRecord()
 }
-func (rs *ReceiptStore) GetReceiptsLogs() []Receipts {
+func (rs *ReceiptStore) GetReceiptsLogs() ([]Receipts) {
 
-	toReport := rs.GetReceiptsToReport()
+	toReport,_ := rs.GetReceiptsToReport()
 	rs.hmu.Lock()
 	defer rs.hmu.Unlock()
 	result := make([]Receipts, 0)
@@ -469,10 +470,10 @@ func (rs *ReceiptStore) GetReceiptsLogs() []Receipts {
 	result = append(result, rs.allReceipts)
 	return result
 }
-func (rs *ReceiptStore) GetReceiptsToReport() Receipts {
+func (rs *ReceiptStore) GetReceiptsToReport() (Receipts,int) {
 	rs.hmu.Lock()
 	defer rs.hmu.Unlock()
-	toReport := rs.extractReportReceipts()
+	toReport,totalCnt := rs.extractReportReceipts()
 	//从数据库中检查是否有上一次未提交成功的
 	fromDB := rs.loadReceipts(RPREF)
 	//合并
@@ -489,7 +490,7 @@ func (rs *ReceiptStore) GetReceiptsToReport() Receipts {
 	}
 	//持久化
 	rs.saveReceipts(RPREF, toReport)
-	return toReport
+	return toReport,totalCnt
 }
 
 /**
@@ -497,20 +498,25 @@ func (rs *ReceiptStore) GetReceiptsToReport() Receipts {
 	遍历allReceipts，把超过2小时的和小于两小时的放到两个map里
     超过两小时的返回，小于两个小时的那个替换当前的allReceipts
 */
-func (rs *ReceiptStore) extractReportReceipts() Receipts {
+func (rs *ReceiptStore) extractReportReceipts() (Receipts,int) {
 
 	result := make(Receipts)
 	newReceipts := make(Receipts)
-
+	total := 0
 	for nodeId, receipts := range rs.allReceipts {
 		for stime, receiptItem := range receipts {
-			if time.Since(stime) > MAX_STIME_JITTER { //超过两小时的
+			if time.Since(stime) > MAX_STIME_JITTER  && total < MAX_ITEM_PER_REPORT{ //超过两小时的
 				receiptItems, ok := result[nodeId]
 				if !ok {
 					receiptItems = make(ReceiptItems)
 					result[nodeId] = receiptItems
 				}
-				receiptItems[stime] = receiptItem
+				if receiptItem.Amount > 25 {
+					receiptItems[stime] = receiptItem
+					total++
+				}
+
+
 			} else { //小于两个小时的
 				receiptItems, ok := newReceipts[nodeId]
 				if !ok {
@@ -525,7 +531,7 @@ func (rs *ReceiptStore) extractReportReceipts() Receipts {
 		rs.allReceipts = newReceipts
 		rs.saveHRecord()
 	}
-	return result
+	return result,total
 }
 
 type ReceiptsOfReport struct {
@@ -586,13 +592,13 @@ func (rs *ReceiptStore) SendDataToServer(url string, timeout time.Duration, resu
 	}
 	return err
 }
-func (rs *ReceiptStore) doAutoSubmit() error {
+func (rs *ReceiptStore) doAutoSubmit() (error,int) {
 	log.Info("report receipts to server 1")
-	receipts := rs.GetReceiptsToReport()
+	receipts,totalCnt := rs.GetReceiptsToReport()
 
 	result, err := rs.createReportData(receipts)
 
-	timeout := time.Duration(5 * time.Second) //超时时间50ms
+	timeout := time.Duration(30 * time.Second) //超时时间50ms
 	log.Info("report receipts to server", "total amount", receipts.Amount())
 	err = util.SendDataToServer(rs.server+ReportRoute, timeout, result)
 	rs.hmu.Lock()
@@ -608,7 +614,7 @@ func (rs *ReceiptStore) doAutoSubmit() error {
 		//提交失败，本地已经存储过了
 		rs.saveReceipts(RPREF, receipts)
 	}
-	return err
+	return err,totalCnt
 }
 func (rs *ReceiptStore) mockAutoSubmit() error {
 	result, err := rs.createReportData(rs.allReceipts)
@@ -628,8 +634,13 @@ func (rs *ReceiptStore) submitRoutine() {
 	for {
 		select {
 		case <-timer.C:
-			timer.Reset(MAX_STIME_DURATION)
-			rs.doAutoSubmit()
+
+			_,totalCnt := rs.doAutoSubmit()
+			if totalCnt >= MAX_ITEM_PER_REPORT { //说明还有数据没有传完，过两分钟再上传
+				timer.Reset(2*time.Minute)
+			}else{//数据上传完了，一个小时候后再上传
+				timer.Reset(MAX_STIME_DURATION)
+			}
 
 		}
 	}

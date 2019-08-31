@@ -229,7 +229,7 @@ type ReportFmt struct {
 
 func (r *HttpReader) doReport(url string, hash []byte, dataLen int64) {
 	r.reportMu.Lock()
-	val := ((dataLen + 4095) >> 12)
+	val := (dataLen + 4095) >> 12;
 	r.unreported[time.Now()] = val
 	r.totalLen += val
 	r.reportMu.Unlock()
