@@ -240,6 +240,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 	self.bzz = network.NewBzz(bzzconfig, to, self.stateStore, self.streamer.GetSpec(), self.streamer.Run)
 
 	delivery.AttachBzz(self.bzz)
+	self.receiptsStore.SetNewWather(self.bzz.Hive)
 	//创建PSS通信网络(暂略过，没有深入研究）
 	// Pss = postal service over swarm (devp2p over bzz)
 	if !enode.IsBootNode(enode.NodeTypeOption(bzzconfig.NodeType)) {

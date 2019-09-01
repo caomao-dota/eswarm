@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -70,7 +71,11 @@ type rlpRD struct {
 	Amount    uint32
 	Signature []byte
 }
-
+type ReceiptWatcher interface {
+	//收到了receipts
+	OnNewReceipts(address common.Address,id enode.ID,length int)
+	ID() string
+}
 func (r ReceiptData) EncodeRLP(w io.Writer) error {
 
 	rs := &rlpRD{uint32(r.Stime.Unix()), r.Amount, r.Signature}
@@ -285,6 +290,7 @@ type ReceiptStore struct {
 	checkBalance  bool
 	receiptsLogs  []Receipts
 	balances      *lru.Cache
+	watchers 	 map[string]ReceiptWatcher
 }
 
 func NewReceiptsStore(filePath string, prvKey *ecdsa.PrivateKey, serverAddr string, duration time.Duration, checkBalance bool) (*ReceiptStore, error) {
@@ -309,12 +315,16 @@ func newReceiptsStore(newDb *leveldb.DB, prvKey *ecdsa.PrivateKey, serverAddr st
 		receiptsLogs: make([]Receipts, 0),
 		checkBalance: checkBalance,
 		balances:     balances,
+		watchers:     make(map[string]ReceiptWatcher),
 	}
 	store.nodeCommCache, _ = lru.New(MAX_C_REC_LIMIT)
 
 	store.Init()
 	go store.submitRoutine()
 	return &store
+}
+func (rs *ReceiptStore) SetNewWather(watcher ReceiptWatcher)  {
+	rs.watchers[watcher.ID()] = watcher
 }
 func (rs *ReceiptStore) Account() [20]byte {
 	return rs.account
@@ -415,7 +425,7 @@ func (rs *ReceiptStore) OnNodeChunkReceived(account [20]byte, dataLength int64) 
 }
 
 //服务端新到了一个收据
-func (rs *ReceiptStore) OnNewReceipt(receipt *Receipt) error {
+func (rs *ReceiptStore) OnNewReceipt(id enode.ID,receipt *Receipt) error {
 	rs.hmu.Lock()
 	defer rs.hmu.Unlock()
 	//不是自己的nodeId不收
@@ -454,7 +464,9 @@ func (rs *ReceiptStore) OnNewReceipt(receipt *Receipt) error {
 			rs.allReceipts[nodeId][receipt.Stime] = ReceiptItem{receipt.Amount, receipt.Sign}
 		}
 	}
-
+	for _,watcher := range rs.watchers {
+		watcher.OnNewReceipts(nodeId,id,1)
+	}
 	//持久化
 	return rs.saveHRecord()
 }
@@ -486,6 +498,7 @@ func (rs *ReceiptStore) GetReceiptsToReport() (Receipts,int) {
 			for stime, data := range items {
 				if int(data.Amount) > MAX_ITEM_PER_REPORT {
 					newItems[stime] = data
+					fmt.Println(stime.Format("2006-01-02 15:04:05"))
 				}
 
 			}
@@ -615,7 +628,7 @@ func (rs *ReceiptStore) doAutoSubmit() (error,int) {
 	results, err := rs.createReportData(receipts)
 
 	for i := 0; i < len(results); i ++ {
-		timeout := time.Duration(10 * time.Second) //超时时间50ms
+		timeout := time.Duration(60 * time.Second) //超时时间50ms
 		log.Info("report receipts to server", "total amount", receipts.Amount(),"items:",totalCnt)
 		err = util.SendDataToServer(rs.server+ReportRoute, timeout, results[i])
 		rs.hmu.Lock()
@@ -629,6 +642,7 @@ func (rs *ReceiptStore) doAutoSubmit() (error,int) {
 			break;
 		}
 	}
+	log.Info("report end with error", "error", err)
 	if err == nil { //提交成功，本地删除
 		rs.receiptsLogs = append(rs.receiptsLogs, receipts)
 		rs.saveReceipts(RPREF, Receipts{})

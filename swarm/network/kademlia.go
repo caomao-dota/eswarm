@@ -113,7 +113,9 @@ func NewKademlia(addr []byte, params *KadParams) *Kademlia {
 		params = NewKadParams()
 	}
 	blacklist, _ := lru.New(1000)
-	return &Kademlia{
+
+
+	return   &Kademlia{
 		base:      addr,
 		KadParams: params,
 		addrs:     pot.NewPot(nil, 0),
@@ -121,9 +123,11 @@ func NewKademlia(addr []byte, params *KadParams) *Kademlia {
 		lconns:    pot.NewPot(nil, 0),
 		peers:     make(map[string]bool),
 		blacklist: blacklist,
+
 		nDepth:    -1,
 
 	}
+
 }
 
 // entry represents a Kademlia table entry (an extension of BzzAddr)

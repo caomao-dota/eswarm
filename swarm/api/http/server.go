@@ -874,7 +874,7 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 			actUri, err := api.Parse("m3u8:/" + url)
 			fullNodes,_ := s.api.GetNodeCount(r.Context())
 			//log.Info("read:","uri",actUri)
-			if err == nil && fullNodes >2 {
+			if err == nil && fullNodes >0 {
 				//数据片断与哈希的对应关系应该已经存储在数据库里
 				newContext := context.WithValue(r.Context(), "url", string(path+act))
 				//newContext = context.WithValue(newContext,"server",*s)
@@ -886,7 +886,12 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 				duration := atomic.LoadInt32(&s.m3u8.cachedDuration)
 				if s.m3u8.centralRetrived {
 					if duration <= 5000 {
-						timeout = 5000
+						if fullNodes < 3 {
+							timeout = int32(2000 + int(fullNodes)*1000)
+						}else{
+							timeout = 5000
+						}
+
 					} else if duration >= 30000 {
 						timeout = 20000
 					} else {

@@ -8,6 +8,7 @@ import (
 	"github.com/plotozhu/MDCMainnet/common"
 	"github.com/plotozhu/MDCMainnet/crypto"
 	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/plotozhu/MDCMainnet/p2p/enode"
 	"github.com/plotozhu/MDCMainnet/rlp"
 	"github.com/syndtr/goleveldb/leveldb"
 	"math/rand"
@@ -262,7 +263,7 @@ func mockChunkDelivery(chunkSender, chunkReceiver *ReceiptStore, t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	chunkSender.OnNewReceipt(receipt)
+	chunkSender.OnNewReceipt(enode.ID{},receipt)
 }
 func Test_HRecStream(t *testing.T) {
 
@@ -343,19 +344,19 @@ func Test_InvalidSignature(t *testing.T) {
 		InvalidSignReceipt.Sign[0] = 1
 	}
 
-	if store1.OnNewReceipt(invNodeIdReceipt) != ErrInvalidNode {
+	if store1.OnNewReceipt(enode.ID{},invNodeIdReceipt) != ErrInvalidNode {
 		t.Error("Invalid signature error invalid node undetected")
 		return
 	}
-	if store1.OnNewReceipt(InvalidTimeReceipt) != ErrInvalidSTime {
+	if store1.OnNewReceipt(enode.ID{},InvalidTimeReceipt) != ErrInvalidSTime {
 		t.Error("Invalid signature error invalid postponed time undetected")
 		return
 	}
-	if store1.OnNewReceipt(InvalidTimeReceipt2) != ErrInvalidSTime {
+	if store1.OnNewReceipt(enode.ID{},InvalidTimeReceipt2) != ErrInvalidSTime {
 		t.Error("Invalid signature error invalid advanced time undetected")
 		return
 	}
-	if store1.OnNewReceipt(InvalidSignReceipt) != ErrInvalidSTime {
+	if store1.OnNewReceipt(enode.ID{},InvalidSignReceipt) != ErrInvalidSTime {
 		t.Error("Invalid signature error invalid signature  undetected")
 		return
 	}
@@ -376,7 +377,7 @@ func Test_DeliverCounter(t *testing.T) {
 		return
 	}
 
-	store4.OnNewReceipt(receipt)
+	store4.OnNewReceipt(enode.ID{},receipt)
 
 	calcUnpaied, _ = store4.unpaidAmount[store5.account]
 	if calcUnpaied != 0 {
@@ -414,7 +415,7 @@ func Test_Unordered(t *testing.T) {
 	Shuffle(receipts)
 
 	for i := uint32(0); i < unpaied; i++ {
-		store4.OnNewReceipt(receipts[i])
+		store4.OnNewReceipt(enode.ID{},receipts[i])
 	}
 
 	calcUnpaied, _ = store4.unpaidAmount[store5.account]
@@ -444,7 +445,7 @@ func Test_MultiStime(t *testing.T) {
 	}
 	Shuffle(receipts)
 	for _, receipt := range receipts {
-		store6.OnNewReceipt(receipt)
+		store6.OnNewReceipt(enode.ID{},receipt)
 	}
 	failed := false
 	if len(store6.allReceipts) == 1 {
@@ -490,7 +491,7 @@ func Test_Unordered2(t *testing.T) {
 	Shuffle(receipts)
 
 	for i := uint32(0); i < unpaied; i++ {
-		store4.OnNewReceipt(receipts[i])
+		store4.OnNewReceipt(enode.ID{},receipts[i])
 	}
 
 	calcUnpaied, _ = store4.unpaidAmount[store5.account]

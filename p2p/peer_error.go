@@ -72,6 +72,7 @@ const (
 	DiscReadTimeout
 	DiscBucketFull
 	DiscSubprotocolError = 0x10
+	DiscIdleConnection =0x11
 )
 
 var discReasonToString = [...]string{
@@ -90,6 +91,7 @@ var discReasonToString = [...]string{
 	DiscReadTimeout:         "read timeout",
 	DiscBucketFull:          "bucket max size reached",
 	DiscSubprotocolError:    "subprotocol error",
+	DiscIdleConnection:		 "idle connection",
 }
 
 func (d DiscReason) String() string {

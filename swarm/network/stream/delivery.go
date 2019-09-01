@@ -473,7 +473,7 @@ func (d *Delivery) GetDataFromCentral(ctx context.Context, address storage.Addre
 
 func (d *Delivery) handleReceiptsMsg(sp *Peer, receipt *ReceiptsMsg) error {
 
-	return d.receiptStore.OnNewReceipt(&state.Receipt{state.ReceiptBody{receipt.PA, time.Unix(int64(receipt.STime), 0), receipt.AMount}, receipt.Sig})
+	return d.receiptStore.OnNewReceipt(sp.ID(),&state.Receipt{state.ReceiptBody{receipt.PA, time.Unix(int64(receipt.STime), 0), receipt.AMount}, receipt.Sig})
 
 }
 func (d *Delivery) GetReceiptsLogs() []state.Receipts {

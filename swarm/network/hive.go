@@ -18,6 +18,8 @@ package network
 
 import (
 	"fmt"
+	gocache "github.com/patrickmn/go-cache"
+	"github.com/plotozhu/MDCMainnet/common"
 	"sync"
 	"time"
 
@@ -75,6 +77,7 @@ type Hive struct {
 
 	ticker        *time.Ticker
 	refreshTicker *time.Ticker
+	idleNodes     *gocache.Cache
 	newNodeDiscov chan struct{}
 	quitC         chan struct{}
 }
@@ -84,7 +87,7 @@ type Hive struct {
 // Kademlia: connectivity driver using a network topology
 // StateStore: to save peers across sessions
 func NewHive(params *HiveParams, kad *Kademlia, store state.Store) *Hive {
-	return &Hive{
+	hive := &Hive{
 		HiveParams:    params,
 		Kademlia:      kad,
 		Store:         store,
@@ -92,8 +95,20 @@ func NewHive(params *HiveParams, kad *Kademlia, store state.Store) *Hive {
 		newNodeDiscov: make(chan struct{}),
 		quitC:         make(chan struct{}),
 	}
-}
+	idleNodes := gocache.New(10*time.Minute,1*time.Minute)
+	hive.idleNodes = idleNodes
 
+	return hive
+}
+/**
+	Rece
+ */
+func (h *Hive) 	OnNewReceipts(address common.Address,id enode.ID,length int){
+	h.idleNodes.SetDefault(id.String(),length)
+}
+func (h *Hive) ID() string {
+	return "KADEMLIA"
+}
 // Start stars the hive, receives p2p.Server only at startup
 // server is used to connect to a peer based on its NodeID or enode URL
 // these are called on the p2p.Server which runs on the node
@@ -120,7 +135,15 @@ func (h *Hive) Start(server *p2p.Server) error {
 	//server.SetNodeAddChecker(h.CheckNode)
 	// this loop is doing bootstrapping and maintains a healthy table
 	h.doRefresh()
+	h.idleNodes.OnEvicted(func(s string, i interface{}) {
+		nodeId := enode.HexID(s)
 
+		peer := h.peers[nodeId]
+		if peer != nil {
+			log.Info("drop idle connection","id",peer.ID() )
+			peer.Disconnect(p2p.DiscIdleConnection)
+		}
+	})
 	go h.connect()
 	go h.refresh()
 	return nil
@@ -264,6 +287,11 @@ func (h *Hive) Run(p *BzzPeer) error {
 
 	}
 	defer h.Off(dp)
+	if enode.IsLightNode(enode.NodeTypeOption(dp.NodeType())) {
+		//轻节点，模拟一个receipt动作，激活
+		h.OnNewReceipts(common.Address{0},dp.ID(),1)
+	}
+
 	return dp.Run(dp.HandleMsg)
 
 }
