@@ -95,7 +95,7 @@ func NewServer(api *api.API, corsString string) *Server {
 
 	server := &Server{api: api,
 		//	db:db,
-		m3u8: M3U8Opt{cachedDuration: 5000, centralRetrived: false},
+		m3u8: M3U8Opt{cachedDuration: 5000, centralRetrived: true},
 	}
 
 	defaultMiddlewares := []Adapter{
