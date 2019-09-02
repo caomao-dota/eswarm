@@ -104,7 +104,12 @@ func NewHive(params *HiveParams, kad *Kademlia, store state.Store) *Hive {
 	Rece
  */
 func (h *Hive) 	OnNewReceipts(address common.Address,id enode.ID,length int){
-	h.idleNodes.SetDefault(id.String(),length)
+
+	peer := h.peers[id]
+	if enode.IsLightNode(enode.NodeTypeOption(peer.Node().NodeType())) {
+		h.idleNodes.SetDefault(id.String(),length)
+	}
+
 }
 func (h *Hive) ID() string {
 	return "KADEMLIA"
@@ -287,10 +292,10 @@ func (h *Hive) Run(p *BzzPeer) error {
 
 	}
 	defer h.Off(dp)
-	if enode.IsLightNode(enode.NodeTypeOption(dp.NodeType())) {
+	//if enode.IsLightNode(enode.NodeTypeOption(dp.NodeType())) {
 		//轻节点，模拟一个receipt动作，激活
 		h.OnNewReceipts(common.Address{0},dp.ID(),1)
-	}
+	//}
 
 	return dp.Run(dp.HandleMsg)
 
