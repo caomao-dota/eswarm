@@ -100,6 +100,11 @@ func (d DiscReason) String() string {
 	if len(discReasonToString) < int(d) {
 		return fmt.Sprintf("unknown disconnect reason %d", d)
 	}
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Printf("unknown disconnect reason %d", err)
+		}
+	}()
 	return discReasonToString[d]
 }
 
