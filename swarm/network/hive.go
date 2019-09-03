@@ -148,7 +148,7 @@ func (h *Hive) Start(server *p2p.Server) error {
 
 		peer := h.peers[nodeId]
 		if peer != nil {
-			log.Info("drop idle connection","id",peer.ID() )
+			log.Trace("drop idle connection","id",peer.ID() )
 			peer.Disconnect(p2p.DiscIdleConnection)
 		}
 	})
