@@ -170,6 +170,8 @@ func NewHive(params *HiveParams, kad *Kademlia, store state.Store) *Hive {
 func (h *Hive) 	OnNewReceipts(address common.Address,id enode.ID,length int){
 	h.cacheLock.Lock()
 	defer h.cacheLock.Unlock()
+	h.lock.Lock()
+	defer h.lock.Unlock()
 	peer := h.peers[id]
 	if peer != nil && enode.IsLightNode(enode.NodeTypeOption(peer.Node().NodeType())) {
 
@@ -208,8 +210,10 @@ func (h *Hive) Start(server *p2p.Server) error {
 	h.doRefresh()
 	h.idleNodes.OnExpired(func(s string) {
 		nodeId := enode.HexID(s)
+		h.lock.Lock()
 
 		peer := h.peers[nodeId]
+		h.lock.Unlock()
 		if peer != nil {
 			log.Trace("drop idle connection","id",peer.ID() )
 			peer.Disconnect(p2p.DiscIdleConnection)
