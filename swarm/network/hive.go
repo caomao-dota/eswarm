@@ -36,6 +36,7 @@ type ExpirableCache struct {
 	defaultTimeout time.Duration
 	kv sync.Map
 	runner *time.Ticker
+	kvMutex sync.Mutex
 	onExpired func(string)
 }
 
@@ -56,6 +57,9 @@ func NewExpirableCache(timeout time.Duration) *ExpirableCache {
 }
 
 func (e *ExpirableCache)checkExpired(){
+
+	e.kvMutex.Lock()
+	defer  e.kvMutex.Unlock()
 	expiredKey := make([]string,0)
 	e.kv.Range(func(key, value interface{}) bool {
 		if  value.(time.Time).Before(time.Now()) {
@@ -81,6 +85,8 @@ func (e *ExpirableCache)Close(){
 	e.runner.Stop()
 }
 func (e *ExpirableCache)Reset(key string){
+	e.kvMutex.Lock()
+	defer  e.kvMutex.Unlock()
 	e.kv.Store(key,time.Now().Add(e.defaultTimeout))
 }
 func (e *ExpirableCache)OnExpired(onExpired func (string)){

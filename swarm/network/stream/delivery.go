@@ -224,7 +224,7 @@ func (d *Delivery) handleRetrieveRequestMsg(ctx context.Context, sp *Peer, req *
 		chunk, err := d.chunkStore.Get(ctx, req.Addr)
 		if err != nil {
 			retrieveChunkFail.Inc(1)
-			log.Warn("ChunkStore.Get can not retrieve chunk", "peer", sp.ID().String(), "addr", req.Addr, "hopcount", req.HopCount, "err", err)
+			log.Trace("ChunkStore.Get can not retrieve chunk", "peer", sp.ID().String(), "addr", req.Addr, "hopcount", req.HopCount, "err", err)
 			return
 		}
 
@@ -232,7 +232,7 @@ func (d *Delivery) handleRetrieveRequestMsg(ctx context.Context, sp *Peer, req *
 			syncing := false
 			err = sp.Deliver(ctx, chunk, s.priority, syncing)
 			if err != nil {
-				log.Warn("ERROR in handleRetrieveRequestMsg", "err", err)
+				log.Trace("ERROR in handleRetrieveRequestMsg", "err", err)
 			}
 			hs, _ := d.bzz.GetOrCreateHandshake(sp.ID())
 			d.receiptStore.OnChunkDelivered(hs.Account, uint32((len(chunk.Data())+4095)>>12))
