@@ -106,7 +106,7 @@ func NewHive(params *HiveParams, kad *Kademlia, store state.Store) *Hive {
 func (h *Hive) 	OnNewReceipts(address common.Address,id enode.ID,length int){
 
 	peer := h.peers[id]
-	if enode.IsLightNode(enode.NodeTypeOption(peer.Node().NodeType())) {
+	if peer != nil && enode.IsLightNode(enode.NodeTypeOption(peer.Node().NodeType())) {
 		h.idleNodes.SetDefault(id.String(),length)
 	}
 
