@@ -18,7 +18,6 @@ package network
 
 import (
 	"fmt"
-	gocache "github.com/patrickmn/go-cache"
 	"github.com/plotozhu/MDCMainnet/common"
 	"sync"
 	"time"
@@ -29,7 +28,58 @@ import (
 	"github.com/plotozhu/MDCMainnet/swarm/log"
 	"github.com/plotozhu/MDCMainnet/swarm/state"
 )
+type CacheItem struct {
+	k string
+	v interface{}
+}
+type ExpirableCache struct {
+	defaultTimeout time.Duration
+	kv sync.Map
+	runner *time.Ticker
+	onExpired func(string)
+}
 
+func NewExpirableCache(timeout time.Duration) *ExpirableCache {
+
+	val := &ExpirableCache{
+		defaultTimeout:timeout,
+		runner:time.NewTicker(time.Minute),
+	}
+
+	go func() {
+		for range val.runner.C {
+			val.checkExpired()
+		}
+	}()
+
+	return val
+}
+
+func (e *ExpirableCache)checkExpired(){
+	expiredKey := make([]string,0)
+	e.kv.Range(func(key, value interface{}) bool {
+		if  value.(*time.Time).Before(time.Now()) {
+			expiredKey = append(expiredKey,key.(string))
+
+		}
+		return true
+	})
+	for _,key := range expiredKey {
+		e.kv.Delete(key)
+		if e.onExpired!= nil {
+			e.onExpired(key)
+		}
+	}
+}
+func (e *ExpirableCache)Close(){
+	e.runner.Stop()
+}
+func (e *ExpirableCache)Reset(key string){
+	e.kv.Store(key,time.Now().Add(e.defaultTimeout))
+}
+func (e *ExpirableCache)OnExpired(onExpired func (string)){
+	e.onExpired = onExpired
+}
 /*
 Hive is the logistic manager of the swarm
 
@@ -78,7 +128,7 @@ type Hive struct {
 
 	ticker        *time.Ticker
 	refreshTicker *time.Ticker
-	idleNodes     *gocache.Cache
+	idleNodes     *ExpirableCache
 	newNodeDiscov chan struct{}
 	quitC         chan struct{}
 }
@@ -95,9 +145,10 @@ func NewHive(params *HiveParams, kad *Kademlia, store state.Store) *Hive {
 		peers:         make(map[enode.ID]*BzzPeer),
 		newNodeDiscov: make(chan struct{}),
 		quitC:         make(chan struct{}),
+		idleNodes:NewExpirableCache(10*time.Minute),
 	}
-	idleNodes := gocache.New(10*time.Minute,1*time.Minute)
-	hive.idleNodes = idleNodes
+
+
 
 	return hive
 }
@@ -110,7 +161,7 @@ func (h *Hive) 	OnNewReceipts(address common.Address,id enode.ID,length int){
 	peer := h.peers[id]
 	if peer != nil && enode.IsLightNode(enode.NodeTypeOption(peer.Node().NodeType())) {
 
-		h.idleNodes.SetDefault(id.String(),length)
+		h.idleNodes.Reset(id.String())
 	}
 
 }
@@ -143,7 +194,7 @@ func (h *Hive) Start(server *p2p.Server) error {
 	//server.SetNodeAddChecker(h.CheckNode)
 	// this loop is doing bootstrapping and maintains a healthy table
 	h.doRefresh()
-	h.idleNodes.OnEvicted(func(s string, i interface{}) {
+	h.idleNodes.OnExpired(func(s string) {
 		nodeId := enode.HexID(s)
 
 		peer := h.peers[nodeId]
@@ -210,6 +261,7 @@ func (h *Hive) doRefresh() {
 
 // Stop terminates the updateloop and saves the peers
 func (h *Hive) Stop() error {
+	h.idleNodes.Close()
 	log.Info(fmt.Sprintf("%08x hive stopping, saving peers", h.BaseAddr()[:4]))
 	if h.ticker != nil {
 		h.ticker.Stop()
