@@ -357,7 +357,7 @@ func (s *Server) HandlePostRaw(w http.ResponseWriter, r *http.Request) {
 // resulting manifest hash as a text/plain response
 func (s *Server) HandlePostFiles(w http.ResponseWriter, r *http.Request) {
 	ruid := GetRUID(r.Context())
-	log.Info("handle.post.files", "ruid", ruid)
+	log.Trace("handle.post.files", "ruid", ruid)
 	postFilesCount.Inc(1)
 
 	contentType, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
@@ -381,7 +381,7 @@ func (s *Server) HandlePostFiles(w http.ResponseWriter, r *http.Request) {
 			respondError(w, r, fmt.Sprintf("cannot resolve %s: %s", uri.Addr, err), http.StatusInternalServerError)
 			return
 		}
-		log.Info("encrypted resolved key", "ruid", ruid, "key", addr)
+		log.Trace("encrypted resolved key", "ruid", ruid, "key", addr)
 	} else {
 		addr, err = s.api.NewManifest(r.Context(), toEncrypt)
 		if err != nil {
@@ -389,11 +389,11 @@ func (s *Server) HandlePostFiles(w http.ResponseWriter, r *http.Request) {
 			respondError(w, r, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		log.Info("new manifest", "ruid", ruid, "key", addr, "time", time.Now())
+		log.Trace("new manifest", "ruid", ruid, "key", addr, "time", time.Now())
 	}
 
 	newAddr, err := s.api.UpdateManifest(r.Context(), addr, func(mw *api.ManifestWriter) error {
-		log.Info("manifest updated", "ruid", ruid, "key", addr, "time", time.Now())
+		log.Trace("manifest updated", "ruid", ruid, "key", addr, "time", time.Now())
 		switch contentType {
 		case "application/x-tar":
 			_, err := s.handleTarUpload(r, mw)
@@ -423,7 +423,7 @@ func (s *Server) HandlePostFiles(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleTarUpload(r *http.Request, mw *api.ManifestWriter) (storage.Address, error) {
-	log.Info("handle.tar.upload", "ruid", GetRUID(r.Context()))
+	log.Trace("handle.tar.upload", "ruid", GetRUID(r.Context()))
 
 	defaultPath := r.URL.Query().Get("defaultpath")
 
@@ -436,7 +436,7 @@ func (s *Server) handleTarUpload(r *http.Request, mw *api.ManifestWriter) (stora
 
 func (s *Server) handleMultipartUpload(r *http.Request, boundary string, mw *api.ManifestWriter) error {
 	ruid := GetRUID(r.Context())
-	log.Debug("handle.multipart.upload", "ruid", ruid)
+	log.Trace("handle.multipart.upload", "ruid", ruid)
 	mr := multipart.NewReader(r.Body, boundary)
 	for {
 		part, err := mr.NextPart()
@@ -899,7 +899,7 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 
-				log.Info("set timeout:", "ms", int64(timeout))
+				log.Trace("set timeout:", "ms", int64(timeout))
 
 				/*if s.m3u8.sizelost > 0 && s.m3u8.sizelost <= 10 {
 					newContext, _ = context.WithTimeout(newContext, 5*time.Second)

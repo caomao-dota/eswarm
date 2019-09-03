@@ -73,6 +73,7 @@ type Hive struct {
 	// bookkeeping
 	lock        sync.Mutex
 	refreshLock sync.Mutex
+	cacheLock   sync.Mutex
 	peers       map[enode.ID]*BzzPeer
 
 	ticker        *time.Ticker
@@ -104,9 +105,11 @@ func NewHive(params *HiveParams, kad *Kademlia, store state.Store) *Hive {
 	Rece
  */
 func (h *Hive) 	OnNewReceipts(address common.Address,id enode.ID,length int){
-
+	h.cacheLock.Lock()
+	defer h.cacheLock.Unlock()
 	peer := h.peers[id]
 	if peer != nil && enode.IsLightNode(enode.NodeTypeOption(peer.Node().NodeType())) {
+
 		h.idleNodes.SetDefault(id.String(),length)
 	}
 

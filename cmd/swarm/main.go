@@ -516,14 +516,14 @@ func setSwarmBootstrapNodes(ctx *cli.Context, bzzCfg *bzzapi.Config, cfg *node.C
 		return
 	}
 
-	log.Info("Start read")
+	log.Trace("Start read")
 	if !enode.IsBootNode(enode.NodeTypeOption(bzzCfg.NodeType)) {
 		cfg.P2P.BootstrapNodes = []*enode.Node{}
 		bootnodeAddrs := ctx.GlobalString(SwarmBootnodesAddrFlag.Name)
 		bootnodes := append([]string{}, SwarmBootnodes...)
 		if bootnodeAddrs != "" {
 			nodes, reportUrl, err := util.GetBootnodesInfo(bootnodeAddrs)
-			log.Info("end read")
+			log.Trace("end read")
 			if err == nil {
 				if len(nodes) != 0 {
 					bootnodes = append(bootnodes, nodes...)

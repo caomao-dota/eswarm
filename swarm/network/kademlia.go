@@ -592,7 +592,7 @@ func (k *Kademlia) sendNeighbourhoodDepthChange() {
 		nDepth := depthForPot(k.conns, k.NeighbourhoodSize, k.base)
 		if nDepth != k.nDepth {
 			k.nDepth = nDepth
-			log.Info("new neighbor", "depth", nDepth)
+			log.Trace("new neighbor", "depth", nDepth)
 			k.nDepthC <- nDepth
 		}
 	}
