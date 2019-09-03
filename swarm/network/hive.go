@@ -58,16 +58,22 @@ func NewExpirableCache(timeout time.Duration) *ExpirableCache {
 func (e *ExpirableCache)checkExpired(){
 	expiredKey := make([]string,0)
 	e.kv.Range(func(key, value interface{}) bool {
-		if  value.(*time.Time).Before(time.Now()) {
+		if  value.(time.Time).Before(time.Now()) {
 			expiredKey = append(expiredKey,key.(string))
 
 		}
 		return true
 	})
-	for _,key := range expiredKey {
-		e.kv.Delete(key)
-		if e.onExpired!= nil {
+	if e.onExpired!= nil {
+		for _, key := range expiredKey {
+			e.kv.Delete(key)
+
 			e.onExpired(key)
+		}
+	}else{
+		for _, key := range expiredKey {
+			e.kv.Delete(key)
+
 		}
 	}
 }
