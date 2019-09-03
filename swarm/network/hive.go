@@ -171,8 +171,8 @@ func (h *Hive) 	OnNewReceipts(address common.Address,id enode.ID,length int){
 	h.cacheLock.Lock()
 	defer h.cacheLock.Unlock()
 	h.lock.Lock()
-	defer h.lock.Unlock()
 	peer := h.peers[id]
+	h.lock.Unlock()
 	if peer != nil && enode.IsLightNode(enode.NodeTypeOption(peer.Node().NodeType())) {
 
 		h.idleNodes.Reset(id.String())
