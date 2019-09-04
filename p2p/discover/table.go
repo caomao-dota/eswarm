@@ -1299,6 +1299,16 @@ func (tab *Table) closest(target enode.ID, nresults int) *nodesByDistance {
 					log.Trace("neighbour node:","id",node.ID(),"addr",fmt.Sprintf("%v:%v/%v",node.IP().String(),node.UDP(),node.LUDP()),"latency",node.latency,"test",node.testAt,"find",node.findAt,"seen",node.seenAt)
 
 					close.push(node, nresults)
+				}else{
+					reason := "unknown"
+					if(enode.IsLightNode(enode.NodeTypeOption(node.NodeType()))){
+						reason = "lightnode"
+					}else if ( (node.testAt) != TimeInvalid ) {
+						reason = "testat failed"
+					}else if (LatencyInvalid == node.latency || 0 == node.latency){
+						reason = "latency failed"
+					}
+					log.Info("ignore node:","node",fmt.Sprintf("%v:%v",node.IP(),node.TCP()),"reason:",reason)
 				}
 			}
 

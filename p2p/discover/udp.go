@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"container/list"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/hashicorp/golang-lru"
@@ -800,7 +801,11 @@ func (req *neighbors) preverify(t *udp, from *net.UDPAddr, fromID enode.ID, from
 }
 
 func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) {
-	//log.Trace("neighbours:","ip",len(req.Nodes),"nodes",req.Nodes)
+	lsvalue := make([]string,0)
+	for _,node := range req.Nodes {
+		lsvalue = append(lsvalue,fmt.Sprintf("%v:%v-%v",node.IP,node.TCP,hex.EncodeToString(node.ID[:5])))
+	}
+	log.Info("neighbours:","ip",fmt.Sprintf("%v:%v",from.IP,from.Port),"count",len(req.Nodes),"nodes",lsvalue)
 }
 
 func (req *neighbors) name() string { return "NEIGHBORS/v4" }
