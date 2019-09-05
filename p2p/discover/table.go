@@ -43,7 +43,7 @@ import (
 
 const (
 	alpha           = 3  // Kademlia concurrency factor
-	bucketSize      = 48 // Kademlia bucket size
+	bucketSize      = 16 // Kademlia bucket size
 	maxReplacements = 10 // Size of per-bucket replacement list
 
 	// We keep buckets for the upper 1/15 of distances because
@@ -53,7 +53,7 @@ const (
 	bucketMinDistance = hashBits - nBuckets // Log distance of closest bucket
 
 	// IP address limits.
-	bucketIPLimit, bucketSubnet = 2, 24 // at most 2 addresses from the same /24
+	bucketIPLimit, bucketSubnet = 4, 24 // at most 2 addresses from the same /24
 	tableIPLimit, tableSubnet   = 10, 24
 
 	maxFindnodeFailures = 5                // Nodes exceeding this limit are dropped
@@ -471,6 +471,10 @@ func (nq *NodeQueue) ReplaceNodeItem(anode *node, checkReplace func(nodeInEntrie
 func (nq *NodeQueue) AddNodeItem(anode *node, shouldUpdate bool) bool {
 	nq.mutex.Lock()
 	defer nq.mutex.Unlock()
+	if enode.IsLightNode(enode.NodeTypeOption(anode.NodeType())){
+		log.Trace("add light node to bucket")
+		return false
+	}
 	return nq.doAddNodeItem(anode)
 }
 func (nq *NodeQueue) doAddNodeItem(anode *node) bool {
@@ -494,6 +498,10 @@ func (nq *NodeQueue) doAddNodeItem(anode *node) bool {
 func (nq *NodeQueue) AddNode(anode *node) (bool, *node) {
 	nq.mutex.Lock()
 	defer nq.mutex.Unlock()
+	if enode.IsLightNode(enode.NodeTypeOption(anode.NodeType())){
+		log.Trace("add light node to bucket")
+		return false,nil
+	}
 	//log.Info("3")
 	//defer func(){log.Info("3.1")}()
 	NodeItem, ok := nq.exists[anode.ID()]
@@ -1382,12 +1390,20 @@ type AddSeenNodeCB func(n *node) *node
 func (tab *Table) AddSeenNode(n *node) *node {
 	tab.mutex.Lock()
 	defer tab.mutex.Unlock()
-	return tab.addSeenNode(n)
+	if enode.IsConnectableNode(enode.NodeTypeOption(n.NodeType())) {
+		return tab.addSeenNode(n)
+	}else{
+		return nil
+	}
+
 }
 func (tab *Table) addSeenNode(n *node) *node {
 	//log.Info("42")
 	//defer func(){log.Info("42.1")}()
 	if n.ID() == tab.self().ID() {
+		return nil
+	}
+	if enode.IsLightNode(enode.NodeTypeOption(n.NodeType())) {
 		return nil
 	}
 	index := fmt.Sprintf("%v:%v", n.IP().String(), n.UDP())

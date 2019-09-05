@@ -8,6 +8,7 @@ import (
 	"github.com/plotozhu/MDCMainnet/swarm/chunk"
 	"github.com/plotozhu/wiredtiger-go/wiredtiger"
 	"math"
+	"os"
 	"sync"
 )
 type TYPE_ENUM  uint8
@@ -69,7 +70,10 @@ func (db *WiredtigerDB)openDB(){
 	if db.conn != nil {
 		db.conn.Close("")
 	}
+
 	var err error
+
+	err  =os.MkdirAll(db.path, os.ModePerm)
 	db.conn,err = wiredtiger.Open(db.path,"create,checkpoint=(log_size=20000000,wait=30),async=(enabled=true,threads=4)")
 
 	if err != nil {
