@@ -1304,7 +1304,7 @@ func (tab *Table) closest(target enode.ID, nresults int) *nodesByDistance {
 
 			if node != nil {
 				if (node.testAt) != TimeInvalid && LatencyInvalid != node.latency && 0 != node.latency  && !enode.IsLightNode(enode.NodeTypeOption(node.NodeType())){
-					log.Trace("neighbour node:","id",node.ID(),"addr",fmt.Sprintf("%v:%v/%v",node.IP().String(),node.UDP(),node.LUDP()),"latency",node.latency,"test",node.testAt,"find",node.findAt,"seen",node.seenAt)
+					log.Info("neighbour node:","id",node.ID(),"addr",fmt.Sprintf("%v:%v/%v",node.IP().String(),node.UDP(),node.LUDP()),"latency",node.latency,"test",node.testAt,"find",node.findAt,"seen",node.seenAt)
 
 					close.push(node, nresults)
 				}else{
