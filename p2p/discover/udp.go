@@ -706,7 +706,7 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) 
 	n := enode.NewV4(req.senderKey, req.From.IP, int(req.From.TCP), int(req.From.UDP), req.NodeType, from.IP)
 
 	n.Set(enr.LUDP(from.Port))
-	log.Trace("ping:", "ping.from ip", req.From.IP, "ping.from port", req.From.TCP, " from", from.IP, " udp", from.Port)
+	log.Info("nodeByPing:", "ping.from ip", req.From.IP, "ping.from port", req.From.TCP, "ping.from udp", req.From.UDP," from", from.IP, " udp", from.Port)
 	go t.tab.OnPingReceived(n, from.IP, uint16(from.Port))
 	if time.Since(t.db.LastPongReceived(n.ID(), from.IP)) > bondExpiration {
 		t.sendPing(fromID, from, func(latency int64) {
