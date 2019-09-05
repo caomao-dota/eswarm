@@ -406,6 +406,7 @@ func (d *Delivery) RequestFromPeers(ctx context.Context, req *network.Request) (
 		}
 	}
 
+
 	if sp == nil {
 		return nil, nil, errors.New("no peer found")
 	}
