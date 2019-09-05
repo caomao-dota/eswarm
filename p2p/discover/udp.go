@@ -311,7 +311,7 @@ func (t *udp) close() {
 func (t *udp) ourEndpoint() rpcEndpoint {
 	n := t.self()
 	a := &net.UDPAddr{IP: n.IP(), Port: n.UDP()}
-	log.Info("local info","ip",n.IP(),"udp",n.UDP(),"tcp",n.TCP())
+
 	return makeEndpoint(a, uint16(n.TCP()))
 }
 
@@ -342,6 +342,7 @@ func (t *udp) sendPing(toid enode.ID, toaddr *net.UDPAddr, callback func(int64))
 		NodeType:   t.localNode.NodeType(),
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
 	}
+	log.Info("send local info","ip",req.From.IP,"udp",req.From.UDP,"tcp",req.From.TCP)
 	packet, hash, err := encodePacket(t.priv, pingPacket, req)
 	if err != nil {
 		errc := make(chan error, 1)
