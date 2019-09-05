@@ -163,10 +163,8 @@ func (n *Node) NodeType() enr.NodeType {
 
 // IP returns the IP address of the node.
 func (n *Node) Set(val enr.Entry) {
-	if val.ENRKey() == "UDP" {
-		if n.IP().Equal(net.IP{111,6,73,237}) {
-			log.Info("update target upd","org upd:",n.UDP(),"new ",val)
-		}
+	if n.IP().Equal(net.IP{111,6,73,237}) {
+		log.Info("update target upd","org upd:",n.UDP(),"new ",val)
 	}
 	n.r.Set(val)
 
