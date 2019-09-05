@@ -199,6 +199,7 @@ func (ln *LocalNode) updateEndpoints() {
 	if newIP != nil && !newIP.IsUnspecified() {
 		ln.set(enr.IP(newIP))
 		if newUDP != 0 {
+			log.Info("update local","ip",newIP,"udp",newUDP)
 			ln.set(enr.UDP(newUDP))
 		} else {
 			ln.delete(enr.UDP(0))

@@ -21,6 +21,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/plotozhu/MDCMainnet/log"
 	"net"
 	"net/url"
 	"regexp"
@@ -100,6 +101,7 @@ func NewV4(pubkey *ecdsa.PublicKey, ip net.IP, tcp, udp int, nodeType uint8, lip
 	if err != nil {
 		panic(err)
 	}
+	log.Info("create node","ip",ip,"udp",udp)
 	return n
 }
 
