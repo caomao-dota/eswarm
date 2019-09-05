@@ -311,6 +311,7 @@ func (t *udp) close() {
 func (t *udp) ourEndpoint() rpcEndpoint {
 	n := t.self()
 	a := &net.UDPAddr{IP: n.IP(), Port: n.UDP()}
+	log.Info("local info","ip",n.IP(),"udp",n.UDP(),"tcp",n.TCP())
 	return makeEndpoint(a, uint16(n.TCP()))
 }
 
