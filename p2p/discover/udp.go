@@ -803,7 +803,7 @@ func (req *neighbors) preverify(t *udp, from *net.UDPAddr, fromID enode.ID, from
 func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []byte) {
 	lsvalue := make([]string,0)
 	for _,node := range req.Nodes {
-		lsvalue = append(lsvalue,fmt.Sprintf("%v:%v-%v",node.IP,node.TCP,hex.EncodeToString(node.ID[:5])))
+		lsvalue = append(lsvalue,fmt.Sprintf("%v:%v-%v",node.IP,node.UDP,hex.EncodeToString(node.ID[:5])))
 	}
 	log.Info("neighbours:","ip",fmt.Sprintf("%v:%v",from.IP,from.Port),"count",len(req.Nodes),"nodes",lsvalue)
 }
