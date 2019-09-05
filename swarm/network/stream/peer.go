@@ -99,6 +99,7 @@ func NewPeer(peer *protocols.Peer, streamer *Registry) *Peer {
 		clientParams: make(map[Stream]*clientParams),
 		quit:         make(chan struct{}),
 		delayArray:   make([]int64,0),
+		averageDelay: time.Hour,
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	go p.pq.Run(ctx, func(i interface{}) {

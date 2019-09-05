@@ -398,7 +398,7 @@ func (d *Delivery) RequestFromPeers(ctx context.Context, req *network.Request) (
 		minDelay := time.Hour
 		for _,id := range protentialNodes{
 			p := d.getPeer(*id)
-			if p != nil && p.GetDelay() < minDelay {
+			if p != nil && p.GetDelay() <= minDelay {
 				minDelay = p.GetDelay()
 				sp = p
 				spID = id
