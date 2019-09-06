@@ -269,7 +269,7 @@ func (n *autodisc)GetExterIP() (net.IP,error ) {
 func (n *autodisc) ExternalIP() (net.IP, error) {
 	if err := n.wait(); err != nil {
 		log.Error("Wait for externIP failed","reason",err)
-		return nil, err
+	//	return nil, err
 	}
 	return n.GetExterIP()
 	//return n.found.ExternalIP()
