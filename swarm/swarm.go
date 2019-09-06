@@ -132,7 +132,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 		BzzAccount:  common.HexToAddress(config.BzzAccount),
 	}
 
-	self.receiptsStore, err = state.NewReceiptsStore(filepath.Join(config.Path, "receipts.db"), self.privateKey, config.ServerAddr, config.ReportInterval, config.CheckBalance)
+	self.receiptsStore, err = state.NewReceiptsStore(filepath.Join(config.Path, "receipts.db"), self.privateKey, config.ServerAddr, config.ReportInterval, config.CheckBalance,enode.IsLightNode(enode.NodeTypeOption(nodeType)))
 	//commenter:Tony  状态存储
 	self.stateStore, err = state.NewDBStore(filepath.Join(config.Path, "state-store.db"))
 	if err != nil {

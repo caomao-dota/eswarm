@@ -18,9 +18,13 @@
 package nat
 
 import (
+	"bytes"
+	"crypto/tls"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -207,12 +211,67 @@ func (n *autodisc) DeleteMapping(protocol string, extport, intport int) error {
 	}
 	return n.found.DeleteMapping(protocol, extport, intport)
 }
+// createHTTPClient for connection re-use
+func createHTTPClient() *http.Client {
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			Proxy:           http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   10 * time.Second,
+			}).DialContext,
+			MaxIdleConns:        2,
+			MaxIdleConnsPerHost: 2,
+			IdleConnTimeout:     1000 * time.Second,
+		},
+	}
+	return client
+}
+func (n *autodisc)GetExterIP() (net.IP,error ) {
+	ipResolver := []string{"https://api.ipify.org/","https://ipv4.icanhazip.com/"}
+	var resolvedIp net.IP
+	for _,uri := range ipResolver {
+		req, err := http.NewRequest("GET", uri, bytes.NewBuffer([]byte("")))
+		if err != nil {
+			log.Error("Error Occured. %+v", err)
 
+			continue
+		}
+		client := createHTTPClient()
+		// use httpClient to send request
+		response, err := client.Do(req)
+		if err != nil || response == nil || (response.StatusCode < 200 || response.StatusCode >= 300) {
+			log.Error("Error sending request to API endpoint", "error:", "get failed")
+			continue
+		} else {
+			// Close the connection to reuse it
+			defer response.Body.Close()
+
+			// Let's check if the work actually is done
+			// We have seen inconsistencies even when we get 200 OK response
+			body, err := ioutil.ReadAll(response.Body)
+			if err != nil {
+				log.Error("Error parse body", "error:", err)
+				continue
+			}
+
+			err = resolvedIp.UnmarshalText(bytes.Trim(body,"\r\n "));
+			if err != nil {
+				log.Error("Error parse body", "error:", err)
+				continue
+			}
+			return resolvedIp,err
+		}
+	}
+	return nil,errors.New("ip not found")
+
+}
 func (n *autodisc) ExternalIP() (net.IP, error) {
 	if err := n.wait(); err != nil {
 		return nil, err
 	}
-	return n.found.ExternalIP()
+	return n.GetExterIP()
+	//return n.found.ExternalIP()
 }
 
 func (n *autodisc) String() string {

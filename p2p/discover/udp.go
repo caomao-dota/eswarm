@@ -342,7 +342,7 @@ func (t *udp) sendPing(toid enode.ID, toaddr *net.UDPAddr, callback func(int64))
 		NodeType:   t.localNode.NodeType(),
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
 	}
-	log.Info("send local info","ip",req.From.IP,"udp",req.From.UDP,"tcp",req.From.TCP)
+	//log.Info("send local info","ip",req.From.IP,"udp",req.From.UDP,"tcp",req.From.TCP)
 	packet, hash, err := encodePacket(t.priv, pingPacket, req)
 	if err != nil {
 		errc := make(chan error, 1)
@@ -807,7 +807,7 @@ func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID enode.ID, mac []b
 	for _,node := range req.Nodes {
 		lsvalue = append(lsvalue,fmt.Sprintf("%v:%v-%v",node.IP,node.UDP,hex.EncodeToString(node.ID[:5])))
 	}
-	log.Info("neighbours:","ip",fmt.Sprintf("%v:%v",from.IP,from.Port),"count",len(req.Nodes),"nodes",lsvalue)
+	//log.Info("neighbours:","ip",fmt.Sprintf("%v:%v",from.IP,from.Port),"count",len(req.Nodes),"nodes",lsvalue)
 }
 
 func (req *neighbors) name() string { return "NEIGHBORS/v4" }

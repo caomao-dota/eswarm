@@ -18,7 +18,7 @@ import (
 	"github.com/plotozhu/MDCMainnet/swarm/util"
 	"golang.org/x/crypto/sha3"
 
-	lru "github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/golang-lru"
 	"github.com/plotozhu/MDCMainnet/p2p/enode"
 	"github.com/plotozhu/MDCMainnet/rlp"
 	"github.com/plotozhu/MDCMainnet/swarm/log"
@@ -291,18 +291,19 @@ type ReceiptStore struct {
 	receiptsLogs  []Receipts
 	balances      *lru.Cache
 	watchers 	 map[string]ReceiptWatcher
+	lightNode     bool
 }
 
-func NewReceiptsStore(filePath string, prvKey *ecdsa.PrivateKey, serverAddr string, duration time.Duration, checkBalance bool) (*ReceiptStore, error) {
+func NewReceiptsStore(filePath string, prvKey *ecdsa.PrivateKey, serverAddr string, duration time.Duration, checkBalance bool,lightNode bool) (*ReceiptStore, error) {
 	db, err := leveldb.OpenFile(filePath, nil)
 	if _, iscorrupted := err.(*dberrors.ErrCorrupted); iscorrupted {
 		db, err = leveldb.RecoverFile(filePath, nil)
 	}
 	MAX_STIME_DURATION = duration             //生成收据时，一个STIME允许的最长时间
 	MAX_STIME_JITTER = 2 * MAX_STIME_DURATION //接收收据时，允许最长的时间差，超过这个时间的不再接收
-	return newReceiptsStore(db, prvKey, serverAddr, checkBalance), err
+	return newReceiptsStore(db, prvKey, serverAddr, checkBalance,lightNode), err
 }
-func newReceiptsStore(newDb *leveldb.DB, prvKey *ecdsa.PrivateKey, serverAddr string, checkBalance bool) *ReceiptStore {
+func newReceiptsStore(newDb *leveldb.DB, prvKey *ecdsa.PrivateKey, serverAddr string, checkBalance bool,lightNode bool) *ReceiptStore {
 	balances, _ := lru.New(100)
 	store := ReceiptStore{
 		account:      crypto.PubkeyToAddress(prvKey.PublicKey),
@@ -316,11 +317,16 @@ func newReceiptsStore(newDb *leveldb.DB, prvKey *ecdsa.PrivateKey, serverAddr st
 		checkBalance: checkBalance,
 		balances:     balances,
 		watchers:     make(map[string]ReceiptWatcher),
+		lightNode:	  lightNode,
 	}
 	store.nodeCommCache, _ = lru.New(MAX_C_REC_LIMIT)
 
 	store.Init()
-	go store.submitRoutine()
+
+	if !lightNode {
+		go store.submitRoutine()
+	}
+
 	return &store
 }
 func (rs *ReceiptStore) SetNewWather(watcher ReceiptWatcher)  {
