@@ -672,22 +672,13 @@ func (rs *ReceiptStore) mockAutoSubmit() error {
 func (rs *ReceiptStore) submitRoutine() {
 	log.Info("Setup report subroutine ", "time", MAX_STIME_DURATION)
 	timer := time.NewTimer(MAX_STIME_DURATION)
-	_,totalCnt := rs.doAutoSubmit()
-	if totalCnt >= MAX_ITEM_PER_REPORT { //说明还有数据没有传完，过两分钟再上传
-		timer.Reset(2*time.Minute)
-	}else{//数据上传完了，一个小时候后再上传
-		timer.Reset(MAX_STIME_DURATION)
-	}
+	timer.Reset(MAX_STIME_DURATION)
 	for {
 		select {
 		case <-timer.C:
 
-			_,totalCnt := rs.doAutoSubmit()
-			if totalCnt >= MAX_ITEM_PER_REPORT { //说明还有数据没有传完，过两分钟再上传
-				timer.Reset(2*time.Minute)
-			}else{//数据上传完了，一个小时候后再上传
-				timer.Reset(MAX_STIME_DURATION)
-			}
+			rs.doAutoSubmit()
+			timer.Reset(MAX_STIME_DURATION)
 
 		}
 	}
