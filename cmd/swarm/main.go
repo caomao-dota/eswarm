@@ -104,6 +104,18 @@ func init() {
 	defaultNodeConfig.IPCPath = "bzzd.ipc"
 	// Set flag defaults for --help display.
 	utils.ListenPortFlag.Value = 30399
+	var rLimit syscall.Rlimit
+	rLimit.Max = 20000
+	rLimit.Cur = 20000
+	err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	if err != nil {
+		fmt.Println("Error Setting Rlimit ", err)
+	}
+	err = syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	if err != nil {
+		fmt.Println("Error Getting Rlimit ", err)
+	}
+	fmt.Println("Rlimit Final", rLimit)
 }
 
 var app = utils.NewApp("", "Ethereum Swarm")
