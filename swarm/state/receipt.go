@@ -292,6 +292,7 @@ type ReceiptStore struct {
 	balances      *lru.Cache
 	watchers 	 map[string]ReceiptWatcher
 	lightNode     bool
+	saveHTimer    *time.Ticker
 }
 
 func NewReceiptsStore(filePath string, prvKey *ecdsa.PrivateKey, serverAddr string, duration time.Duration, checkBalance bool,lightNode bool) (*ReceiptStore, error) {
@@ -327,7 +328,17 @@ func newReceiptsStore(newDb *leveldb.DB, prvKey *ecdsa.PrivateKey, serverAddr st
 		go store.submitRoutine()
 	}
 
+	store.saveHTimer = time.NewTicker(time.Minute)
+	go func() {
+		for  range store.saveHTimer.C {
+			store.saveHRecord()
+		}
+	}()
+
 	return &store
+}
+func (rs *ReceiptStore) saveHRoutine(){
+
 }
 func (rs *ReceiptStore) SetNewWather(watcher ReceiptWatcher)  {
 	rs.watchers[watcher.ID()] = watcher
@@ -434,7 +445,7 @@ func (rs *ReceiptStore) OnNodeChunkReceived(account [20]byte, dataLength int64) 
 func (rs *ReceiptStore) OnNewReceipt(id enode.ID,receipt *Receipt) error {
 	rs.hmu.Lock()
 	defer rs.hmu.Unlock()
-	return nil
+
 	//不是自己的nodeId不收
 	if receipt.Account != rs.account {
 		return ErrInvalidNode
@@ -475,7 +486,7 @@ func (rs *ReceiptStore) OnNewReceipt(id enode.ID,receipt *Receipt) error {
 		watcher.OnNewReceipts(nodeId,id,1)
 	}
 	//持久化
-	return rs.saveHRecord()
+	return nil//rs.saveHRecord()
 }
 func (rs *ReceiptStore) GetReceiptsLogs() ([]Receipts) {
 
