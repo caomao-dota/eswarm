@@ -328,7 +328,7 @@ func newReceiptsStore(newDb *leveldb.DB, prvKey *ecdsa.PrivateKey, serverAddr st
 		go store.submitRoutine()
 	}
 
-	store.saveHTimer = time.NewTicker(time.Minute)
+	store.saveHTimer = time.NewTicker(5*time.Minute)
 	go func() {
 		for  range store.saveHTimer.C {
 			store.saveHRecord()
@@ -441,10 +441,14 @@ func (rs *ReceiptStore) OnNodeChunkReceived(account [20]byte, dataLength int64) 
 
 }
 
+func (rs *ReceiptStore)CalcReceipts()	error{
+
+}
 //服务端新到了一个收据
 func (rs *ReceiptStore) OnNewReceipt(id enode.ID,receipt *Receipt) error {
 	rs.hmu.Lock()
 	defer rs.hmu.Unlock()
+
 
 	//不是自己的nodeId不收
 	if receipt.Account != rs.account {
