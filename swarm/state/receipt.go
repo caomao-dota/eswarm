@@ -434,6 +434,7 @@ func (rs *ReceiptStore) OnNodeChunkReceived(account [20]byte, dataLength int64) 
 func (rs *ReceiptStore) OnNewReceipt(id enode.ID,receipt *Receipt) error {
 	rs.hmu.Lock()
 	defer rs.hmu.Unlock()
+	return nil
 	//不是自己的nodeId不收
 	if receipt.Account != rs.account {
 		return ErrInvalidNode
