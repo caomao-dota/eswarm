@@ -105,8 +105,8 @@ func init() {
 	// Set flag defaults for --help display.
 	utils.ListenPortFlag.Value = 30399
 	var rLimit syscall.Rlimit
-	rLimit.Max = 20000
-	rLimit.Cur = 20000
+	rLimit.Max = 60000
+	rLimit.Cur = 60000
 	err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
 	if err != nil {
 		fmt.Println("Error Setting Rlimit ", err)

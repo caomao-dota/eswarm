@@ -331,6 +331,8 @@ func newReceiptsStore(newDb *leveldb.DB, prvKey *ecdsa.PrivateKey, serverAddr st
 	store.saveHTimer = time.NewTicker(time.Minute)
 	go func() {
 		for  range store.saveHTimer.C {
+			store.hmu.Lock()
+			defer store.hmu.Unlock()
 			store.saveHRecord()
 		}
 	}()
