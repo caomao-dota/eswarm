@@ -74,7 +74,7 @@ func (db *WiredtigerDB)openDB(){
 	var err error
 
 	err  =os.MkdirAll(db.path, os.ModePerm)
-	db.conn,err = wiredtiger.Open(db.path,"create,checkpoint=(log_size=20000000,wait=30),async=(enabled=true,threads=4)")
+	db.conn,err = wiredtiger.Open(db.path,"create,cache_size=512M,checkpoint=(log_size=20000000,wait=30),async=(enabled=true,threads=4)")
 
 	if err != nil {
 		log.Error(err.Error())

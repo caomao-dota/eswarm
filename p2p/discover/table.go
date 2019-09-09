@@ -54,7 +54,7 @@ const (
 
 	// IP address limits.
 	bucketIPLimit, bucketSubnet = 4, 24 // at most 2 addresses from the same /24
-	tableIPLimit, tableSubnet   = 10, 24
+	tableIPLimit, tableSubnet   = 20, 24
 
 	maxFindnodeFailures = 5                // Nodes exceeding this limit are dropped
 	refreshInterval     = 10 * time.Minute //30 * time.Minute
