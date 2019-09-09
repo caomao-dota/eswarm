@@ -275,7 +275,6 @@ func (rs *Receipts) CurrentReceipt(account [20]byte) *ReceiptData {
 	return &ReceiptData{lastestTime, result[lastestTime].Amount, result[lastestTime].Sign}
 }
 
-
 type ReceiptStore struct {
 	account     [20]byte
 	hex         string
@@ -294,8 +293,6 @@ type ReceiptStore struct {
 	watchers 	 map[string]ReceiptWatcher
 	lightNode     bool
 	saveHTimer    *time.Ticker
-	rawReceipts   map[enode.ID]map[time.Time]*Receipt
-	rawmu           sync.RWMutex
 }
 
 func NewReceiptsStore(filePath string, prvKey *ecdsa.PrivateKey, serverAddr string, duration time.Duration, checkBalance bool,lightNode bool) (*ReceiptStore, error) {
@@ -321,7 +318,6 @@ func newReceiptsStore(newDb *leveldb.DB, prvKey *ecdsa.PrivateKey, serverAddr st
 		checkBalance: checkBalance,
 		balances:     balances,
 		watchers:     make(map[string]ReceiptWatcher),
-		rawReceipts:  make(map[enode.ID]map[time.Time]*Receipt),
 		lightNode:	  lightNode,
 	}
 	store.nodeCommCache, _ = lru.New(MAX_C_REC_LIMIT)
@@ -332,10 +328,10 @@ func newReceiptsStore(newDb *leveldb.DB, prvKey *ecdsa.PrivateKey, serverAddr st
 		go store.submitRoutine()
 	}
 
-	store.saveHTimer = time.NewTicker(5*time.Minute)
+	store.saveHTimer = time.NewTicker(time.Minute)
 	go func() {
 		for  range store.saveHTimer.C {
-			store.CalcReceipts()
+			store.saveHRecord()
 		}
 	}()
 
@@ -445,70 +441,11 @@ func (rs *ReceiptStore) OnNodeChunkReceived(account [20]byte, dataLength int64) 
 
 }
 
-func (rs *ReceiptStore)CalcReceipts()	error{
-	rs.rawmu.Lock()
-	defer rs.rawmu.Unlock()
-	for id,receipts := range rs.rawReceipts {
-		WatcherNotified := false
-		for _,receipt := range receipts {
-			//验证签名是否正确
-			pubKey, isOk := receipt.Verify()
-			if !isOk {
-				return ErrInvalidSignature
-			}
-			//根据这个pubKey生成nodeId
-			nodeId := crypto.PubkeyToAddress(*pubKey)
-			_, ok := rs.allReceipts[nodeId]
-			//这个节点的第一次记录
-			if !ok {
-				rs.allReceipts[nodeId] = make(ReceiptItems)
-			}
-			_, ok = rs.allReceipts[nodeId][receipt.Stime]
-			if !ok {
-				//这个节点的这个STIME的第一次记录
-				rs.allReceipts[nodeId][receipt.Stime] = ReceiptItem{receipt.Amount, receipt.Sign}
-				rs.decreaseOnNewReceipt(nodeId, receipt.Amount)
-			} else {
-				//这个节点的这个STIME记录存在，只有更大的Amount才会覆盖小的
-				if receipt.Amount > rs.allReceipts[nodeId][receipt.Stime].Amount {
-					//更新未支付的数量
-					rs.decreaseOnNewReceipt(nodeId, receipt.Amount-rs.allReceipts[nodeId][receipt.Stime].Amount)
-					//覆盖原有的记录
-					rs.allReceipts[nodeId][receipt.Stime] = ReceiptItem{receipt.Amount, receipt.Sign}
-				}
-			}
-			if !WatcherNotified {
-				WatcherNotified = true
-				for _,watcher := range rs.watchers {
-					watcher.OnNewReceipts(nodeId,id,1)
-				}
-			}
-
-		}
-
-	}
-	//从列表中删除无效的
-	for id,receipts := range rs.rawReceipts {
-
-		for stime,receipt := range receipts {
-			if  receipt.Stime.Add(MAX_STIME_JITTER).Before(time.Now()) {
-				delete(receipts,stime)
-			}
-		}
-
-		if len(receipts) == 0 {
-			delete(rs.rawReceipts,id)
-		}
-	}
-
-	//持久化
-	return rs.saveHRecord()
-}
 //服务端新到了一个收据
 func (rs *ReceiptStore) OnNewReceipt(id enode.ID,receipt *Receipt) error {
+	rs.hmu.Lock()
+	defer rs.hmu.Unlock()
 
-	rs.rawmu.Lock()
-	defer rs.rawmu.Unlock()
 	//不是自己的nodeId不收
 	if receipt.Account != rs.account {
 		return ErrInvalidNode
@@ -519,22 +456,37 @@ func (rs *ReceiptStore) OnNewReceipt(id enode.ID,receipt *Receipt) error {
 		log.Error("signed time is :", "time", receipt.Stime)
 		return ErrInvalidSTime
 	}
-
-	receiptNode := rs.rawReceipts[id]
-	if receiptNode == nil {
-		rs.rawReceipts[id] = make(map[time.Time]*Receipt)
-		receiptNode = rs.rawReceipts[id]
+	//验证签名是否正确
+	pubKey, isOk := receipt.Verify()
+	if !isOk {
+		return ErrInvalidSignature
 	}
-
-	rawReceipt := receiptNode[receipt.Stime]
-	if rawReceipt == nil {
-		receiptNode[receipt.Stime] = receipt
-	}else {
-		if rawReceipt.Amount < receipt.Amount {
-			receiptNode[receipt.Stime] = receipt
+	//根据这个pubKey生成nodeId
+	nodeId := crypto.PubkeyToAddress(*pubKey)
+	_, ok := rs.allReceipts[nodeId]
+	//这个节点的第一次记录
+	if !ok {
+		rs.allReceipts[nodeId] = make(ReceiptItems)
+	}
+	_, ok = rs.allReceipts[nodeId][receipt.Stime]
+	if !ok {
+		//这个节点的这个STIME的第一次记录
+		rs.allReceipts[nodeId][receipt.Stime] = ReceiptItem{receipt.Amount, receipt.Sign}
+		rs.decreaseOnNewReceipt(nodeId, receipt.Amount)
+	} else {
+		//这个节点的这个STIME记录存在，只有更大的Amount才会覆盖小的
+		if receipt.Amount > rs.allReceipts[nodeId][receipt.Stime].Amount {
+			//更新未支付的数量
+			rs.decreaseOnNewReceipt(nodeId, receipt.Amount-rs.allReceipts[nodeId][receipt.Stime].Amount)
+			//覆盖原有的记录
+			rs.allReceipts[nodeId][receipt.Stime] = ReceiptItem{receipt.Amount, receipt.Sign}
 		}
 	}
-	return nil
+	for _,watcher := range rs.watchers {
+		watcher.OnNewReceipts(nodeId,id,1)
+	}
+	//持久化
+	return nil//rs.saveHRecord()
 }
 func (rs *ReceiptStore) GetReceiptsLogs() ([]Receipts) {
 
