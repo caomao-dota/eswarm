@@ -443,6 +443,7 @@ func (rs *ReceiptStore) OnNodeChunkReceived(account [20]byte, dataLength int64) 
 
 func (rs *ReceiptStore)CalcReceipts()	error{
 
+	return nil
 }
 //服务端新到了一个收据
 func (rs *ReceiptStore) OnNewReceipt(id enode.ID,receipt *Receipt) error {
