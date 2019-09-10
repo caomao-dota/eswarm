@@ -645,6 +645,7 @@ func (rs *ReceiptStore) SendDataToServer(url string, timeout time.Duration, resu
 	return err
 }
 func (rs *ReceiptStore) doAutoSubmit() (error,int) {
+
 	log.Info("report receipts to server 1")
 	receipts,totalCnt := rs.GetReceiptsToReport()
 
@@ -665,6 +666,8 @@ func (rs *ReceiptStore) doAutoSubmit() (error,int) {
 			break;
 		}
 	}
+	rs.hmu.Lock()
+	defer rs.hmu.Unlock()
 	log.Info("report end with error", "error", err)
 	if err == nil { //提交成功，本地删除
 		rs.receiptsLogs = append(rs.receiptsLogs, receipts)
