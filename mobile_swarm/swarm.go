@@ -27,18 +27,21 @@ import (
 	"github.com/plotozhu/MDCMainnet/accounts"
 	"github.com/plotozhu/MDCMainnet/accounts/keystore"
 	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/plotozhu/MDCMainnet/log"
 	"github.com/plotozhu/MDCMainnet/node"
 	"github.com/plotozhu/MDCMainnet/p2p"
 	"github.com/plotozhu/MDCMainnet/p2p/nat"
 	"github.com/plotozhu/MDCMainnet/swarm"
 	bzzapi "github.com/plotozhu/MDCMainnet/swarm/api"
 	"github.com/plotozhu/MDCMainnet/swarm/util"
+	"github.com/plotozhu/MDCMainnet/swarm/version"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	rm "runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -118,6 +121,9 @@ func PostToServer(urlStr string, timeout time.Duration, data *ActivatePost) (int
 	postdata.Set("account", data.Account)
 	postdata.Set("credential", data.Credential)
 	postdata.Set("clientId", data.ClientId)
+	postdata.Set("version", version.Version)
+	postdata.Set("os", rm.GOOS)
+	log.Info("activate started ", "params", data)
 	resp, err := client.PostForm(urlStr, postdata)
 	if err != nil {
 		return 0, err
@@ -139,9 +145,15 @@ func PostToServer(urlStr string, timeout time.Duration, data *ActivatePost) (int
 
 	return respData.ExpireTime, nil
 }
-
 func Start(path string, password string, bootnodeAddrs string, bootnode string) (stack *Node, _ error) {
+	return StartL(path, password, bootnodeAddrs, bootnode, 1)
+}
+func StartL(path string, password string, bootnodeAddrs string, bootnode string, logLevel int) (stack *Node, _ error) {
 	//path keystore上一级目录
+	glogger := log.NewGlogHandler(log.StreamHandler(os.Stderr, log.TerminalFormat(false)))
+	glogger.Verbosity(log.Lvl(logLevel))
+	log.Root().SetHandler(glogger)
+
 	if path == "" {
 		return nil, errors.New("Must input path ...")
 	}
@@ -287,6 +299,8 @@ func ActivateR(path string, appId string, clientId string, credential string, ad
 			return 0, err
 		}
 		bzzAccount = account
+
+		log.Info("account created:", "bzzAccount", account)
 	}
 
 	activatePost := &ActivatePost{appId, credential, bzzAccount, clientId}
