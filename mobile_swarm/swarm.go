@@ -442,6 +442,8 @@ func NewSwarmNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 	}
 	bzzconfig.Init(key.PrivateKey)
 
+	bzzconfig.BzzAccount = config.SwarmAccount
+
 	if err := rawStack.Register(func(*node.ServiceContext) (node.Service, error) {
 		return swarm.NewSwarm(bzzconfig, nil)
 	}); err != nil {
