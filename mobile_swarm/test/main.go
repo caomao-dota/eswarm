@@ -22,7 +22,7 @@ func main() {
 	}
 	fmt.Println(expireTime)
 
-	node, err := csdc.Start(path, "123", "https://raw.githubusercontent.com/wiki/CSDCFund/csdc/nodeslist.txt", "")
+	node, err := csdc.StartL(path, "123", "https://raw.githubusercontent.com/wiki/CSDCFund/csdc/nodeslist.txt", "", 3)
 
 	fmt.Println(node.GetHttpPort())
 
