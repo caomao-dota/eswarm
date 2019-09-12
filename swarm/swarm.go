@@ -244,7 +244,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 	self.receiptsStore.SetNewWather(self.bzz.Hive)
 	//创建PSS通信网络(暂略过，没有深入研究）
 	// Pss = postal service over swarm (devp2p over bzz)
-	if !enode.IsBootNode(enode.NodeTypeOption(bzzconfig.NodeType)) {
+	/*if !enode.IsBootNode(enode.NodeTypeOption(bzzconfig.NodeType)) {
 		self.ps, err = pss.NewPss(to, config.Pss)
 		if err != nil {
 			return nil, err
@@ -252,7 +252,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 		if pss.IsActiveHandshake {
 			pss.SetHandshakeController(self.ps, pss.NewHandshakeParams())
 		}
-	}
+	}*/
 
 	//创建api
 	self.api = api.NewAPI(self.fileStore, mockStore, self.dns, feedsHandler, self.privateKey)

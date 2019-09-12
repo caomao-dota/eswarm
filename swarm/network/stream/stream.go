@@ -43,7 +43,7 @@ const (
 	High
 	Top
 	PriorityQueue    = 4    // number of priority queues - Low, Mid, High, Top
-	PriorityQueueCap = 4096 // queue capacity
+	PriorityQueueCap = 512 // queue capacity
 	HashSize         = 32
 )
 
