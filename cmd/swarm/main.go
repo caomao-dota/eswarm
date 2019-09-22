@@ -105,17 +105,16 @@ func init() {
 	// Set flag defaults for --help display.
 	utils.ListenPortFlag.Value = 30399
 	var rLimit syscall.Rlimit
-	rLimit.Max = 60000
-	rLimit.Cur = 60000
-	err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
 	if err != nil {
-		fmt.Println("Error Setting Rlimit ", err)
+		log.Error("Error Getting Rlimit ", "get", err)
 	}
-	err = syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	rLimit.Cur = rLimit.Max
+	err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
 	if err != nil {
-		fmt.Println("Error Getting Rlimit ", err)
+		log.Error("Error Setting Rlimit ", "set", err)
 	}
-	fmt.Println("Rlimit Final", rLimit)
+	log.Info("Rlimit Final", "limits", rLimit)
 }
 
 var app = utils.NewApp("", "Ethereum Swarm")
@@ -323,7 +322,6 @@ func bzzd(ctx *cli.Context) error {
 	initSwarmNode(bzzconfig, stack, ctx)
 	//register BZZ as node.Service in the ethereum node
 	registerBzzService(bzzconfig, stack)
-
 
 	//start the node
 	utils.StartNode(stack)
