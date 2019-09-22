@@ -69,7 +69,7 @@ func createReceiptStore(t *testing.T, index int) *ReceiptStore {
 	if err != nil {
 		t.Error(err)
 	}
-	receiptStore := newReceiptsStore(db, getOrCreateKey(index), "",false)
+	receiptStore := newReceiptsStore(db, getOrCreateKey(index), "",false,false)
 
 	return receiptStore
 }

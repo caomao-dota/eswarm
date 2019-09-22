@@ -296,7 +296,7 @@ func (h *Hasher) BlockSize() int {
 func (h *Hasher) Sum(b []byte) (s []byte) {
 	t := h.getTree()
 	// write the last section with final flag set to true
-	go h.writeSection(t.cursor, t.section, true, true)
+	go h.writeSection(t.cursor, t.section, true, true,nil)
 	// wait for the result
 	s = <-t.result
 	span := t.span
@@ -341,10 +341,12 @@ func (h *Hasher) Write(b []byte) (int, error) {
 			return 0, nil
 		}
 	}
+	waiter := make(chan struct{},256)
 	// read full sections and the last possibly partial section from the input buffer
 	for smax < l {
 		// section complete; push to tree asynchronously
-		go h.writeSection(t.cursor, t.section, true, false)
+		waiter <- struct{}{}
+ 		go h.writeSection(t.cursor, t.section, true, false,waiter)
 		// reset section
 		t.section = make([]byte, secsize)
 		// copy from input buffer at smax to right half of section
@@ -401,7 +403,7 @@ func (h *Hasher) NewAsyncWriter(double bool) *AsyncHasher {
 		secsize *= 2
 	}
 	write := func(i int, section []byte, final bool) {
-		h.writeSection(i, section, double, final)
+		h.writeSection(i, section, double, final,nil)
 	}
 	return &AsyncHasher{
 		Hasher:  h,
@@ -524,12 +526,17 @@ func (sw *AsyncHasher) Sum(b []byte, length int, meta []byte) (s []byte) {
 }
 
 // writeSection writes the hash of i-th section into level 1 node of the BMT tree
-func (h *Hasher) writeSection(i int, section []byte, double bool, final bool) {
+func (h *Hasher) writeSection(i int, section []byte, double bool, final bool, val chan struct{}) {
 	// select the leaf node for the section
 	var n *node
 	var isLeft bool
 	var hasher hash.Hash
 	var level int
+	defer func() {
+		if val != nil {
+			<- val
+		}
+	}()
 	t := h.getTree()
 	if double {
 		level++
