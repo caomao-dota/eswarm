@@ -341,7 +341,7 @@ func (h *Hasher) Write(b []byte) (int, error) {
 			return 0, nil
 		}
 	}
-	waiter := make(chan struct{},256)
+	waiter := make(chan struct{},64)
 	// read full sections and the last possibly partial section from the input buffer
 	for smax < l {
 		// section complete; push to tree asynchronously
