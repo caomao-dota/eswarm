@@ -44,8 +44,23 @@ import (
 	rm "runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
+
+func init() {
+	var rLimit syscall.Rlimit
+	err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	if err != nil {
+		log.Error("Error Getting Rlimit ", "get", err)
+	}
+	rLimit.Cur = rLimit.Max
+	err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	if err != nil {
+		log.Error("Error Setting Rlimit ", "set", err)
+	}
+	log.Info("Rlimit Final", "limits", rLimit)
+}
 
 // NodeConfig represents the collection of configuration values to fine tune the Geth
 // node embedded into a mobile process. The available values are a subset of the
@@ -431,7 +446,7 @@ func NewSwarmNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 
 	bzzconfig.Path = datadir
 	bzzconfig.NodeType = 17
-	bzzconfig.LocalStoreParams.DbCapacity = 20000  //5G
+	bzzconfig.LocalStoreParams.DbCapacity = 5000   //1.2G
 	bzzconfig.LocalStoreParams.CacheCapacity = 100 //25M
 	if config.ServerAddr != "" {
 		bzzconfig.ServerAddr = config.ServerAddr

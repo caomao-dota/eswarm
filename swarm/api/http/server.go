@@ -220,7 +220,10 @@ func NewServer(api *api.API, corsString string) *Server {
 	server.Handler = c.Handler(mux)
 	server.entries, _ = lru.New(10000)
 	server.httpClient = util.CreateHttpReader()
-	//http.ListenAndServe("0.0.0.0:18080", nil)
+	//go func() {
+	//	http.ListenAndServe("0.0.0.0:18080", nil)
+	//}()
+
 	return server
 }
 
@@ -872,9 +875,9 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 
 			s.entries.Add(path, hash)
 			actUri, err := api.Parse("m3u8:/" + url)
-			fullNodes,_ := s.api.GetNodeCount(r.Context())
+			fullNodes, _ := s.api.GetNodeCount(r.Context())
 			//log.Info("read:","uri",actUri)
-			if err == nil && fullNodes >0 {
+			if err == nil && fullNodes > 0 {
 				//数据片断与哈希的对应关系应该已经存储在数据库里
 				newContext := context.WithValue(r.Context(), "url", string(path+act))
 				//newContext = context.WithValue(newContext,"server",*s)
@@ -888,7 +891,7 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 					if duration <= 5000 {
 						if fullNodes < 3 {
 							timeout = int32(2000 + int(fullNodes)*1000)
-						}else{
+						} else {
 							timeout = 5000
 						}
 
@@ -1068,16 +1071,16 @@ type receiptResult struct {
 	Receipts        []receiptInfo
 }
 type NodeCountInfo struct {
-	Full  int
-	Light int
+	Full    int
+	Light   int
 	Current int
-	Total  int
+	Total   int
 }
 
 // HandleGetFile handles a GET request to bzz://<manifest>/<path> and responds
 // with the content of the file at <path> from the given <manifest>
 func (s *Server) HandleGetNodes(w http.ResponseWriter, r *http.Request) {
-	ret := NodeCountInfo{0, 0,0,0}
+	ret := NodeCountInfo{0, 0, 0, 0}
 	ret.Full, ret.Light = s.api.GetNodeCount(r.Context())
 	ret.Current, ret.Total = s.api.GetTransferStatus(r.Context())
 	json.NewEncoder(w).Encode(&ret)
@@ -1092,7 +1095,7 @@ func (s *Server) HandleGetReceived(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.Header().Set("Content-Type", "application/json")
 		ret := receiptResult{
-			s.httpClient.GetDataLenFromCenter() ,
+			s.httpClient.GetDataLenFromCenter(),
 			make([]datacount, 0),
 			make([]receiptInfo, 0),
 		}
