@@ -196,6 +196,17 @@ func StartL(path string, password string, bootnodeAddrs string, bootnode string,
 	config.SwarmAccount = account
 	config.SwarmAccountPassword = password
 
+	var rLimit syscall.Rlimit
+	rErr := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	if rErr != nil {
+		return nil, errors.New("rLimit error")
+		log.Error("start Error Getting Rlimit ", "get", err)
+	} else {
+		if rLimit.Cur < 2048 {
+			return nil, errors.New("rLimit error")
+		}
+	}
+
 	if bootnodeAddrs != "" {
 		nodes, reportUrl, err := util.GetBootnodesInfo(bootnodeAddrs)
 		if err == nil {

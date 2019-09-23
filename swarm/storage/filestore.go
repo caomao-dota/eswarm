@@ -37,8 +37,8 @@ implementation for storage or retrieval.
 
 const (
 	defaultLDBCapacity                = 10000000 // capacity for LevelDB, by default 10M*256K bytes == 2.56TB
-	defaultCacheCapacity              = 256	    // capacity for in-memory chunks' cache
-	defaultChunkRequestsCacheCapacity = 100000 // capacity for container holding outgoing requests for chunks. should be set to LevelDB capacity
+	defaultCacheCapacity              = 256      // capacity for in-memory chunks' cache
+	defaultChunkRequestsCacheCapacity = 64       // capacity for container holding outgoing requests for chunks. should be set to LevelDB capacity
 )
 
 type FileStore struct {
