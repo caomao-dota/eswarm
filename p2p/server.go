@@ -848,6 +848,21 @@ running:
 				}
 				name := truncateName(c.name)
 				srv.log.Info("Adding p2p peer", "name", name, "addr", c.fd.RemoteAddr(), "peers", len(peers)+1,"inbound",p.Inbound())
+				isLight := enode.IsLightNode(enode.NodeTypeOption(p.Node().NodeType()))
+
+				if isLight {
+					value := atomic.AddInt32(&srv.connInfo.lightCnt,1)
+					srv.connInfo.mutex.Lock()
+					if value >= int32(srv.MaxPeers){
+						srv.connInfo.lightState = ST_FULL
+					}
+				}else{
+					value := atomic.AddInt32(&srv.connInfo.fullCnt,1)
+					if value >= 50{
+						srv.connInfo.fullState = ST_FULL
+					}
+				}
+
 				go srv.runPeer(p)
 				peers[c.node.ID()] = p
 				if p.Inbound() && enode.IsConnectableNode(enode.NodeTypeOption(p.Node().NodeType())){
@@ -883,6 +898,20 @@ running:
 			delete(peers, pd.ID())
 			if pd.Inbound() {
 				inboundCount--
+			}
+			isLight := enode.IsLightNode(enode.NodeTypeOption(pd.Node().NodeType()))
+
+			if isLight {
+				value := atomic.AddInt32(&srv.connInfo.lightCnt,-1)
+				srv.connInfo.mutex.Lock()
+				if value <= int32(srv.MaxPeers * 9 /10 ) && srv.connInfo.lightState == ST_FULL {
+					srv.connInfo.lightState = ST_ACCEPTING
+				}
+			}else{
+				value := atomic.AddInt32(&srv.connInfo.fullCnt,-1)
+				if value < 45 {
+					srv.connInfo.fullState = ST_ACCEPTING
+				}
 			}
 		}
 	}
@@ -1244,34 +1273,10 @@ func (srv *Server) runPeer(p *Peer) {
 		Peer: p.ID(),
 	})
 
-	isLight := enode.IsLightNode(enode.NodeTypeOption(p.Node().NodeType()))
 
-	if isLight {
-		value := atomic.AddInt32(&srv.connInfo.lightCnt,1)
-		srv.connInfo.mutex.Lock()
-		if value >= int32(srv.MaxPeers){
-			srv.connInfo.lightState = ST_FULL
-		}
-	}else{
-		value := atomic.AddInt32(&srv.connInfo.fullCnt,1)
-		if value >= 50{
-			srv.connInfo.fullState = ST_FULL
-		}
-	}
 	// run the protocol
 	remoteRequested, err := p.run()
-	if isLight {
-		value := atomic.AddInt32(&srv.connInfo.lightCnt,-1)
-		srv.connInfo.mutex.Lock()
-		if value <= int32(srv.MaxPeers * 9 /10 ) && srv.connInfo.lightState == ST_FULL {
-			srv.connInfo.lightState = ST_ACCEPTING
-		}
-	}else{
-		value := atomic.AddInt32(&srv.connInfo.fullCnt,-1)
-		if value < 45 {
-			srv.connInfo.fullState = ST_ACCEPTING
-		}
-	}
+
 	// broadcast peer drop
 	srv.peerFeed.Send(&PeerEvent{
 		Type:  PeerEventTypeDrop,
