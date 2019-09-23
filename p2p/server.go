@@ -950,7 +950,7 @@ running:
 }
 
 func (srv *Server) protoHandshakeChecks(peers map[enode.ID]*Peer, inboundCount int, c *conn) error {
-	lightPeerCnt := int(atomic.LoadInt32(&srv.connInfo.fullCnt))
+	lightPeerCnt := int(atomic.LoadInt32(&srv.connInfo.lightCnt))
 	fullPeerCnt := int(atomic.LoadInt32(&srv.connInfo.fullCnt))
 
 
