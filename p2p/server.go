@@ -856,11 +856,14 @@ running:
 					if value >= int32(srv.MaxPeers){
 						srv.connInfo.lightState = ST_FULL
 					}
+					srv.connInfo.mutex.Unlock()
 				}else{
+					srv.connInfo.mutex.Lock()
 					value := atomic.AddInt32(&srv.connInfo.fullCnt,1)
 					if value >= 50{
 						srv.connInfo.fullState = ST_FULL
 					}
+					srv.connInfo.mutex.Unlock()
 				}
 
 				go srv.runPeer(p)
@@ -907,11 +910,14 @@ running:
 				if value <= int32(srv.MaxPeers * 9 /10 ) && srv.connInfo.lightState == ST_FULL {
 					srv.connInfo.lightState = ST_ACCEPTING
 				}
+				srv.connInfo.mutex.Unlock()
 			}else{
 				value := atomic.AddInt32(&srv.connInfo.fullCnt,-1)
+				srv.connInfo.mutex.Lock()
 				if value < 45 {
 					srv.connInfo.fullState = ST_ACCEPTING
 				}
+				srv.connInfo.mutex.Unlock()
 			}
 		}
 	}
