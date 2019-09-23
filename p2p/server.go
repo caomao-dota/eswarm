@@ -156,6 +156,49 @@ type Config struct {
 }
 type AddCheck func(node *enode.Node) bool
 
+const (
+	ST_ACCEPTING = 0
+	ST_FULL      =1
+	ST_THRESHOLD = 2
+)
+const (
+	DISC_UNKNOWN = iota
+	DISC_HS_ERR
+	DISC_PEERS_FULL
+	DISC_BUCKET_FULL
+	DISC_CONN_FAIL
+	DISC_REJECT
+)
+type ConnInfo struct {
+	mutex		sync.Mutex
+	lightCnt     int32
+	fullCnt      int32
+	lightState   int
+	fullState    int
+	nodeHistory  *lru.Cache
+}
+type ConnState struct {
+	value   *enode.Node
+	reason  uint8
+}
+/**
+	当有大量的轻节点的时候，节点会不停收到连接请求，然后判断失效后断开，在这个过程中，需要耗费CPU来进行测试，因此我们现在做以下的几个工作来降低CPU
+
+   1.判定当前的连接数，如果：
+      A. 当全节点数连接数大于 100 而且 轻节点的连接状态处于1/2时，停止accept
+      否则：
+	   1.记录曾经连接过的端口的类型,作以下的处理
+		  A. 如果全节点数大于100， 新的连接/端口对如果是全节点，直接不连接
+          B. 如果轻节点连接状态处于状态2，则不接收轻节点连接
+       2.全节点连接不超过50时的处理
+       3.轻节点不处于状态1/2时,允许接入
+
+     ST_ACCEPTING -- 100% maxpeers -->  -- >90% max peers -->  ST_THRESHOLD -- <90% maxPeers -->ST_ACCEPTING
+
+  	 端口连接状态
+     1. 来源IP/来源端口 -> oaddr/enode
+
+ */
 // Server manages all peer connections.
 type Server struct {
 	// Config fields may not be modified while the server is running.
@@ -197,6 +240,7 @@ type Server struct {
 	blacklist    *lru.Cache
 	FilterChain  *FilterChain
 	_addCheckFun AddCheck
+	connInfo      ConnInfo
 }
 type BlackItem struct {
 	DiscTime  time.Time
@@ -454,6 +498,17 @@ func (srv *Server) Start() (err error) {
 	if srv.running {
 		return errors.New("server already running")
 	}
+
+	info := ConnInfo{
+		lightState:ST_ACCEPTING,
+		fullState:ST_ACCEPTING,
+
+		fullCnt:0,
+		lightCnt:0,
+	}
+
+	info.nodeHistory,_ = lru.New(10000)
+	srv.connInfo = info
 	srv.running = true
 	srv.blacklist, _ = lru.New(1000)
 	srv.FilterChain = NewFilterChain()
@@ -860,17 +915,10 @@ running:
 }
 
 func (srv *Server) protoHandshakeChecks(peers map[enode.ID]*Peer, inboundCount int, c *conn) error {
-	lightPeerCnt := 0
-	fullPeerCnt := 0
+	lightPeerCnt := int(atomic.LoadInt32(&srv.connInfo.fullCnt))
+	fullPeerCnt := int(atomic.LoadInt32(&srv.connInfo.fullCnt))
 
-	for _, peer := range peers {
-		//log.Info("node exist:","id",peer.ID(),"ip",peer.Node().IP(),"port",peer.Node().UDP())
-		if enode.IsLightNode(enode.NodeTypeOption(peer.Node().NodeType())) {
-			lightPeerCnt++
-		} else {
-			fullPeerCnt++
-		}
-	}
+
 	isLightNode := enode.IsLightNode(enode.NodeTypeOption(c.node.NodeType()))
 	log.Trace("connects:", "light conn", lightPeerCnt, " full conn", fullPeerCnt)
 	// Drop connections with no matching protocols.
@@ -922,7 +970,7 @@ func (srv *Server) maxDialedConns() int {
 	if r == 0 {
 		r = defaultDialRatio
 	}
-	return srv.MaxPeers / r
+	return 50 / r
 }
 
 // listenLoop runs in its own goroutine and accepts
@@ -959,9 +1007,48 @@ func (srv *Server) listenLoop() {
 			}
 			break
 		}
-
+		accepting := true;
+		srv.connInfo.mutex.Lock()
+		accepting = srv.connInfo.fullState == ST_ACCEPTING && srv.connInfo.lightState == ST_ACCEPTING
+		srv.connInfo.mutex.Unlock()
+		if !accepting{
+			srv.log.Debug("Rejected conn (not whitelisted in NetRestrict)", "addr", fd.RemoteAddr())
+			fd.Close()
+			slots <- struct{}{}
+			continue
+		}
+		connect_allowed := true
+		//检查列表中是否有该IP/端口
 		// Reject connections that do not match NetRestrict.
+		tcp, ok := fd.RemoteAddr().(*net.TCPAddr);
+		if  ok {
+			indexKey := fmt.Sprintf("%v:%v",tcp.IP,tcp.Port)
+			srv.connInfo.mutex.Lock()
+			value,ok := srv.connInfo.nodeHistory.Get(indexKey)
+			if ok {
+
+				//TODO
+				value_ := value.(*ConnState)
+				if srv.connInfo.lightState != ST_ACCEPTING && enode.IsLightNode(enode.NodeTypeOption(value_.value.NodeType()))  ||
+					 srv.connInfo.fullState != ST_ACCEPTING && enode.IsFullNode(enode.NodeTypeOption(value_.value.NodeType())) {
+					connect_allowed = false
+				}
+			}else{
+
+			}
+
+			srv.connInfo.mutex.Unlock()
+			if !(connect_allowed) {
+				srv.log.Debug("Rejected conn not allowed", "addr", fd.RemoteAddr())
+				fd.Close()
+				slots <- struct{}{}
+				continue
+			}
+		}
+
 		if srv.NetRestrict != nil {
+
+
 			if tcp, ok := fd.RemoteAddr().(*net.TCPAddr); ok && !srv.NetRestrict.Contains(tcp.IP) {
 				srv.log.Debug("Rejected conn (not whitelisted in NetRestrict)", "addr", fd.RemoteAddr())
 				fd.Close()
@@ -970,10 +1057,12 @@ func (srv *Server) listenLoop() {
 			}
 		}
 
+
 		var ip net.IP
 		if tcp, ok := fd.RemoteAddr().(*net.TCPAddr); ok {
 			ip = tcp.IP
 		}
+
 		fd = newMeteredConn(fd, true, ip)
 		srv.log.Trace("Accepted connection", "addr", fd.RemoteAddr())
 		go func() {
@@ -994,6 +1083,21 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *enode.Node) 
 		srv.log.Trace("Setting up connection failed", "addr", fd.RemoteAddr(), "err", err)
 	}
 	return err
+}
+
+func (srv *Server) updateNodeCache(index string, tNode *enode.Node,reason uint8)  {
+	srv.connInfo.mutex.Lock()
+	defer srv.connInfo.mutex.Unlock()
+
+	result,ok := srv.connInfo.nodeHistory.Get(index)
+	if !ok {
+		srv.connInfo.nodeHistory.Add(index,&ConnState{tNode,reason})
+	}else{
+		result_ := result.(*ConnState)
+		if result_.value != tNode || result_.reason != reason {
+			srv.connInfo.nodeHistory.Add(index,&ConnState{tNode,reason})
+		}
+	}
 }
 
 func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) error {
@@ -1030,6 +1134,13 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 	} else {
 		c.node = nodeFromConn(remotePubkey, c.fd)
 	}
+	tcp, ok:=c.fd.RemoteAddr().(*net.TCPAddr)
+	indexKey := ""
+	if ok {
+		indexKey = fmt.Sprintf("%v:%v",tcp.IP,tcp.Port)
+		srv.updateNodeCache(indexKey,c.node,DISC_UNKNOWN)
+	}
+
 	if conn, ok := c.fd.(*meteredConn); ok {
 		conn.handshakeDone(c.node.ID())
 	}
@@ -1038,18 +1149,21 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 	err = srv.checkpoint(c, srv.posthandshake)
 	if err != nil {
 		clog.Trace("Rejected peer before protocol handshake", "err", err)
+		srv.updateNodeCache(indexKey,c.node,DISC_HS_ERR)
 		return err
 	}
 	// Run the protocol handshake
 	phs, err := c.doProtoHandshake(srv.ourHandshake)
 	if err != nil {
 		clog.Trace("Failed proto handshake", "err", err)
+		srv.updateNodeCache(indexKey,c.node,DISC_HS_ERR)
 		return err
 	}
 	c.node = updateNodeByPhs(c.node, phs)
-	//movee posthandshake to doProtoHandshake so that we can know the nodetype
+	//move posthandshake to doProtoHandshake so that we can know the nodetype
 	if id := c.node.ID(); !bytes.Equal(crypto.Keccak256(phs.ID), id[:]) {
 		clog.Trace("Wrong devp2p handshake identity", "phsid", hex.EncodeToString(phs.ID))
+		srv.updateNodeCache(indexKey,c.node,DISC_HS_ERR)
 		return DiscUnexpectedIdentity
 	}
 	c.caps, c.name = phs.Caps, phs.Name
@@ -1061,10 +1175,12 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 	err = srv.checkpoint(c, srv.addpeer)
 	if err != nil {
 		clog.Trace("Rejected peer", "err", err)
+		srv.updateNodeCache(indexKey,c.node,DISC_REJECT)
 		return err
 	}
 	if srv._addCheckFun != nil {
 		if !srv._addCheckFun(c.node) {
+			srv.updateNodeCache(indexKey,c.node,DISC_REJECT)
 			return errors.New("bucket full!")
 		}
 	}
@@ -1121,15 +1237,41 @@ func (srv *Server) runPeer(p *Peer) {
 		srv.newPeerHook(p)
 	}
 
+
 	// broadcast peer add
 	srv.peerFeed.Send(&PeerEvent{
 		Type: PeerEventTypeAdd,
 		Peer: p.ID(),
 	})
 
+	isLight := enode.IsLightNode(enode.NodeTypeOption(p.Node().NodeType()))
+
+	if isLight {
+		value := atomic.AddInt32(&srv.connInfo.lightCnt,1)
+		srv.connInfo.mutex.Lock()
+		if value >= int32(srv.MaxPeers){
+			srv.connInfo.lightState = ST_FULL
+		}
+	}else{
+		value := atomic.AddInt32(&srv.connInfo.fullCnt,1)
+		if value >= 50{
+			srv.connInfo.fullState = ST_FULL
+		}
+	}
 	// run the protocol
 	remoteRequested, err := p.run()
-
+	if isLight {
+		value := atomic.AddInt32(&srv.connInfo.lightCnt,1)
+		srv.connInfo.mutex.Lock()
+		if value <= int32(srv.MaxPeers * 9 /10 ) && srv.connInfo.lightState == ST_FULL {
+			srv.connInfo.lightState = ST_ACCEPTING
+		}
+	}else{
+		value := atomic.AddInt32(&srv.connInfo.fullCnt,1)
+		if value < 45 {
+			srv.connInfo.fullState = ST_ACCEPTING
+		}
+	}
 	// broadcast peer drop
 	srv.peerFeed.Send(&PeerEvent{
 		Type:  PeerEventTypeDrop,
@@ -1140,6 +1282,8 @@ func (srv *Server) runPeer(p *Peer) {
 	// Note: run waits for existing peers to be sent on srv.delpeer
 	// before returning, so this send should not select on srv.quit.
 	srv.delpeer <- peerDrop{p, err, remoteRequested}
+	indexKey := fmt.Sprintf("%v:%v",p.Node().IP,p.Node().TCP())
+	srv.updateNodeCache(indexKey,p.Node(),DISC_BUCKET_FULL)
 }
 
 // NodeInfo represents a short summary of the information known about the host.
