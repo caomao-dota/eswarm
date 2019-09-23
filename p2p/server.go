@@ -1042,7 +1042,7 @@ func (srv *Server) listenLoop() {
 			}
 			break
 		}
-		/*accepting := true;
+		accepting := true;
 		srv.connInfo.mutex.Lock()
 		accepting = srv.connInfo.fullState == ST_ACCEPTING && srv.connInfo.lightState == ST_ACCEPTING
 		srv.connInfo.mutex.Unlock()
@@ -1080,7 +1080,7 @@ func (srv *Server) listenLoop() {
 				continue
 			}
 		}
-*/
+
 		if srv.NetRestrict != nil {
 
 
@@ -1169,12 +1169,12 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 	} else {
 		c.node = nodeFromConn(remotePubkey, c.fd)
 	}
-	/*tcp, ok:=c.fd.RemoteAddr().(*net.TCPAddr)
+	tcp, ok:=c.fd.RemoteAddr().(*net.TCPAddr)
 	indexKey := ""
 	if ok {
 		indexKey = fmt.Sprintf("%v:%v",tcp.IP,tcp.Port)
 		srv.updateNodeCache(indexKey,c.node,DISC_UNKNOWN)
-	}*/
+	}
 
 	if conn, ok := c.fd.(*meteredConn); ok {
 		conn.handshakeDone(c.node.ID())
@@ -1184,21 +1184,21 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 	err = srv.checkpoint(c, srv.posthandshake)
 	if err != nil {
 		clog.Trace("Rejected peer before protocol handshake", "err", err)
-		//srv.updateNodeCache(indexKey,c.node,DISC_HS_ERR)
+		srv.updateNodeCache(indexKey,c.node,DISC_HS_ERR)
 		return err
 	}
 	// Run the protocol handshake
 	phs, err := c.doProtoHandshake(srv.ourHandshake)
 	if err != nil {
 		clog.Trace("Failed proto handshake", "err", err)
-		//srv.updateNodeCache(indexKey,c.node,DISC_HS_ERR)
+		srv.updateNodeCache(indexKey,c.node,DISC_HS_ERR)
 		return err
 	}
 	c.node = updateNodeByPhs(c.node, phs)
 	//move posthandshake to doProtoHandshake so that we can know the nodetype
 	if id := c.node.ID(); !bytes.Equal(crypto.Keccak256(phs.ID), id[:]) {
 		clog.Trace("Wrong devp2p handshake identity", "phsid", hex.EncodeToString(phs.ID))
-		//srv.updateNodeCache(indexKey,c.node,DISC_HS_ERR)
+		srv.updateNodeCache(indexKey,c.node,DISC_HS_ERR)
 		return DiscUnexpectedIdentity
 	}
 	c.caps, c.name = phs.Caps, phs.Name
@@ -1210,12 +1210,12 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 	err = srv.checkpoint(c, srv.addpeer)
 	if err != nil {
 		clog.Trace("Rejected peer", "err", err)
-		//srv.updateNodeCache(indexKey,c.node,DISC_REJECT)
+		srv.updateNodeCache(indexKey,c.node,DISC_REJECT)
 		return err
 	}
 	if srv._addCheckFun != nil {
 		if !srv._addCheckFun(c.node) {
-			//srv.updateNodeCache(indexKey,c.node,DISC_REJECT)
+			srv.updateNodeCache(indexKey,c.node,DISC_REJECT)
 			return errors.New("bucket full!")
 		}
 	}
