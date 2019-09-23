@@ -1261,13 +1261,13 @@ func (srv *Server) runPeer(p *Peer) {
 	// run the protocol
 	remoteRequested, err := p.run()
 	if isLight {
-		value := atomic.AddInt32(&srv.connInfo.lightCnt,1)
+		value := atomic.AddInt32(&srv.connInfo.lightCnt,-1)
 		srv.connInfo.mutex.Lock()
 		if value <= int32(srv.MaxPeers * 9 /10 ) && srv.connInfo.lightState == ST_FULL {
 			srv.connInfo.lightState = ST_ACCEPTING
 		}
 	}else{
-		value := atomic.AddInt32(&srv.connInfo.fullCnt,1)
+		value := atomic.AddInt32(&srv.connInfo.fullCnt,-1)
 		if value < 45 {
 			srv.connInfo.fullState = ST_ACCEPTING
 		}
