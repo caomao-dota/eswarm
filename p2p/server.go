@@ -920,7 +920,7 @@ func (srv *Server) protoHandshakeChecks(peers map[enode.ID]*Peer, inboundCount i
 
 
 	isLightNode := enode.IsLightNode(enode.NodeTypeOption(c.node.NodeType()))
-	log.Trace("connects:", "light conn", lightPeerCnt, " full conn", fullPeerCnt)
+	log.Info("connects:", "light conn", lightPeerCnt, " full conn", fullPeerCnt)
 	// Drop connections with no matching protocols.
 	switch {
 
