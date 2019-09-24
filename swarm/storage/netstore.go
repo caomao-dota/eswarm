@@ -58,8 +58,8 @@ var fetcherTimeout = 15 * time.Second // timeout to cancel the fetcher even if r
 
 // NewNetStore creates a new NetStore object using the given local store. newFetchFunc is a
 // constructor function that can create a fetch function for a specific chunk address.
-func NewNetStore(store SyncChunkStore, nnf NewNetFetcherFunc) (*NetStore, error) {
-	fetchers, err := lru.New(defaultChunkRequestsCacheCapacity)
+func NewNetStore(store SyncChunkStore, nnf NewNetFetcherFunc, cacheSize int) (*NetStore, error) {
+	fetchers, err := lru.New(cacheSize)
 	if err != nil {
 		return nil, err
 	}

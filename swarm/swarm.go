@@ -163,7 +163,11 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 	}
 
 	////  网络数据存储，文件存在了lstore里，fetcher暂还没有设置，在174行的：self.netStore.NewNetFetcherFunc 设置
-	self.netStore, err = storage.NewNetStore(lstore, nil)
+	cacheSize := 64
+	if(config.NodeType == 36) {
+		cacheSize = 100000
+	}
+	self.netStore, err = storage.NewNetStore(lstore, nil,cacheSize)
 	if err != nil {
 		return nil, err
 	}

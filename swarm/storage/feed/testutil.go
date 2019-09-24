@@ -61,7 +61,7 @@ func NewTestHandler(datadir string, params *HandlerParams) (*TestHandler, error)
 	}
 	localStore.Validators = append(localStore.Validators, storage.NewContentAddressValidator(storage.MakeHashFunc(feedsHashAlgorithm)))
 	localStore.Validators = append(localStore.Validators, fh)
-	netStore, err := storage.NewNetStore(localStore, nil)
+	netStore, err := storage.NewNetStore(localStore, nil,1000)
 	if err != nil {
 		return nil, err
 	}
