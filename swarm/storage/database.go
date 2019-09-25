@@ -28,7 +28,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
-const openFileLimit = 65536
+
 
 type LDBDatabase struct {
 	db *leveldb.DB
