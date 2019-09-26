@@ -155,6 +155,7 @@ func newBatch() *dbBatch {
 // to avoid the appearance of a pluggable distance metric and opportunities of bugs associated with providing
 // a function different from the one that is actually used.
 func NewLDBStore(params *LDBStoreParams) (s *LDBStore, err error) {
+	//return nil,nil
 	s = new(LDBStore)
 	s.hashfunc = params.Hash
 	s.quit = make(chan struct{})

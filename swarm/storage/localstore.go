@@ -18,11 +18,11 @@ package storage
 
 import (
 	"context"
+	"github.com/plotozhu/MDCMainnet/log"
 	"path/filepath"
 	"sync"
 
 	"github.com/plotozhu/MDCMainnet/metrics"
-	"github.com/plotozhu/MDCMainnet/swarm/log"
 	"github.com/plotozhu/MDCMainnet/swarm/storage/mock"
 )
 
@@ -137,7 +137,12 @@ func (ls *LocalStore) Put(ctx context.Context, chunk Chunk) error {
 		return err
 	}
 	ls.memStore.Put(ctx, chunk)
-	err = ls.DbStore.Put(ctx, chunk)
+	if ls.DbStore != nil {
+		err = ls.DbStore.Put(ctx, chunk)
+	}else{
+		err = nil
+	}
+
 	return err
 }
 
@@ -145,7 +150,12 @@ func (ls *LocalStore) Put(ctx context.Context, chunk Chunk) error {
 // is being stored there.
 // Returns true if it is stored, false if not
 func (ls *LocalStore) Has(ctx context.Context, addr Address) bool {
-	return ls.DbStore.Has(ctx, addr)
+	if ls.DbStore != nil {
+		return ls.DbStore.Has(ctx, addr)
+	}else{
+		return ls.memStore.Has(ctx,addr)
+	}
+
 }
 
 // Get(chunk *Chunk) looks up a chunk in the local stores
@@ -167,21 +177,28 @@ func (ls *LocalStore) get(ctx context.Context, addr Address) (chunk Chunk, err e
 		return nil, err
 	}
 
-	if err == nil {
-		metrics.GetOrRegisterCounter("localstore.get.cachehit", nil).Inc(1)
-		go ls.DbStore.MarkAccessed(addr)
-		return chunk, nil
-	}
+
 
 	metrics.GetOrRegisterCounter("localstore.get.cachemiss", nil).Inc(1)
-	chunk, err = ls.DbStore.Get(ctx, addr)
-	if err != nil {
-		metrics.GetOrRegisterCounter("localstore.get.error", nil).Inc(1)
+	if ls.DbStore != nil {
+
+		if err == nil {
+			metrics.GetOrRegisterCounter("localstore.get.cachehit", nil).Inc(1)
+			go ls.DbStore.MarkAccessed(addr)
+			return chunk, nil
+		}
+		chunk, err = ls.DbStore.Get(ctx, addr)
+		if err != nil {
+			metrics.GetOrRegisterCounter("localstore.get.error", nil).Inc(1)
+			return nil, err
+		}
+
+		ls.memStore.Put(ctx, chunk)
+		return chunk, nil
+	}else{
 		return nil, err
 	}
 
-	ls.memStore.Put(ctx, chunk)
-	return chunk, nil
 }
 
 //从本地获取一个数据片断，如果没有，返回一个函数，该函数使用context作为参数
@@ -200,63 +217,85 @@ func (ls *LocalStore) FetchFunc(ctx context.Context, addr Address) func(context.
 }
 
 func (ls *LocalStore) BinIndex(po uint8) uint64 {
-	return ls.DbStore.BinIndex(po)
+	if ls.DbStore != nil {
+		return ls.DbStore.BinIndex(po)
+	}else{
+		return 0
+	}
+
 }
 
 func (ls *LocalStore) Iterator(from uint64, to uint64, po uint8, f func(Address, uint64) bool) error {
-	return ls.DbStore.SyncIterator(from, to, po, f)
+	if ls.DbStore != nil {
+		return ls.DbStore.SyncIterator(from, to, po, f)
+	}else{
+		return nil
+	}
+
 }
 
 // Close the local store
 func (ls *LocalStore) Close() {
-	ls.DbStore.Close()
+	if ls.DbStore != nil  {
+		ls.DbStore.Close()
+	}
+
 }
 
 // Migrate checks the datastore schema vs the runtime schema and runs
 // migrations if they don't match
 func (ls *LocalStore) Migrate() error {
-	actualDbSchema, err := ls.DbStore.GetSchema()
-	if err != nil {
-		log.Error(err.Error())
-		return err
-	}
-
-	if actualDbSchema == CurrentDbSchema {
-		return nil
-	}
-
-	log.Debug("running migrations for", "schema", actualDbSchema, "runtime-schema", CurrentDbSchema)
-
-	if actualDbSchema == DbSchemaNone {
-		ls.migrateFromNoneToPurity()
-		actualDbSchema = DbSchemaPurity
-	}
-
-	if err := ls.DbStore.PutSchema(actualDbSchema); err != nil {
-		return err
-	}
-
-	if actualDbSchema == DbSchemaPurity {
-		if err := ls.migrateFromPurityToHalloween(); err != nil {
+	if ls.DbStore != nil {
+		actualDbSchema, err := ls.DbStore.GetSchema()
+		if err != nil {
+			log.Error(err.Error())
 			return err
 		}
-		actualDbSchema = DbSchemaHalloween
+
+		if actualDbSchema == CurrentDbSchema {
+			return nil
+		}
+
+		log.Debug("running migrations for", "schema", actualDbSchema, "runtime-schema", CurrentDbSchema)
+
+		if actualDbSchema == DbSchemaNone {
+			ls.migrateFromNoneToPurity()
+			actualDbSchema = DbSchemaPurity
+		}
+
+		if err := ls.DbStore.PutSchema(actualDbSchema); err != nil {
+			return err
+		}
+
+		if actualDbSchema == DbSchemaPurity {
+			if err := ls.migrateFromPurityToHalloween(); err != nil {
+				return err
+			}
+			actualDbSchema = DbSchemaHalloween
+		}
+
+		if err := ls.DbStore.PutSchema(actualDbSchema); err != nil {
+			return err
+		}
 	}
 
-	if err := ls.DbStore.PutSchema(actualDbSchema); err != nil {
-		return err
-	}
 	return nil
 }
 
 func (ls *LocalStore) migrateFromNoneToPurity() {
 	// delete chunks that are not valid, i.e. chunks that do not pass
 	// any of the ls.Validators
-	ls.DbStore.Cleanup(func(c Chunk) bool {
-		return !ls.isValid(c)
-	})
+	if ls.DbStore !=nil  {
+		ls.DbStore.Cleanup(func(c Chunk) bool {
+			return !ls.isValid(c)
+		})
+	}
+
 }
 
 func (ls *LocalStore) migrateFromPurityToHalloween() error {
-	return ls.DbStore.CleanGCIndex()
+	if ls.DbStore !=nil {
+		return ls.DbStore.CleanGCIndex()
+	}
+	return nil
 }
