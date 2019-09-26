@@ -196,7 +196,7 @@ func (ls *LocalStore) get(ctx context.Context, addr Address) (chunk Chunk, err e
 		ls.memStore.Put(ctx, chunk)
 		return chunk, nil
 	}else{
-		return nil, err
+		return nil, ErrChunkNotFound
 	}
 
 }

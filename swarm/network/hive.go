@@ -272,6 +272,7 @@ func (h *Hive) doRefresh() {
 
 	defer h.refreshLock.Unlock()
 	h.Register(nodes...)
+	h.savePeers()
 
 }
 
