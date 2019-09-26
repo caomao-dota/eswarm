@@ -196,16 +196,16 @@ func StartL(path string, password string, bootnodeAddrs string, bootnode string,
 	config.SwarmAccount = account
 	config.SwarmAccountPassword = password
 
-	var rLimit syscall.Rlimit
-	rErr := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
-	if rErr != nil {
-		return nil, errors.New("rLimit error")
-		log.Error("start Error Getting Rlimit ", "get", err)
-	} else {
-		if rLimit.Cur < 2048 {
-			return nil, errors.New("rLimit error")
-		}
-	}
+	//var rLimit syscall.Rlimit
+	//rErr := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	//if rErr != nil {
+	//	return nil, errors.New("rLimit error")
+	//	log.Error("start Error Getting Rlimit ", "get", err)
+	//} else {
+	//	if rLimit.Cur < 2048 {
+	//		return nil, errors.New("rLimit error")
+	//	}
+	//}
 
 	if bootnodeAddrs != "" {
 		nodes, reportUrl, err := util.GetBootnodesInfo(bootnodeAddrs)
@@ -457,8 +457,8 @@ func NewSwarmNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 
 	bzzconfig.Path = datadir
 	bzzconfig.NodeType = 17
-	bzzconfig.LocalStoreParams.DbCapacity = 5000   //1.2G
-	bzzconfig.LocalStoreParams.CacheCapacity = 100 //25M
+	bzzconfig.LocalStoreParams.DbCapacity = 0      //120M
+	bzzconfig.LocalStoreParams.CacheCapacity = 500 //126M
 	if config.ServerAddr != "" {
 		bzzconfig.ServerAddr = config.ServerAddr
 	}
