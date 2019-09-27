@@ -913,7 +913,7 @@ func (s *Server) HandleGetM3u8(w http.ResponseWriter, r *http.Request) {
 					newContext, _ = context.WithTimeout(newContext, 20*time.Second)
 				}
 				*/
-				anewContext, _ := context.WithTimeout(newContext, time.Duration(int64(2000)*int64(time.Millisecond)))
+				anewContext, _ := context.WithTimeout(newContext, time.Duration(int64(10000)*int64(time.Millisecond)))
 				addr, err := s.api.ResolveURI(anewContext, actUri, pass)
 				if err == nil {
 					newContext, _ = context.WithTimeout(newContext, time.Duration(int64(timeout)*int64(time.Millisecond)))

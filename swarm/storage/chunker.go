@@ -532,7 +532,7 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 		//检查是否需要
 		if OK {
 			result := buffer.(*DataCache)
-			if result.start > off || //不在缓冲之内
+			if off < result.start  || //不在缓冲之内
 				(!result.end && (off+int64(len(b)) > (result.start + util.MaxLen))) {
 				needRetrieve = true
 
@@ -545,8 +545,8 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 
 			//////------- first read from P2P network--------/////
 			quitC := make(chan bool)
-			size, err := r.Size(cctx, quitC)
-			if err == nil {
+			size, err2 := r.Size(cctx, quitC)
+			if err2 == nil {
 
 				errC := make(chan error)
 
@@ -564,8 +564,8 @@ func (r *LazyChunkReader) ReadAt(b []byte, off int64) (read int, err error) {
 
 				max_read := size-off;
 				fileEnd := false
-				if max_read > MAX_FILE_CACHE {//256*1024*100+100
-					max_read = MAX_FILE_CACHE
+				if max_read > util.MaxLen {//256*1024*100+100
+					max_read = util.MaxLen
 				}else{
 					fileEnd = true
 				}

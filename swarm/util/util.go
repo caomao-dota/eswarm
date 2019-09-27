@@ -66,7 +66,7 @@ func (hr *HttpReader) GetDataLenFromCenter() int64 {
 }
 
 //从中心化服务端取数据，最多取1024*1024*8 （8M字节数据）
-const MaxLen = 8 * 1024 * 1024
+const MaxLen = 25 * 1024 * 1024
 
 func (hr *HttpReader) GetChunkFromCentral(uri string, start int64, topHash []byte, r *http.Request) (result []byte, isEnd bool) {
 	req, err := http.NewRequest("GET", uri, bytes.NewBuffer([]byte("")))
