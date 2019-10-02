@@ -44,6 +44,8 @@ var (
 	CPREF              = []byte("IN_CHUNK")
 	HPREF              = []byte("IN_RECEIPT")
 	RPREF              = []byte("UNREPORTED")
+	SDATE			   = []byte("SDATE")
+	SFORMAT			   = "2010-01-01 03:11:15"
 	BALNACE_PREFIX     = "BL"
 	MAX_STIME_DURATION = 60 * time.Minute       //生成收据时，一个STIME允许的最长时间
 	MAX_STIME_JITTER   = 2 * MAX_STIME_DURATION //接收收据时，允许最长的时间差，超过这个时间的不再接收
@@ -286,56 +288,80 @@ type ReceiptStore struct {
 	nodeCommCache *lru.Cache
 	cmu           sync.RWMutex
 	hmu           sync.RWMutex
-	server        string
+	servers        []string
 	checkBalance  bool
 	receiptsLogs  []Receipts
 	balances      *lru.Cache
 	watchers 	 map[string]ReceiptWatcher
 	lightNode     bool
+	quit         chan struct{}
+	filePath     string
 	saveHTimer    *time.Ticker
 }
 
-func NewReceiptsStore(filePath string, prvKey *ecdsa.PrivateKey, serverAddr string, duration time.Duration, checkBalance bool,lightNode bool) (*ReceiptStore, error) {
-	db, err := leveldb.OpenFile(filePath, nil)
-	if _, iscorrupted := err.(*dberrors.ErrCorrupted); iscorrupted {
-		db, err = leveldb.RecoverFile(filePath, nil)
-	}
+func NewReceiptsStore(filePath string, prvKey *ecdsa.PrivateKey, serverAddrs []string, duration time.Duration, checkBalance bool,lightNode bool) (*ReceiptStore, error) {
+
 	MAX_STIME_DURATION = duration             //生成收据时，一个STIME允许的最长时间
 	MAX_STIME_JITTER = 2 * MAX_STIME_DURATION //接收收据时，允许最长的时间差，超过这个时间的不再接收
-	return newReceiptsStore(db, prvKey, serverAddr, checkBalance,lightNode), err
+	return newReceiptsStore(filePath, prvKey, serverAddrs, checkBalance,lightNode), nil
 }
-func newReceiptsStore(newDb *leveldb.DB, prvKey *ecdsa.PrivateKey, serverAddr string, checkBalance bool,lightNode bool) *ReceiptStore {
+func newReceiptsStore(filePath string , prvKey *ecdsa.PrivateKey, serverAddrs []string, checkBalance bool,lightNode bool) *ReceiptStore {
 	balances, _ := lru.New(100)
 	store := ReceiptStore{
 		account:      crypto.PubkeyToAddress(prvKey.PublicKey),
 		hex:          crypto.PubkeyToAddress(prvKey.PublicKey).Hex(),
-		db:           newDb,
 		prvKey:       prvKey,
 		unpaidAmount: make(map[[20]byte]uint32),
 		allReceipts:  make(Receipts),
-		server:       serverAddr,
+		servers:       serverAddrs,
 		receiptsLogs: make([]Receipts, 0),
 		checkBalance: checkBalance,
 		balances:     balances,
 		watchers:     make(map[string]ReceiptWatcher),
 		lightNode:	  lightNode,
+		filePath:     filePath,
 	}
 	store.nodeCommCache, _ = lru.New(MAX_C_REC_LIMIT)
 
-	store.Init()
 
-	if !lightNode {
-		go store.submitRoutine()
-	}
+//	store.Start()
 
-	store.saveHTimer = time.NewTicker(5*time.Minute)
-	go func() {
-		for  range store.saveHTimer.C {
-			store.saveHRecord()
-		}
-	}()
 
 	return &store
+}
+func (rs *ReceiptStore) Start(){
+
+	if rs.db != nil {
+		rs.db.Close()
+	}
+
+	db, err := leveldb.OpenFile(rs.filePath, nil)
+	if _, iscorrupted := err.(*dberrors.ErrCorrupted); iscorrupted {
+		db, err = leveldb.RecoverFile(rs.filePath, nil)
+	}
+	rs.db = db
+	rs.quit = make(chan struct{})
+
+	rs.Init()
+	if !rs.lightNode {
+		go rs.submitRoutine()
+	}
+
+	rs.saveHTimer = time.NewTicker(5*time.Minute)
+	go func() {
+		for  range rs.saveHTimer.C {
+			rs.saveHRecord()
+		}
+	}()
+}
+func (rs *ReceiptStore) Stop(){
+	rs.saveHTimer.Stop();
+	close(rs.quit)
+
+	if rs.db != nil {
+		rs.db.Close()
+	}
+
 }
 func (rs *ReceiptStore) saveHRoutine(){
 
@@ -351,6 +377,7 @@ func (rs *ReceiptStore) Init() {
 	rs.loadHRecord()
 
 }
+
 func (rs *ReceiptStore) loadCRecord() {
 	data, err := rs.db.Get(CPREF, nil)
 	result := make([]*ReceiptBody, 0)
@@ -420,11 +447,24 @@ func (rs *ReceiptStore) OnNodeChunkReceived(account [20]byte, dataLength int64) 
 	chunkAmount := uint32((dataLength + 4095) >> 12)
 	//update chunkOfNode
 	item, exist := rs.nodeCommCache.Get(account)
+	newTime := time.Now()
 	if !exist {
-		item = &ReceiptInStore{time.Now(), chunkAmount}
+		sDate,err := rs.db.Get(SDATE,nil)
+		if err != nil {
+			sTime,err := time.Parse(SFORMAT,string(sDate))
+			if err != nil && MAX_STIME_DURATION < time.Since(sTime) {
+				newTime = sTime
+			}else{
+				rs.db.Put(SDATE,[]byte(newTime.Format(SFORMAT)),nil)
+			}
+		}else{
+			rs.db.Put(SDATE,[]byte(newTime.Format(SFORMAT)),nil)
+		}
+		item = &ReceiptInStore{newTime, chunkAmount}
 	} else {
 		if MAX_STIME_DURATION < time.Since(item.(*ReceiptInStore).Stime) {
-			item = &ReceiptInStore{time.Now(), chunkAmount}
+			item = &ReceiptInStore{newTime, chunkAmount}
+			rs.db.Put(SDATE,[]byte(newTime.Format(SFORMAT)),nil)
 		} else {
 			item = &ReceiptInStore{item.(*ReceiptInStore).Stime, item.(*ReceiptInStore).Amount + chunkAmount}
 		}
@@ -654,7 +694,7 @@ func (rs *ReceiptStore) doAutoSubmit() (error,int) {
 	for i := 0; i < len(results); i ++ {
 		timeout := time.Duration(60 * time.Second) //超时时间50ms
 		log.Info("report receipts to server", "total amount", receipts.Amount(),"items:",totalCnt)
-		err = util.SendDataToServer(rs.server+ReportRoute, timeout, results[i])
+		err = util.SendDataToServers(rs.servers,ReportRoute, timeout, results[i])
 		rs.hmu.Lock()
 
 		len := len(rs.receiptsLogs)
@@ -699,6 +739,9 @@ func (rs *ReceiptStore) submitRoutine() {
 
 			rs.doAutoSubmit()
 			timer.Reset(MAX_STIME_DURATION)
+			case <-rs.quit:
+				timer.Stop()
+				return
 
 		}
 	}
@@ -742,42 +785,46 @@ func (rs *ReceiptStore) CheckBalance(nodeId [20]byte) int64 {
 		}
 	}
 	//Get balance from server
-	data, err = util.GetDataFromServer(rs.server + AccountRoute + hexId)
-	if err == nil {
-		var m BalaceMessage
-		err = json.Unmarshal(data, &m)
-		if err != nil {
-			Balance := int64(InvalidBalance)
-			if m.VBalance != "" {
-				balance, err := strconv.ParseFloat(m.VBalance, 64)
-				if err != nil {
-					Balance = int64(balance * 10000000000)
+	for _,server := range rs.servers {
+		data, err = util.GetDataFromServer(server + AccountRoute + hexId)
+		if err == nil {
+			var m BalaceMessage
+			err = json.Unmarshal(data, &m)
+			if err != nil {
+				Balance := int64(InvalidBalance)
+				if m.VBalance != "" {
+					balance, err := strconv.ParseFloat(m.VBalance, 64)
+					if err != nil {
+						Balance = int64(balance * 10000000000)
+					}
+
+				} else {
+					balance, err := strconv.ParseFloat(m.Balance, 64)
+					if err != nil {
+						Balance = int64(balance * 10000000000)
+					}
+				}
+				if Balance != InvalidBalance {
+					dataToStore := BalanceInfoDb{time.Now().Unix(), Balance}
+					result, err := json.Marshal(dataToStore)
+					if err == nil {
+						rs.db.Put([]byte(BALNACE_PREFIX+hexId), result, nil)
+						rs.balances.Add(hexId, result)
+					}
 				}
 
+				return Balance
 			} else {
-				balance, err := strconv.ParseFloat(m.Balance, 64)
-				if err != nil {
-					Balance = int64(balance * 10000000000)
-				}
-			}
-			if Balance != InvalidBalance {
-				dataToStore := BalanceInfoDb{time.Now().Unix(), Balance}
-				result, err := json.Marshal(dataToStore)
-				if err == nil {
-					rs.db.Put([]byte(BALNACE_PREFIX+hexId), result, nil)
-					rs.balances.Add(hexId, result)
-				}
+				return InvalidBalance
 			}
 
-			return Balance
 		} else {
-			return InvalidBalance
-		}
 
-	} else {
-		log.Error("error in get balance", "reason", err)
-		return InvalidBalance
+		}
 	}
+	log.Error("error in get balance", "reason", err)
+	return InvalidBalance
+
 
 }
 

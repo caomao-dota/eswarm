@@ -73,7 +73,7 @@ type Config struct {
 	GlobalStoreAPI      string
 	ChunkDbPath         string
 	privateKey          *ecdsa.PrivateKey
-	ServerAddr          string
+	ServerAddrs          []string
 	CentralAddr         []string
 	BootnodeRetriveAddr string //获取bootnode的地址
 	NodeType            uint
@@ -106,7 +106,7 @@ func NewConfig() (c *Config) {
 		SyncUpdateDelay:      15 * time.Second,
 		SwapAPI:              "",
 		NodeType:             36,
-		ServerAddr:           "http://124.156.115.14:4000/apis/v1",
+		ServerAddrs:           []string{"http://124.156.115.14:4000/apis/v1"},
 		CentralAddr:          []string{"http://124.156.115.14:8500"},
 		ReportInterval:       1 * time.Hour,
 		CheckBalance:         false,

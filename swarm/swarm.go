@@ -132,7 +132,7 @@ func NewSwarm(config *api.Config, mockStore *mock.NodeStore) (self *Swarm, err e
 		BzzAccount:  common.HexToAddress(config.BzzAccount),
 	}
 
-	self.receiptsStore, err = state.NewReceiptsStore(filepath.Join(config.Path, "receipts.db"), self.privateKey, config.ServerAddr, config.ReportInterval, config.CheckBalance,enode.IsLightNode(enode.NodeTypeOption(nodeType)))
+	self.receiptsStore, err = state.NewReceiptsStore(filepath.Join(config.Path, "receipts.db"), self.privateKey, config.ServerAddrs, config.ReportInterval, config.CheckBalance,enode.IsLightNode(enode.NodeTypeOption(nodeType)))
 	//commenter:Tony  状态存储
 	self.stateStore, err = state.NewDBStore(filepath.Join(config.Path, "state-store.db"))
 	if err != nil {
@@ -427,7 +427,7 @@ func (s *Swarm) Start(srv *p2p.Server) error {
 	log.Info("Starting http listen ","addr",addr)
 	server := httpapi.NewServer(s.api, s.config.Cors)
 
-	server.CreateCdnReporter(s.config.BzzAccount, s.config.ServerAddr)
+	server.CreateCdnReporter(s.config.BzzAccount, s.config.ServerAddrs)
 
 	if s.config.Cors != "" {
 		log.Debug("Swarm HTTP proxy CORS headers", "allowedOrigins", s.config.Cors)
@@ -464,6 +464,7 @@ func (s *Swarm) Start(srv *p2p.Server) error {
 
 	startCounter.Inc(1)
 	s.streamer.Start(srv)
+	s.receiptsStore.Start()
 	return nil
 }
 
@@ -502,7 +503,7 @@ func (s *Swarm) Stop() error {
 	if s.stateStore != nil {
 		s.stateStore.Close()
 	}
-
+	s.receiptsStore.Stop()
 	for _, cleanF := range s.cleanupFuncs {
 		err = cleanF()
 		if err != nil {

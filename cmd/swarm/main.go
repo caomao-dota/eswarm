@@ -123,7 +123,7 @@ var app = utils.NewApp("", "Ethereum Swarm")
 func init() {
 	app.Action = bzzd
 	app.Version = sv.ArchiveVersion(gitCommit)
-	app.Copyright = "Copyright 2013-2016 The go-ethereum Authors"
+	app.Copyright = "Copyright 2013-2019 The go-ethereum Authors"
 	app.Commands = []cli.Command{
 		{
 			Action:             version,
@@ -538,7 +538,7 @@ func setSwarmBootstrapNodes(ctx *cli.Context, bzzCfg *bzzapi.Config, cfg *node.C
 				if len(nodes) != 0 {
 					bootnodes = append(bootnodes, nodes...)
 				}
-				bzzCfg.ServerAddr = reportUrl
+				bzzCfg.ServerAddrs = reportUrl
 			}
 
 		}

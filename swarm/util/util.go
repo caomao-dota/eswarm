@@ -46,7 +46,7 @@ type HttpReader struct {
 	totalLen   int64
 	reportMu   sync.Mutex
 	account    [20]byte
-	reportUrl  string
+	reportUrls []string
 }
 
 func CreateHttpReader() *HttpReader {
@@ -57,9 +57,9 @@ func CreateHttpReader() *HttpReader {
 		totalLen:   0,
 	}
 }
-func (hr *HttpReader) SetCdnReporter(account, serverUrl string) {
+func (hr *HttpReader) SetCdnReporter(account string, serverUrls []string) {
 	hr.account = common.HexToAddress(account)
-	hr.reportUrl = serverUrl + "/cdn"
+	hr.reportUrls = serverUrls
 }
 func (hr *HttpReader) GetDataLenFromCenter() int64 {
 	return hr.totalLen
@@ -115,8 +115,8 @@ func (hr *HttpReader) GetChunkFromCentral(uri string, start int64, topHash []byt
 			} else {
 				isEnd = true
 			}
-			if len(hr.reportUrl) != 0 {
-				hr.doReport(hr.reportUrl, topHash, int64(len(result)))
+			if len(hr.reportUrls) != 0 {
+				hr.doReport(hr.reportUrls,"/cdn" ,topHash, int64(len(result)))
 			}
 
 		} else {
@@ -166,8 +166,8 @@ func (s *HttpReader) GetDataFromCentralServer(uri string, r *http.Request, w htt
 		if err != nil {
 			log.Error("Couldn't parse response body. %+v", err)
 		}
-		if len(s.reportUrl) != 0 {
-			s.doReport(s.reportUrl, hash, int64(len(body)))
+		if len(s.reportUrls) != 0 {
+			s.doReport(s.reportUrls,"/cdn", hash, int64(len(body)))
 		}
 		if w != nil {
 			for k, vv := range response.Header {
@@ -227,7 +227,7 @@ type ReportFmt struct {
 	Data    []byte
 }
 
-func (r *HttpReader) doReport(url string, hash []byte, dataLen int64) {
+func (r *HttpReader) doReport(urls []string, cmd string, hash []byte, dataLen int64) {
 	r.reportMu.Lock()
 	val := (dataLen + 4095) >> 12;
 	r.unreported[time.Now()] = val
@@ -240,7 +240,7 @@ func (r *HttpReader) doReport(url string, hash []byte, dataLen int64) {
 		r.reportMu.Unlock()
 		result, _ := rlp.EncodeToBytes(&dataToReport)
 		data, _ := rlp.EncodeToBytes(ReportFmt{r.account, hash, result})
-		err := SendDataToServer(url, 5*time.Second, data)
+		err := SendDataToServers(urls,cmd, 5*time.Second, data)
 		if err != nil {
 			r.reportMu.Lock()
 			for stime, amount := range dataToReport {
@@ -250,7 +250,7 @@ func (r *HttpReader) doReport(url string, hash []byte, dataLen int64) {
 		}
 	}()
 }
-func SendDataToServer(url string, timeout time.Duration, data []byte) error {
+func SendDataToServers(hosts []string,cmd string, timeout time.Duration, data []byte) error {
 
 	client := &http.Client{
 		Timeout: timeout,
@@ -266,27 +266,33 @@ func SendDataToServer(url string, timeout time.Duration, data []byte) error {
 			IdleConnTimeout:     1000 * time.Second,
 		},
 	}
-	request, err := http.NewRequest("POST", url, bytes.NewReader(data))
-	if err != nil {
-		log.Info("error to send data", "reason", err)
-	}
-	request.Header.Set("Connection", "Keep-Alive")
-	request.Header.Set("Content-Type", "text/plain")
-
-	res, err := client.Do(request)
-
-	if err == nil { //提交成功，本地删除
-		defer res.Body.Close()
-		if res.StatusCode != 200 {
-			log.Error("error response in send receipts", "error", res.StatusCode, "url", url)
-			err = errors.New(res.Status)
-		} else {
-
+	last_err := error(nil)
+	for _,host := range hosts {
+		url := host+cmd
+		request, err := http.NewRequest("POST", url, bytes.NewReader(data))
+		if err != nil {
+			log.Info("error to send data", "reason", err)
 		}
-	} else {
-		log.Error("error in send receipts", "error", err, "url", url)
+		request.Header.Set("Connection", "Keep-Alive")
+		request.Header.Set("Content-Type", "text/plain")
+
+		res, err := client.Do(request)
+		last_err = err
+		if err == nil { //提交成功，本地删除
+			defer res.Body.Close()
+			if res.StatusCode != 200 {
+				log.Error("error response in send receipts", "error", res.StatusCode, "url", url)
+				err = errors.New(res.Status)
+			} else {
+				break;
+			}
+		} else {
+			log.Error("error in send receipts", "error", err, "url", url)
+		}
+
 	}
-	return err
+
+	return last_err
 }
 
 func GetDataFromServer(url string) (data []byte, err error) {
@@ -310,24 +316,28 @@ type Defs struct {
 	BootNodes  []string
 	ReportAddr string
 }
+type DefsV2 struct {
+	BootNodes  []string
+	ReportAddrs []string
+}
 
 var commonIV = []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f}
 var encryptKey = "Damn@CCCP&Descendants#2019#20200"
 
-func GetBootnodesInfo(uri string) (bootnodes []string, reportAddress string, err error) {
+func GetBootnodesInfo(uri string) (bootnodes []string, reportAddress []string, err error) {
 
 	req, err := http.NewRequest("GET", uri, bytes.NewBuffer([]byte("")))
 	if err != nil {
 		log.Error("Error Occured. %+v", err)
 
-		return []string{}, "", err
+		return []string{},  []string{}, err
 	}
 	client := createHTTPClient()
 	// use httpClient to send request
 	response, err := client.Do(req)
 	if err != nil || response == nil || (response.StatusCode < 200 || response.StatusCode >= 300) {
 		log.Error("Error sending request to API endpoint", "error:", "get failed")
-		return []string{}, "", err
+		return []string{}, []string{}, err
 	} else {
 		// Close the connection to reuse it
 		defer response.Body.Close()
@@ -336,7 +346,7 @@ func GetBootnodesInfo(uri string) (bootnodes []string, reportAddress string, err
 		// We have seen inconsistencies even when we get 200 OK response
 		body, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			return []string{}, "", err
+			return []string{},  []string{}, err
 		}
 
 		//解码
@@ -345,16 +355,16 @@ func GetBootnodesInfo(uri string) (bootnodes []string, reportAddress string, err
 
 		if err == nil {
 			log.Info("Get :", "cnt", len(result.BootNodes))
-			return result.BootNodes, result.ReportAddr, nil
+			return result.BootNodes, result.ReportAddrs, nil
 		} else {
-			return nil, "", err
+			return nil,  []string{}, err
 		}
 
 		//log.Trace("Response Body:", string(body))
 	}
 }
 
-func DecipherData(cipherData string) (*Defs, error) {
+func DecipherData(cipherData string) (*DefsV2, error) {
 	// 创建加密算法aes
 	c, err := aes.NewCipher([]byte(encryptKey))
 	if err != nil {
@@ -369,10 +379,20 @@ func DecipherData(cipherData string) (*Defs, error) {
 	plaintextCopy := make([]byte, len(asBytes))
 	cfbdec.XORKeyStream(plaintextCopy, asBytes)
 
-	result := Defs{}
-	rlp.DecodeBytes(plaintextCopy, &result)
+	resultv1 := Defs{}
+	result := DefsV2{}
+	err = rlp.DecodeBytes(plaintextCopy, &resultv1)
+	if err == nil {
+		result.BootNodes = resultv1.BootNodes
+		result.ReportAddrs = append([]string{},resultv1.ReportAddr)
+	}else{
+		err = rlp.DecodeBytes(plaintextCopy, &result)
+	}
+
+
+
 	//fmt.Printf("%x=>%s\n", asBytes, plaintextCopy)
-	return &result, nil
+	return &result, err
 }
 func CiphData(toCipher Defs) string {
 	// 创建加密算法aes

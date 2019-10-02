@@ -255,8 +255,8 @@ type Server struct {
 
 }
 
-func (s *Server) CreateCdnReporter(bzzAccount, reportURL string) {
-	s.httpClient.SetCdnReporter(bzzAccount, reportURL)
+func (s *Server) CreateCdnReporter(bzzAccount string, reportURLs []string) {
+	s.httpClient.SetCdnReporter(bzzAccount, reportURLs)
 }
 func (s *Server) HandleBzzGet(w http.ResponseWriter, r *http.Request) {
 	log.Debug("handleBzzGet", "ruid", GetRUID(r.Context()), "uri", r.RequestURI)
