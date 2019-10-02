@@ -32,10 +32,11 @@ func main() {
 
 	timer := time.NewTimer(5*time.Second)
 	<-timer.C
-	node.Stop()
+	node.Close()
 	timer = time.NewTimer(2*time.Second)
 	<-timer.C
-	node.Start()
+	node, err = csdc.StartL(path, "123", "https://raw.githubusercontent.com/wiki/CSDCFund/csdc/nodeslist.txt", "", 3)
+
 	if err != nil {
 		fmt.Println(err)
 		return
