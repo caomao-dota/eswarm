@@ -84,7 +84,7 @@ type Swarm struct {
 	receiptsStore     *state.ReceiptStore
 	accountingMetrics *protocols.AccountingMetrics
 	cleanupFuncs      []func() error
-
+	apiServer 		  *httpapi.Server
 	tracerClose io.Closer
 }
 
@@ -426,7 +426,7 @@ func (s *Swarm) Start(srv *p2p.Server) error {
 	addr := net.JoinHostPort(s.config.ListenAddr, s.config.Port)
 	log.Info("Starting http listen ","addr",addr)
 	server := httpapi.NewServer(s.api, s.config.Cors)
-
+	s.apiServer = server
 	server.CreateCdnReporter(s.config.BzzAccount, s.config.ServerAddrs)
 
 	if s.config.Cors != "" {
@@ -503,7 +503,12 @@ func (s *Swarm) Stop() error {
 	if s.stateStore != nil {
 		s.stateStore.Close()
 	}
-	s.receiptsStore.Stop()
+	if s.receiptsStore !=nil  {
+		s.receiptsStore.Stop()
+	}
+	if s.apiServer != nil {
+		s.apiServer.Close()
+	}
 	for _, cleanF := range s.cleanupFuncs {
 		err = cleanF()
 		if err != nil {

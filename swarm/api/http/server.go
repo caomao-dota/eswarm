@@ -229,7 +229,16 @@ func NewServer(api *api.API, corsString string) *Server {
 
 func (s *Server) ListenAndServe(addr string) error {
 	s.listenAddr = addr
-	return http.ListenAndServe(addr, s)
+	server := &http.Server{Addr: addr, Handler: s}
+	s.srv = server
+	return server.ListenAndServe()
+	//return http.ListenAndServe(addr, s)
+}
+
+func (s *Server)Close(){
+	if s.srv != nil {
+		s.srv.Close()
+	}
 }
 
 type M3U8Opt struct {
@@ -252,6 +261,7 @@ type Server struct {
 	//	db *leveldb.DB
 	m3u8           M3U8Opt
 	cachedDuration int32 //当前缓冲的数据值，以ms为单位
+	srv 		*http.Server
 
 }
 
