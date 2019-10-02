@@ -90,7 +90,7 @@ type NodeConfig struct {
 	// SwarmAccountPassword specifies password for account retrieval from the keystore.
 	SwarmAccountPassword string
 
-	ServerAddr string
+	ServerAddrs []string
 }
 
 // defaultNodeConfig contains the default node configuration values to use if all
@@ -214,7 +214,7 @@ func StartL(path string, password string, bootnodeAddrs string, bootnode string,
 				bootnodes = append(bootnodes, nodes...)
 			}
 		}
-		config.ServerAddr = reportUrl
+		config.ServerAddrs = reportUrl
 	}
 
 	stack, err = NewSwarmNode(path, config)
@@ -447,36 +447,37 @@ func NewSwarmNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 	if err != nil {
 		return nil, err
 	}
-	bzzconfig := bzzapi.NewConfig()
 
-	// start swarm http proxy server
-	l, _ := net.Listen("tcp", ":0") // listen on localhost
-	port := l.Addr().(*net.TCPAddr).Port
-	l.Close()
-	bzzconfig.Port = strconv.Itoa(port)
-
-	bzzconfig.Path = datadir
-	bzzconfig.NodeType = 17
-	bzzconfig.LocalStoreParams.DbCapacity = 0      //120M
-	bzzconfig.LocalStoreParams.CacheCapacity = 500 //126M
-	if config.ServerAddr != "" {
-		bzzconfig.ServerAddr = config.ServerAddr
-	}
-	key, err := getSwarmKey(rawStack, config.SwarmAccount, config.SwarmAccountPassword)
-	if err != nil {
-		return nil, fmt.Errorf("no key")
-	}
-	bzzconfig.Init(key.PrivateKey)
-
-	bzzconfig.BzzAccount = config.SwarmAccount
-
+	anode := &Node{rawStack, "0"}
 	if err := rawStack.Register(func(*node.ServiceContext) (node.Service, error) {
+		bzzconfig := bzzapi.NewConfig()
+
+		// start swarm http proxy server
+		l, _ := net.Listen("tcp", ":0") // listen on localhost
+		port := l.Addr().(*net.TCPAddr).Port
+		l.Close()
+		bzzconfig.Port = strconv.Itoa(port)
+		anode.SetHttpPort(bzzconfig.Port)
+		bzzconfig.Path = datadir
+		bzzconfig.NodeType = 17
+		bzzconfig.LocalStoreParams.DbCapacity = 0      //120M
+		bzzconfig.LocalStoreParams.CacheCapacity = 500 //126M
+		if len(config.ServerAddrs) != 0 {
+			bzzconfig.ServerAddrs = config.ServerAddrs
+		}
+		key, err := getSwarmKey(rawStack, config.SwarmAccount, config.SwarmAccountPassword)
+		if err != nil {
+			return nil, fmt.Errorf("no key")
+		}
+		bzzconfig.Init(key.PrivateKey)
+
+		bzzconfig.BzzAccount = config.SwarmAccount
 		return swarm.NewSwarm(bzzconfig, nil)
 	}); err != nil {
 		return nil, fmt.Errorf("swarm init: %v", err)
 	}
 
-	return &Node{rawStack, bzzconfig.Port}, nil
+	return anode, nil
 }
 
 // Close terminates a running node along with all it's services, tearing internal
@@ -524,6 +525,9 @@ func (n *Node) GetPeersInfo() *PeerInfos {
 	return &PeerInfos{n.node.Server().PeersInfo()}
 }
 
+func (n *Node) SetHttpPort(port string) {
+	 n.httpPort = port
+}
 // getBzzPort
 func (n *Node) GetHttpPort() string {
 	return n.httpPort

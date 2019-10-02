@@ -28,6 +28,6 @@ SwapEnabled = false
 LightNodeEnabled = false
 
 
-ServerAddr =  "http://172.16.1.10:4000/apis/v1/receipts"
+ServerAddrs =  []string{"http://172.16.1.10:4000/apis/v1/receipts"}
 
 CentralAddr = ["http://172.16.1.10:8500"]

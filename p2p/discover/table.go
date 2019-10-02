@@ -637,6 +637,7 @@ func newTable(t transport, db *enode.DB, bootnodes []*enode.Node, onTest bool) (
 	tab.loadSeedNodes()
 	tab.nodeAddedHook = func(i *node) {
 		log.Debug("noded added:", "id", i.ID(), "addr", i.IP(), "port", i.UDP())
+
 		if !i.registered && tab.notifyChannel != nil {
 			log.Debug("noded changed:","id",i.ID(),"addr",i.IP(),"port",i.UDP())
 			tab.notifyChannel <- struct{}{}

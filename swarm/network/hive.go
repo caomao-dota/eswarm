@@ -142,6 +142,7 @@ type Hive struct {
 	refreshTicker *time.Ticker
 	idleNodes     *ExpirableCache
 	newNodeDiscov chan struct{}
+	server		 *p2p.Server
 	quitC         chan struct{}
 }
 
@@ -203,7 +204,7 @@ func (h *Hive) Start(server *p2p.Server) error {
 	h.ticker = time.NewTicker(h.KeepAliveInterval)
 	h.refreshTicker = time.NewTicker(h.RefreshPeers)
 	server.SetNotificationChan(h.newNodeDiscov)
-
+	h.server =server
 	h.Kademlia.SetFilter(server.FilterChain)
 	//server.SetNodeAddChecker(h.CheckNode)
 	// this loop is doing bootstrapping and maintains a healthy table
@@ -278,6 +279,7 @@ func (h *Hive) doRefresh() {
 
 // Stop terminates the updateloop and saves the peers
 func (h *Hive) Stop() error {
+	h.server.SetNotificationChan(nil)
 	h.idleNodes.Close()
 	log.Info(fmt.Sprintf("%08x hive stopping, saving peers", h.BaseAddr()[:4]))
 	if h.ticker != nil {
