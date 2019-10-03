@@ -396,7 +396,7 @@ func DecipherData(cipherData string) (*DefsV2, error) {
 	//fmt.Printf("%x=>%s\n", asBytes, plaintextCopy)
 	return &result, err
 }
-func CiphData(toCipher Defs) string {
+func CiphData(toCipher DefsV2) string {
 	// 创建加密算法aes
 	c, err := aes.NewCipher([]byte(encryptKey))
 	if err != nil {
