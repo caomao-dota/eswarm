@@ -452,22 +452,21 @@ func NewSwarmNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 	if err := rawStack.Register(func(*node.ServiceContext) (node.Service, error) {
 		bzzconfig := bzzapi.NewConfig()
 
-		if anode.httpPort == "0"{
+		if anode.httpPort == "0" {
 			// start swarm http proxy server
 			l, _ := net.Listen("tcp", ":0") // listen on localhost
 			port := l.Addr().(*net.TCPAddr).Port
 			bzzconfig.Port = strconv.Itoa(port)
 			l.Close()
-		}else{
+		} else {
 			bzzconfig.Port = anode.httpPort
 		}
-
 
 		anode.SetHttpPort(bzzconfig.Port)
 		bzzconfig.Path = datadir
 		bzzconfig.NodeType = 17
 		bzzconfig.LocalStoreParams.DbCapacity = 0      //120M
-		bzzconfig.LocalStoreParams.CacheCapacity = 500 //126M
+		bzzconfig.LocalStoreParams.CacheCapacity = 100 //26M
 		if len(config.ServerAddrs) != 0 {
 			bzzconfig.ServerAddrs = config.ServerAddrs
 		}
@@ -532,8 +531,9 @@ func (n *Node) GetPeersInfo() *PeerInfos {
 }
 
 func (n *Node) SetHttpPort(port string) {
-	 n.httpPort = port
+	n.httpPort = port
 }
+
 // getBzzPort
 func (n *Node) GetHttpPort() string {
 	return n.httpPort
