@@ -137,6 +137,7 @@ func PostToServer(urlStr string, timeout time.Duration, data *ActivatePost) (int
 	postdata.Set("credential", data.Credential)
 	postdata.Set("clientId", data.ClientId)
 	postdata.Set("version", version.Version)
+	postdata.Set("vMeta", version.VersionMeta)
 	postdata.Set("os", rm.GOOS)
 	log.Info("activate started ", "params", data)
 	resp, err := client.PostForm(urlStr, postdata)
