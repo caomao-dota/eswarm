@@ -467,10 +467,7 @@ func (s *Swarm) Start(srv *p2p.Server) error {
 	s.receiptsStore.Start()
 	return nil
 }
-
-// implements the node.Service interface
-// stops all component services.
-func (s *Swarm) Stop() error {
+func (s *Swarm) Pause() error {
 	if s.tracerClose != nil {
 		err := s.tracerClose.Close()
 		tracing.FinishSpans()
@@ -506,15 +503,23 @@ func (s *Swarm) Stop() error {
 	if s.receiptsStore !=nil  {
 		s.receiptsStore.Stop()
 	}
-	if s.apiServer != nil {
-		s.apiServer.Close()
-	}
+
 	for _, cleanF := range s.cleanupFuncs {
 		err = cleanF()
 		if err != nil {
 			log.Error("encountered an error while running cleanup function", "err", err)
 			break
 		}
+	}
+	return err
+}
+// implements the node.Service interface
+// stops all component services.
+func (s *Swarm) Stop() error {
+
+	err := s.Pause()
+	if s.apiServer != nil {
+		s.apiServer.Close()
 	}
 	return err
 }

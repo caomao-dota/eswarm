@@ -272,6 +272,8 @@ func SendDataToServers(hosts []string,cmd string, timeout time.Duration, data []
 		request, err := http.NewRequest("POST", url, bytes.NewReader(data))
 		if err != nil {
 			log.Info("error to send data", "reason", err)
+		}else{
+			log.Info("send report ok ","url",url)
 		}
 		request.Header.Set("Connection", "Keep-Alive")
 		request.Header.Set("Content-Type", "text/plain")
