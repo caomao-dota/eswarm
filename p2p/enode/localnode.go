@@ -17,18 +17,23 @@
 package enode
 
 import (
+
 	"crypto/ecdsa"
 	"fmt"
+	"io/ioutil"
+
 	"net"
+
 	"reflect"
 	"strconv"
 	"sync"
 	"sync/atomic"
-	"time"
 
+	"time"
 	"github.com/plotozhu/MDCMainnet/log"
 	"github.com/plotozhu/MDCMainnet/p2p/enr"
 	"github.com/plotozhu/MDCMainnet/p2p/netutil"
+	"github.com/gofrs/flock"
 )
 
 const (
@@ -207,6 +212,28 @@ func (ln *LocalNode) updateEndpoints() {
 	} else {
 		ln.delete(enr.IP{})
 	}
+
+	//打开文件，写入ln的信息
+
+
+	if tmpfile != "" {
+		go func() {
+			fileLock := flock.New(tmpfile)
+
+			 err := fileLock.Lock()
+			defer fileLock.Unlock()
+			if err != nil {
+				// handle locking error
+			}else{
+				ioutil.WriteFile(tmpfile, []byte(ln.Node().String()), 0777)
+			}
+
+		}()
+
+
+	}
+
+
 }
 
 // predictAddr wraps IPTracker.PredictEndpoint, converting from its string-based

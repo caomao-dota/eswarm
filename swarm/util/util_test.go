@@ -1,8 +1,10 @@
 package util
 
 import (
+	"math"
 	"os"
 	"testing"
+	"fmt"
 )
 
 func TestCipher(t *testing.T) {
@@ -35,4 +37,49 @@ func TestCipher(t *testing.T) {
 	} else {
 		t.Error("error in cipher/decipher", err)
 	}
+}
+
+
+
+
+
+const P = 0.15
+type CacheInfo struct {
+	key string
+	value float64
+}
+
+func GetValue(m,n float64,info map[string]float64) float64{
+	result := 0.0
+	key := fmt.Sprintf("%v/%v",int32(m),int32(n))
+	ret,exit := info[key]
+	if exit  {
+		return ret
+	}
+	if(m <=n ){
+		result =  math.Pow(P,n)
+	}else if(n==0) {
+		result =  math.Pow(1-P,m)
+	}else if(m == 1){
+		result =  math.Pow(P,n)
+	}else {
+		result =  P*GetValue(m-1,n-1,info)+(1-P)*GetValue(m-1,n,info)
+	}
+	info[key] = result
+	return result
+}
+func TestCipherOut(t *testing.T) {
+	info := make(map[string]float64)
+	result := 0.0;
+	for i := 0; i < 25;i++{
+		result = result + GetValue(float64(49),float64(i),info)
+		//0.9999999998941209  48
+		//0.9999999997691102
+		//0.9999999999991741
+		//0.9999980846217624
+		//0.999999999999991
+		//0.9999999999999913
+	}
+	fmt.Println(fmt.Sprintf("total :%v",result ))
+
 }
