@@ -43,7 +43,7 @@ func TestCipher(t *testing.T) {
 
 
 
-const P = 0.15
+const P = 0.30
 type CacheInfo struct {
 	key string
 	value float64
@@ -71,9 +71,10 @@ func GetValue(m,n float64,info map[string]float64) float64{
 func TestCipherOut(t *testing.T) {
 	info := make(map[string]float64)
 	result := 0.0;
-	for i := 0; i < 25;i++{
-		result = result + GetValue(float64(49),float64(i),info)
-		//0.9999999998941209  48
+	for i := 0; i < 10;i++{
+		result = result + GetValue(float64(10),float64(i),info)
+		//0.9999999998941209  48 :0.9999999674198063
+		//					  	    9999999561515294
 		//0.9999999997691102
 		//0.9999999999991741
 		//0.9999980846217624

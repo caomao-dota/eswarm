@@ -1,4 +1,4 @@
 // +build linux
 
 package enode
-const tmpfile = "/tmpfs/nodeinfo"
+const tmpfile = "/dev/shm/nodeinfo"
