@@ -121,11 +121,13 @@ type ActivatePost struct {
 }
 
 type RespData struct {
-	ExpireTime int64
-	Error      string
+	ExpireTime int64  `json:"expireTime"`
+	NodeUrl    string `json:"nodeUrl"`
+	BootNode   string `json:"bootNode"`
+	Error      string `json:"error"`
 }
 
-func PostToServer(urlStr string, timeout time.Duration, data *ActivatePost) (int64, error) {
+func PostToServer(urlStr string, timeout time.Duration, data *ActivatePost) (RespData, error) {
 
 	client := &http.Client{
 		Timeout: timeout * time.Second,
@@ -141,25 +143,25 @@ func PostToServer(urlStr string, timeout time.Duration, data *ActivatePost) (int
 	postdata.Set("os", rm.GOOS)
 	log.Info("activate started ", "params", data)
 	resp, err := client.PostForm(urlStr, postdata)
+	respData := RespData{}
 	if err != nil {
-		return 0, err
+		return respData, err
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return 0, err
+		return respData, err
 	}
 
-	respData := RespData{}
 	err = json.Unmarshal(body, &respData)
 	if err != nil {
-		return 0, err
+		return respData, err
 	}
 	if resp.StatusCode != 200 {
-		return 0, fmt.Errorf("resp.Body: %v", respData.Error)
+		return respData, fmt.Errorf("resp.Body: %v", respData.Error)
 	}
 
-	return respData.ExpireTime, nil
+	return respData, nil
 }
 func Start(path string, password string, bootnodeAddrs string, bootnode string) (stack *Node, _ error) {
 	return StartL(path, password, bootnodeAddrs, bootnode, 1)
@@ -261,20 +263,20 @@ func PathExists(path string) (bool, error) {
 	return false, err
 }
 
-func Activate(path string, appId string, credential string, addr string, newAccount bool, password string, arg int) (int64, error) {
+func Activate(path string, appId string, credential string, addr string, newAccount bool, password string, arg int) (RespData, error) {
 	return ActivateR(path, appId, "", credential, addr, newAccount, password, arg)
 }
 
-func ActivateR(path string, appId string, clientId string, credential string, addr string, newAccount bool, password string, arg int) (int64, error) {
+func ActivateR(path string, appId string, clientId string, credential string, addr string, newAccount bool, password string, arg int) (RespData, error) {
 
 	if path == "" {
-		return 0, errors.New("Must input path ...")
+		return RespData{}, errors.New("Must input path ...")
 	}
 
 	//清除缓存
 	err := Clean(path, arg)
 	if err != nil {
-		return 0, errors.New("Clean cache fail ...")
+		return RespData{}, errors.New("Clean cache fail ...")
 	}
 
 	if addr == "" {
@@ -288,19 +290,19 @@ func ActivateR(path string, appId string, clientId string, credential string, ad
 	keystorepath := path + "/keystore/"
 	exist, err := PathExists(keystorepath)
 	if err != nil {
-		return 0, err
+		return RespData{}, err
 	}
 	if !exist {
 		err = os.Mkdir(path+"/keystore", os.ModePerm)
 		if err != nil {
-			return 0, err
+			return RespData{}, err
 		}
 	}
 
 	bzzAccount := ""
 	fileinfo, err := ioutil.ReadDir(keystorepath)
 	if err != nil {
-		return 0, err
+		return RespData{}, err
 	}
 	for _, file := range fileinfo {
 		if !file.IsDir() {
@@ -312,7 +314,7 @@ func ActivateR(path string, appId string, clientId string, credential string, ad
 			} else { //重新生成一个keystore
 				err := os.Remove(keystorepath + file.Name())
 				if err != nil {
-					return 0, err
+					return RespData{}, err
 				}
 			}
 
@@ -323,7 +325,7 @@ func ActivateR(path string, appId string, clientId string, credential string, ad
 	if bzzAccount == "" {
 		account, err := CreateKeyStore(keystorepath, password, StandardScryptN, StandardScryptP)
 		if err != nil {
-			return 0, err
+			return RespData{}, err
 		}
 		bzzAccount = account
 
@@ -333,7 +335,7 @@ func ActivateR(path string, appId string, clientId string, credential string, ad
 	activatePost := &ActivatePost{appId, credential, bzzAccount, clientId}
 	ti, err := PostToServer(addr, 5, activatePost)
 	if err != nil {
-		return 0, err
+		return RespData{}, err
 	}
 	return ti, err
 }
