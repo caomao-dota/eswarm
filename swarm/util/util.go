@@ -339,6 +339,7 @@ func GetBootnodesInfo(uri string) (bootnodes []string, reportAddress []string, e
 	response, err := client.Do(req)
 	if err != nil || response == nil || (response.StatusCode < 200 || response.StatusCode >= 300) {
 		log.Error("Error sending request to API endpoint", "error:", "get failed")
+		err = errors.New("get failed")
 		return []string{}, []string{}, err
 	} else {
 		// Close the connection to reuse it

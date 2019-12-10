@@ -17,11 +17,8 @@
 package enode
 
 import (
-
 	"crypto/ecdsa"
 	"fmt"
-	"io/ioutil"
-
 	"net"
 
 	"reflect"
@@ -29,11 +26,10 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"time"
 	"github.com/plotozhu/MDCMainnet/log"
 	"github.com/plotozhu/MDCMainnet/p2p/enr"
 	"github.com/plotozhu/MDCMainnet/p2p/netutil"
-	"github.com/gofrs/flock"
+	"time"
 )
 
 const (
@@ -216,22 +212,7 @@ func (ln *LocalNode) updateEndpoints() {
 	//打开文件，写入ln的信息
 
 
-	if tmpfile != "" {
-		go func() {
-			fileLock := flock.New(tmpfile)
 
-			 err := fileLock.Lock()
-			defer fileLock.Unlock()
-			if err != nil {
-				// handle locking error
-			}else{
-				ioutil.WriteFile(tmpfile, []byte(ln.Node().String()), 0777)
-			}
-
-		}()
-
-
-	}
 
 
 }
