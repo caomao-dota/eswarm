@@ -563,3 +563,24 @@ func (n *Node) GetM3U8Url(cdnUrl string, hash string) string {
 
 	return fmt.Sprintf("%v%v", baseUrl, url)
 }
+
+// getFile baseUrl
+func (n *Node) GetFileBaseUrl() string {
+	return fmt.Sprintf("http://localhost:%v/file:/", n.httpPort)
+}
+
+// getM3U8 url
+func (n *Node) GetFileUrl(cdnUrl string, hash string) string {
+
+	if hash == "" {
+		return cdnUrl
+	}
+
+	index := strings.LastIndex(cdnUrl, "/")
+	baseUrl := n.GetFileBaseUrl()
+
+	url := fmt.Sprintf("%v/{%v}%v", cdnUrl[:index], hash, cdnUrl[index:])
+	url = strings.Replace(url, "://", "/", -1)
+
+	return fmt.Sprintf("%v%v", baseUrl, url)
+}

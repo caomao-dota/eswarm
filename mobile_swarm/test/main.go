@@ -22,7 +22,7 @@ func main() {
 	}
 	fmt.Println(res)
 
-	node, err := csdc.StartL(path, "123", res.NodeUrl, res.BootNode, 3)
+	node, err := csdc.StartL(path, "123", res.NodeUrl, res.BootNode, 4)
 
 	fmt.Println(node.GetHttpPort())
 
@@ -30,12 +30,16 @@ func main() {
 
 	fmt.Println(node.GetM3U8Url("https://v.152878.com/vback/qYq5rD7Jq19gE/2358/0981B7353D085CA0AE868EA1DEE43067/0981B7353D085CA0AE868EA1DEE43067_ea6399f6616d4a60aa42487c2814e4c2.mp4/index.m3u8?token=cz05OWViYWFkZDI2MjI5NjBlOTM2ZTJjN2ZiMTQ2Nzg4ZiZpPTk5OTk5JnA9NSZ0PTE1NjUwOTIyOTImbj0wOTgxQjczNTNEMDg1Q0EwQUU4NjhFQTFERUU0MzA2N19lYTYzOTlmNjYxNmQ0YTYwYWE0MjQ4N2MyODE0ZTRjMi5tcDQvaW5kZXgubTN1OCZyPTEmdj0yLjAuMCZjPTImZT03MjA=", "00d534e271ae532aaaf05ff5a36e5e48b6193f7c8c6784c7a38653f462399243"))
 
-	timer := time.NewTimer(5 * time.Second)
-	<-timer.C
-	node.Stop()
-	timer = time.NewTimer(2 * time.Second)
-	<-timer.C
-	node.Start()
+	fmt.Println(node.GetFileBaseUrl())
+
+	fmt.Println(node.GetFileUrl("http://mediacallback-test.potato.im/download/a8e186a234daa0d721d93885b0c8c000e17d85b3/ZpBiLd7B9233422815956410007", "950e4852cca684f48c18ed9c3368327cdb7731bb51d24c1280de120a5db258e2"))
+
+	//timer := time.NewTimer(5 * time.Second)
+	//<-timer.C
+	//node.Stop()
+	//timer = time.NewTimer(2 * time.Second)
+	//<-timer.C
+	//node.Start()
 	if err != nil {
 		fmt.Println(err)
 		return
