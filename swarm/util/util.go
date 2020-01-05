@@ -330,7 +330,7 @@ func GetBootnodesInfo(uri string) (bootnodes []string, reportAddress []string, e
 
 	req, err := http.NewRequest("GET", uri, bytes.NewBuffer([]byte("")))
 	if err != nil {
-		log.Error("Error Occured. %+v", err)
+		log.Error("Bootnode Error Occured. %+v", err)
 
 		return []string{},  []string{}, err
 	}
@@ -352,6 +352,7 @@ func GetBootnodesInfo(uri string) (bootnodes []string, reportAddress []string, e
 		err = errors.New(result)
 		return []string{}, []string{}, err
 	} else {
+
 		// Close the connection to reuse it
 		defer response.Body.Close()
 
@@ -359,6 +360,7 @@ func GetBootnodesInfo(uri string) (bootnodes []string, reportAddress []string, e
 		// We have seen inconsistencies even when we get 200 OK response
 		body, err := ioutil.ReadAll(response.Body)
 		if err != nil {
+			log.Error("bootnode error in get body %v",err)
 			return []string{},  []string{}, err
 		}
 
@@ -370,6 +372,7 @@ func GetBootnodesInfo(uri string) (bootnodes []string, reportAddress []string, e
 			log.Info("Get :", "cnt", len(result.BootNodes))
 			return result.BootNodes, result.ReportAddrs, nil
 		} else {
+			log.Error("bootnode error in decode body %v",err)
 			return nil,  []string{}, err
 		}
 
