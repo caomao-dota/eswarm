@@ -182,6 +182,12 @@ func NewServer(api *api.API, corsString string) *Server {
 			defaultMiddlewares...,
 		),
 	})
+	mux.Handle("/file:/", methodHandler{
+		"GET": Adapt(
+			http.HandlerFunc(server.HandleGetVideoFile),
+			defaultMiddlewares...,
+		),
+	})
 	mux.Handle("/activate:/", methodHandler{
 		"POST": Adapt(
 			http.HandlerFunc(server.HandleGetM3u8),
@@ -853,6 +859,79 @@ func createHTTPClient() *http.Client {
 	}
 	return client
 }
+
+
+
+// HandleGetM3u8 处理m3u8
+// -
+//   given storage key
+func (s *Server) HandleGetVideoFile(w http.ResponseWriter, r *http.Request) {
+
+	ruid := GetRUID(r.Context())
+	uri := GetURI(r.Context())
+
+	log.Debug("handle.file", "ruid", ruid, "uri", uri)
+	getCount.Inc(1)
+	//_, pass, _ := r.BasicAuth()
+
+
+	pattern_meu8 := regexp.MustCompile(`\/file:\/(?P<schema>https?)\/(?P<path>(\S+\/)+)\{(?P<hash>[0-9a-fA-F]{64})\}(\/(?P<act>(\S*)))`)
+	replacedURL := strings.Replace(strings.Replace(r.RequestURI, "%7B", "{", -1), "%7D", "}", -1)
+	result := pattern_meu8.FindSubmatch([]byte(replacedURL))
+	if len(result) != 0 {
+		schema := string(result[1])
+		path := schema + "://" + string(result[2])
+
+		hash := result[4]
+
+		act := string(result[6])
+
+		if len(hash) != 0 { //有hash的，说明是要取hash对应的m3u8文件
+
+
+			fullNodes, _ := s.api.GetNodeCount(r.Context())
+			//log.Info("read:","uri",actUri)
+			if  fullNodes > 0 {
+				//数据片断与哈希的对应关系应该已经存储在数据库里
+				newContext := context.WithValue(r.Context(), "url", string(path+act))
+				//newContext = context.WithValue(newContext,"server",*s)
+				newContext = context.WithValue(newContext, "request", r)
+
+				newContext = context.WithValue(newContext, "reporter", s.httpClient)
+				newContext = context.WithValue(newContext, "hash", common.HexToHash(string(hash)))
+
+
+
+
+				/*if s.m3u8.sizelost > 0 && s.m3u8.sizelost <= 10 {
+					newContext, _ = context.WithTimeout(newContext, 5*time.Second)
+				} else if s.m3u8.sizelost > 10 {
+					s.m3u8.sizelost = 0
+					newContext, _ = context.WithTimeout(newContext, 20*time.Second)
+				} else {
+					newContext, _ = context.WithTimeout(newContext, 20*time.Second)
+				}
+				*/
+
+			//	newCtx,_ := context.WithTimeout(newContext,time.Duration(int64(size/100)*int64(time.Millisecond)))
+
+
+				s.HandleGetFile(w, r.WithContext(SetURI(newContext,&api.URI{Addr:string(hash),Scheme:"bzz"})))
+				return
+			}
+			//s.m3u8.sizelost++
+			//log.Debug("Get from central node:", "uri", actUri)
+			s.m3u8.centralRetrived = s.httpClient.GetDataFromCentralServer(path+act, r, w, common.Hex2Bytes(string(hash)), respondError)
+			return
+
+		}
+	}
+
+	respondError(w, r, "Invalid URL"+r.RequestURI, 400)
+	return
+
+}
+
 
 // HandleGetM3u8 处理m3u8
 // -
