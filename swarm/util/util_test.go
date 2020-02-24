@@ -1,6 +1,7 @@
 package util
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"os"
@@ -8,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestCipher(t *testing.T) {
+func _TestCipher(t *testing.T) {
 
 	rawData := DefsV2{[]string{"enode://f4a9712067c8204af740c0596b5b5cef974bba52d1c4d9240974d51ffa9bd6caedf694c496ad66208e33a8b611edba57ee5ff30531b810c43c7dee5712da34c5@134.175.166.163:30396?nt=9","enode://5d95d2000514edd945c6ddf2a0bad86e058c24b938073de6c931bb0257351551a3cd29d1a2c92fe4a9af7f2bfc19cb111ec415b7f173b9b0dda547280c86de36@36.153.93.250:30399?nt=36","enode://7aa903cb306852357b41c1587d2df65651693ab8fcd6ffad512d3a3812df8a680c87322975f92a900dda7e81329fa43a05ce4218bcf0ec43fd0fe366e7e46a0b@39.165.44.145:5939?nt=36","enode://da936161f92d55bf6878b4533051936916a37ef866232ac43d1ca4e7e5d0e0d57511f379e137ca08f22a00412030cc5f302427352538c576f1fa5a584a9c909f@39.165.44.131:8602?nt=36"}, []string{"https://service.371738.com/apis/v1"}}
 	//rawData := DefsV2{[]string{"enode://d8578bfef5b8e447d9e3ca674597b317a8ceb103da129a978d93eed61888e4cfaab19794e3c2e274a88de3ce238ae70fd5556f0365f323abbea2011f605861d6@172.16.1.11:30396"}, []string{"http://172.16.1.25:4000/apis/v1","http://172.16.1.24:4000/apis/v1"}}
@@ -123,4 +124,27 @@ func __TestValueOf(t *testing.T){
 	})
 
 	fmt.Print(err)
+}
+
+type type1 struct {
+
+	Field1 int
+}
+
+type type2 struct {
+	type1
+	Field2 *int
+}
+
+func TestStruct(t *testing.T){
+	val :=type1{1}
+	bytes,_ :=json.Marshal(val)
+	var  val2 type2
+	err2 := json.Unmarshal(bytes,val2)
+
+	if err2 != nil{
+		fmt.Println("error",err2)
+	}else{
+		fmt.Println(fmt.Sprintf("t2:%v",val2))
+	}
 }

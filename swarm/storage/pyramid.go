@@ -67,7 +67,7 @@ var (
 )
 
 const (
-	ChunkProcessors = 8
+	ChunkProcessors = 64
 	splitTimeout    = time.Minute * 5
 )
 
@@ -173,12 +173,12 @@ func NewPyramidSplitter(params *PyramidSplitterParams) (pc *PyramidChunker) {
 
 func (pc *PyramidChunker) Join(addr Address, getter Getter, depth int) LazySectionReader {
 	return &LazyChunkReader{
-		addr:      addr,
-		depth:     depth,
-		chunkSize: pc.chunkSize,
-		branchesOfChunk:  pc.branches,
-		hashSize:  pc.hashSize,
-		getter:    getter,
+		addr:            addr,
+		depth:           depth,
+		chunkSize:       pc.chunkSize,
+		branchesOfChunk: pc.branches,
+		hashSize:        pc.hashSize,
+		getter:          getter,
 	}
 }
 
