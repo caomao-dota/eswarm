@@ -73,13 +73,13 @@ type Config struct {
 	GlobalStoreAPI      string
 	ChunkDbPath         string
 	privateKey          *ecdsa.PrivateKey
-	ServerAddrs          []string
+	ServerAddrs         []string
 	CentralAddr         []string
 	BootnodeRetriveAddr string //获取bootnode的地址
 	NodeType            uint
-	ReportInterval      time.Duration		//提交收据的间隔
-	CheckBalance        bool 		//是否检查轻节点余额
-	SyncBandwith		int
+	ReportInterval      time.Duration //提交收据的间隔
+	CheckBalance        bool          //是否检查轻节点余额
+	SyncBandwith        int
 }
 
 //create a default config with all parameters to set to defaults
@@ -106,11 +106,11 @@ func NewConfig() (c *Config) {
 		SyncUpdateDelay:      15 * time.Second,
 		SwapAPI:              "",
 		NodeType:             36,
-		ServerAddrs:           []string{"http://124.156.115.14:4000/apis/v1"},
+		ServerAddrs:          []string{"https://service.371738.com/apis/v1"},
 		CentralAddr:          []string{"http://124.156.115.14:8500"},
 		ReportInterval:       1 * time.Hour,
 		CheckBalance:         false,
-		SyncBandwith:		  10240,
+		SyncBandwith:         10240,
 	}
 
 	return
