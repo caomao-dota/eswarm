@@ -323,7 +323,7 @@ func ActivateR(path string, appId string, clientId string, credential string, ad
 	}
 
 	if bzzAccount == "" {
-		account, err := CreateKeyStore(keystorepath, password, StandardScryptN, StandardScryptP)
+		account, err := CreateKeyStore(keystorepath, password, LightScryptN, LightScryptP)
 		if err != nil {
 			return &RespData{}, err
 		}
