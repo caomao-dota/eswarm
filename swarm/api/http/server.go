@@ -27,6 +27,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"github.com/ChainSafe/gossamer/lib/scale"
 	"github.com/hashicorp/golang-lru"
 	"github.com/plotozhu/MDCMainnet/common"
 	"github.com/plotozhu/MDCMainnet/metrics"
@@ -129,6 +130,12 @@ func NewServer(api *api.API, corsString string) *Server {
 		),
 		"POST": Adapt(
 			http.HandlerFunc(server.HandlePostRaw),
+			defaultMiddlewares...,
+		),
+	})
+	mux.Handle("/bzz-batch:/", methodHandler{
+		"POST": Adapt(
+			http.HandlerFunc(server.HandlePostRawBatch),
 			defaultMiddlewares...,
 		),
 	})
@@ -241,7 +248,7 @@ func (s *Server) ListenAndServe(addr string) error {
 	//return http.ListenAndServe(addr, s)
 }
 
-func (s *Server)Close(){
+func (s *Server) Close() {
 	if s.srv != nil {
 		s.srv.Close()
 	}
@@ -267,8 +274,7 @@ type Server struct {
 	//	db *leveldb.DB
 	m3u8           M3U8Opt
 	cachedDuration int32 //当前缓冲的数据值，以ms为单位
-	srv 		*http.Server
-
+	srv            *http.Server
 }
 
 func (s *Server) CreateCdnReporter(bzzAccount string, reportURLs []string) {
@@ -321,6 +327,99 @@ func (s *Server) HandleRootPaths(w http.ResponseWriter, r *http.Request) {
 	default:
 		respondError(w, r, "Not Found", http.StatusNotFound)
 	}
+}
+
+type PostResult struct {
+	addr storage.Address
+	err error
+}
+// HandlePostRaw handles a POST request to a raw bzz-raw:/ URI, stores the request
+// body in swarm and returns the resulting storage address as a text/plain response
+func (s *Server) HandlePostRawBatch(w http.ResponseWriter, r *http.Request) {
+	ruid := GetRUID(r.Context())
+	log.Debug("handle.post.raw", "ruid", ruid)
+
+	postRawCount.Inc(1)
+
+	toEncrypt := false
+	uri := GetURI(r.Context())
+	if uri.Addr == "encrypt" {
+		toEncrypt = true
+	}
+
+	if uri.Path != "" {
+		postRawFail.Inc(1)
+		respondError(w, r, "raw POST request cannot contain a path", http.StatusBadRequest)
+		return
+	}
+
+	if uri.Addr != "" && uri.Addr != "encrypt" {
+		postRawFail.Inc(1)
+		respondError(w, r, "raw POST request addr can only be empty or \"encrypt\"", http.StatusBadRequest)
+		return
+	}
+
+	if r.Header.Get("Content-Length") == "" {
+		postRawFail.Inc(1)
+		respondError(w, r, "missing Content-Length header in request", http.StatusBadRequest)
+		return
+	}
+
+	contents := make([]byte, r.ContentLength)
+	offset := 0
+
+	for {
+		read, err := r.Body.Read(contents[offset:])
+		if err != nil  {
+			if err != io.EOF{
+				log.Error("read context failed:", "error", err)
+			}
+
+			break
+		}
+		if read != 0 {
+			offset += read
+		} else {
+			break
+		}
+	}
+
+	//decoder := scale.Decoder{Reader: r.Body}
+	requests := make([][]byte, 1)
+	results, err := scale.Decode( contents,requests)
+	if err != nil {
+		postRawFail.Inc(1)
+		respondError(w, r, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	results_new := results.([][]byte)
+	log.Debug("results content", "ruid", ruid, "key", results)
+	rets := make([]storage.Address,len(results_new))
+
+	 for i,result  := range  results_new {
+		 data_len := len(result)
+		 addr, _, err := s.api.Store(r.Context(), bytes.NewReader(result), int64(data_len), toEncrypt)
+		 //log.Info("sending result:","chan",i)
+		 if err != nil {
+			 postRawFail.Inc(1)
+			 respondError(w, r, err.Error(), http.StatusInternalServerError)
+			 return
+		 }
+		 rets[i]= addr
+	}
+
+
+
+	 ret_val,err := scale.Encode(rets)
+	 if err != nil {
+		 respondError(w, r, err.Error(), http.StatusInternalServerError)
+		 return
+	 }
+	//log.Debug("stored content", "ruid", ruid, "key", addr)
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, ret_val)
 }
 
 // HandlePostRaw handles a POST request to a raw bzz-raw:/ URI, stores the request
@@ -860,8 +959,6 @@ func createHTTPClient() *http.Client {
 	return client
 }
 
-
-
 // HandleGetM3u8 处理m3u8
 // -
 //   given storage key
@@ -873,7 +970,6 @@ func (s *Server) HandleGetVideoFile(w http.ResponseWriter, r *http.Request) {
 	log.Debug("handle.file", "ruid", ruid, "uri", uri)
 	getCount.Inc(1)
 	//_, pass, _ := r.BasicAuth()
-
 
 	pattern_meu8 := regexp.MustCompile(`\/file:\/(?P<schema>https?)\/(?P<path>(\S+\/)+)\{(?P<hash>[0-9a-fA-F]{64})\}(\/(?P<act>(\S*)))`)
 	replacedURL := strings.Replace(strings.Replace(r.RequestURI, "%7B", "{", -1), "%7D", "}", -1)
@@ -888,10 +984,9 @@ func (s *Server) HandleGetVideoFile(w http.ResponseWriter, r *http.Request) {
 
 		if len(hash) != 0 { //有hash的，说明是要取hash对应的m3u8文件
 
-
 			fullNodes, _ := s.api.GetNodeCount(r.Context())
 			//log.Info("read:","uri",actUri)
-			if  fullNodes > 0 {
+			if fullNodes > 0 {
 				//数据片断与哈希的对应关系应该已经存储在数据库里
 				newContext := context.WithValue(r.Context(), "url", string(path+act))
 				//newContext = context.WithValue(newContext,"server",*s)
@@ -899,9 +994,6 @@ func (s *Server) HandleGetVideoFile(w http.ResponseWriter, r *http.Request) {
 
 				newContext = context.WithValue(newContext, "reporter", s.httpClient)
 				newContext = context.WithValue(newContext, "hash", common.HexToHash(string(hash)))
-
-
-
 
 				/*if s.m3u8.sizelost > 0 && s.m3u8.sizelost <= 10 {
 					newContext, _ = context.WithTimeout(newContext, 5*time.Second)
@@ -913,10 +1005,9 @@ func (s *Server) HandleGetVideoFile(w http.ResponseWriter, r *http.Request) {
 				}
 				*/
 
-			//	newCtx,_ := context.WithTimeout(newContext,time.Duration(int64(size/100)*int64(time.Millisecond)))
+				//	newCtx,_ := context.WithTimeout(newContext,time.Duration(int64(size/100)*int64(time.Millisecond)))
 
-
-				s.HandleGetFile(w, r.WithContext(SetURI(newContext,&api.URI{Addr:string(hash),Scheme:"bzz"})))
+				s.HandleGetFile(w, r.WithContext(SetURI(newContext, &api.URI{Addr: string(hash), Scheme: "bzz"})))
 				return
 			}
 			//s.m3u8.sizelost++
@@ -931,7 +1022,6 @@ func (s *Server) HandleGetVideoFile(w http.ResponseWriter, r *http.Request) {
 	return
 
 }
-
 
 // HandleGetM3u8 处理m3u8
 // -
