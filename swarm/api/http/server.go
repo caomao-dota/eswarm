@@ -410,16 +410,18 @@ func (s *Server) HandlePostRawBatch(w http.ResponseWriter, r *http.Request) {
 
 
 
+
 	 ret_val,err := scale.Encode(rets)
 	 if err != nil {
 		 respondError(w, r, err.Error(), http.StatusInternalServerError)
 		 return
 	 }
 	//log.Debug("stored content", "ruid", ruid, "key", addr)
-
-	w.Header().Set("Content-Type", "text/plain")
+	log.Info("results content", "ruid", ruid, "ret counts", len(rets))
+	w.Header().Set("Content-Type", "binary/octet-stream")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, ret_val)
+	w.Write(ret_val)
+	//fmt.Fprint(w, ret_val)
 }
 
 // HandlePostRaw handles a POST request to a raw bzz-raw:/ URI, stores the request
