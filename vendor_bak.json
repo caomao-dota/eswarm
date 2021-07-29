@@ -165,6 +165,12 @@
 			"revisionTime": "2018-08-26T13:48:48Z"
 		},
 		{
+			"checksumSHA1": "MlaWEe1K+Kpb9wDF88qPoqO1uro=",
+			"path": "github.com/gofrs/flock",
+			"revision": "5135e617513b1e6e205a3a89b042249dee6730c8",
+			"revisionTime": "2019-03-20T16:07:11Z"
+		},
+		{
 			"checksumSHA1": "yqF125xVSkmfLpIVGrLlfE05IUk=",
 			"path": "github.com/golang/protobuf/proto",
 			"revision": "748d386b5c1ea99658fd69fe9f03991ce86a90c1",
@@ -497,16 +503,16 @@
 			"revisionTime": "2019-02-27T00:00:51Z"
 		},
 		{
-			"checksumSHA1": "JS/LQFhqSRsSAcUAAXTg64mm0NU=",
+			"checksumSHA1": "GeYTImXf2O9vrV+7/2SlZCM3/Pc=",
 			"path": "github.com/plotozhu/wiredtiger-go",
-			"revision": "d45c15f5c4febb87cd1198bce0d24f8c05590089",
-			"revisionTime": "2019-06-13T03:09:34Z"
+			"revision": "4fea116a571a20e66383d45aa19c2003866f2ee8",
+			"revisionTime": "2021-07-29T10:40:45Z"
 		},
 		{
 			"checksumSHA1": "VWq9BrHJB9cHc5M/DRPhgQIvkwU=",
 			"path": "github.com/plotozhu/wiredtiger-go/wiredtiger",
-			"revision": "d45c15f5c4febb87cd1198bce0d24f8c05590089",
-			"revisionTime": "2019-06-13T03:09:34Z"
+			"revision": "4fea116a571a20e66383d45aa19c2003866f2ee8",
+			"revisionTime": "2021-07-29T10:40:45Z"
 		},
 		{
 			"checksumSHA1": "LuFv4/jlrmFNnDb/5SCSEPAM9vU=",
@@ -1089,12 +1095,6 @@
 			"path": "gopkg.in/sourcemap.v1/base64vlq",
 			"revision": "6e83acea0053641eff084973fee085f0c193c61a",
 			"revisionTime": "2017-02-13T14:20:43Z"
-		},
-		{
-			"checksumSHA1": "MlaWEe1K+Kpb9wDF88qPoqO1uro=",
-			"path": "github.com/gofrs/flock",
-			"revision": "5135e617513b1e6e205a3a89b042249dee6730c8",
-			"revisionTime": "2019-03-20T16:07:11Z"
 		},
 		{
 			"checksumSHA1": "Yx1MU40fyGe7hhqW9+dkv8kXa60=",
