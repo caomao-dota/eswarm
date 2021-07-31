@@ -22,30 +22,35 @@
 
 ## Building the source
 
-### 处理vendor
-* 首先保证govendor已经安装，如果没有，使用`sudo apt install govendor`安装
+### 安装golang和相关依赖
+    sudo add-apt-repository ppa:longsleep/golang-backports -y
+    
+    apt-get update
+    
+    apt install build-essential  govendor autoconf automake libtool  golang-go git -y
+    
+### 下载代码并编译wiredTiger
 
-    cd MDCMainnet
-    
+    mkdir ~/go/src/github.com/gauss-project -p
+    cd ~/go/src/github.com/gauss-project
+    git clone https://github.com/gauss-project/eswarm
+    cd eswarm
+    go mod init
     mkdir vendor
-    
     mv vendor_bak.json vendor.json
-    
     govendor migrate
-    
-    govendor sync
-    
-### 下载编译wiredTiger
+    govendor sync -v
+    go mod init
     cd vendor/github.com/plotozhu/wiredtiger-go
     ./install-deps.sh
        
 
 ###  编译ESwarm
-    回到主目录
-    cd ../../../../
 
+    cd ~/go/src/github.com/gauss-project/eswarm
     make 
     make swarm
+    生成的swarm文件存放在"/root/go/src/github.com/gauss-project/eswarm/build/bin"
 
 ## Running Swarm
 
