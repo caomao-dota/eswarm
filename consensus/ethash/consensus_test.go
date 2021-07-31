@@ -23,9 +23,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/common/math"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/params"
+	"github.com/gauss-project/eswarm/common/math"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/params"
 )
 
 type diffTest struct {

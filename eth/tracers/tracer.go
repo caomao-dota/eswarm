@@ -25,11 +25,11 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/common/hexutil"
-	"github.com/plotozhu/MDCMainnet/core/vm"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/common/hexutil"
+	"github.com/gauss-project/eswarm/core/vm"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/log"
 	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
 

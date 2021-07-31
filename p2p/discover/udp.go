@@ -23,16 +23,16 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hashicorp/golang-lru"
-	"github.com/plotozhu/MDCMainnet/p2p/enr"
+	"github.com/gauss-project/eswarm/p2p/enr"
 	"net"
 	"sync"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
-	"github.com/plotozhu/MDCMainnet/p2p/netutil"
-	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/p2p/enode"
+	"github.com/gauss-project/eswarm/p2p/netutil"
+	"github.com/gauss-project/eswarm/rlp"
 )
 
 // Errors

@@ -26,10 +26,10 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/plotozhu/MDCMainnet/cmd/internal/browser"
-	"github.com/plotozhu/MDCMainnet/params"
+	"github.com/gauss-project/eswarm/cmd/internal/browser"
+	"github.com/gauss-project/eswarm/params"
 
-	"github.com/plotozhu/MDCMainnet/cmd/utils"
+	"github.com/gauss-project/eswarm/cmd/utils"
 	cli "gopkg.in/urfave/cli.v1"
 )
 
@@ -41,7 +41,7 @@ var bugCommand = cli.Command{
 	Category:  "MISCELLANEOUS COMMANDS",
 }
 
-const issueURL = "https://github.com/plotozhu/MDCMainnet/issues/new"
+const issueURL = "https://github.com/gauss-project/eswarm/issues/new"
 
 // reportBug reports a bug by opening a new URL to the go-ethereum GH issue
 // tracker and setting default values as the issue body.

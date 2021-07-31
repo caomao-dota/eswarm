@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/feed/lookup"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/swarm/storage/feed/lookup"
 )
 
 // Query is used to specify constraints when performing an update lookup

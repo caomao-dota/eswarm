@@ -21,9 +21,9 @@ package geth
 import (
 	"encoding/json"
 
-	"github.com/plotozhu/MDCMainnet/core"
-	"github.com/plotozhu/MDCMainnet/p2p/discv5"
-	"github.com/plotozhu/MDCMainnet/params"
+	"github.com/gauss-project/eswarm/core"
+	"github.com/gauss-project/eswarm/p2p/discv5"
+	"github.com/gauss-project/eswarm/params"
 )
 
 // MainnetGenesis returns the JSON spec to use for the main Ethereum network. It

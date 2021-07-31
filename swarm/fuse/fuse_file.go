@@ -26,8 +26,8 @@ import (
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
-	"github.com/plotozhu/MDCMainnet/swarm/log"
-	"github.com/plotozhu/MDCMainnet/swarm/storage"
+	"github.com/gauss-project/eswarm/swarm/log"
+	"github.com/gauss-project/eswarm/swarm/storage"
 	"golang.org/x/net/context"
 )
 

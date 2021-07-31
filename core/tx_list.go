@@ -22,9 +22,9 @@ import (
 	"math/big"
 	"sort"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/log"
 )
 
 // nonceHeap is a heap.Interface implementation over 64bit unsigned integers for

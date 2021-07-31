@@ -21,9 +21,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/plotozhu/MDCMainnet/common/bitutil"
-	"github.com/plotozhu/MDCMainnet/common/hexutil"
-	"github.com/plotozhu/MDCMainnet/swarm/storage"
+	"github.com/gauss-project/eswarm/common/bitutil"
+	"github.com/gauss-project/eswarm/common/hexutil"
+	"github.com/gauss-project/eswarm/swarm/storage"
 )
 
 // TopicLength establishes the max length of a topic string

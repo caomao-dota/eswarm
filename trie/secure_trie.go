@@ -19,8 +19,8 @@ package trie
 import (
 	"fmt"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/log"
 )
 
 // SecureTrie wraps a trie with key hashing. In a secure trie, all

@@ -35,12 +35,12 @@ import (
 
 	mmap "github.com/edsrzf/mmap-go"
 	"github.com/hashicorp/golang-lru/simplelru"
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/consensus"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/metrics"
-	"github.com/plotozhu/MDCMainnet/rpc"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/consensus"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/metrics"
+	"github.com/gauss-project/eswarm/rpc"
 )
 
 var ErrInvalidDumpMagic = errors.New("invalid dump magic")

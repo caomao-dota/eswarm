@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
-	"github.com/plotozhu/MDCMainnet/metrics"
-	"github.com/plotozhu/MDCMainnet/swarm/api"
-	"github.com/plotozhu/MDCMainnet/swarm/log"
-	"github.com/plotozhu/MDCMainnet/swarm/sctx"
-	"github.com/plotozhu/MDCMainnet/swarm/spancontext"
+	"github.com/gauss-project/eswarm/metrics"
+	"github.com/gauss-project/eswarm/swarm/api"
+	"github.com/gauss-project/eswarm/swarm/log"
+	"github.com/gauss-project/eswarm/swarm/sctx"
+	"github.com/gauss-project/eswarm/swarm/spancontext"
 )
 
 // Adapt chains h (main request handler) main handler to adapters (middleware handlers)

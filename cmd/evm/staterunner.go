@@ -23,10 +23,10 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/plotozhu/MDCMainnet/core/state"
-	"github.com/plotozhu/MDCMainnet/core/vm"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/tests"
+	"github.com/gauss-project/eswarm/core/state"
+	"github.com/gauss-project/eswarm/core/vm"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/tests"
 
 	cli "gopkg.in/urfave/cli.v1"
 )

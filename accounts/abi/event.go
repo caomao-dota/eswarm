@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/crypto"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/crypto"
 )
 
 // Event is an event potentially triggered by the EVM's LOG mechanism. The Event

@@ -21,9 +21,9 @@ import (
 	"context"
 	"sync"
 
-	"github.com/plotozhu/MDCMainnet/internal/ethapi"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/rpc"
+	"github.com/gauss-project/eswarm/internal/ethapi"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/rpc"
 )
 
 type StdIOUI struct {

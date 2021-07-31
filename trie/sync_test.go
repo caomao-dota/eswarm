@@ -20,8 +20,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/ethdb"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/ethdb"
 )
 
 // makeTestTrie create a sample test trie to test node-wise reconstruction.

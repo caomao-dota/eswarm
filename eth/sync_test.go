@@ -21,9 +21,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/eth/downloader"
-	"github.com/plotozhu/MDCMainnet/p2p"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
+	"github.com/gauss-project/eswarm/eth/downloader"
+	"github.com/gauss-project/eswarm/p2p"
+	"github.com/gauss-project/eswarm/p2p/enode"
 )
 
 // Tests that fast sync gets disabled as soon as a real block is successfully

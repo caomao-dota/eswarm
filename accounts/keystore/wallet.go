@@ -19,10 +19,10 @@ package keystore
 import (
 	"math/big"
 
-	ethereum "github.com/plotozhu/MDCMainnet"
-	"github.com/plotozhu/MDCMainnet/accounts"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/crypto"
+	ethereum "github.com/gauss-project/eswarm"
+	"github.com/gauss-project/eswarm/accounts"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/crypto"
 )
 
 // keystoreWallet implements the accounts.Wallet interface for the original

@@ -22,11 +22,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/node"
-	"github.com/plotozhu/MDCMainnet/p2p/simulations/adapters"
-	"github.com/plotozhu/MDCMainnet/swarm/network"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/node"
+	"github.com/gauss-project/eswarm/p2p/simulations/adapters"
+	"github.com/gauss-project/eswarm/swarm/network"
 )
 
 /*

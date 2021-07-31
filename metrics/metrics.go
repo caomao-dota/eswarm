@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/log"
 )
 
 // Enabled is checked by the constructor functions for all of the

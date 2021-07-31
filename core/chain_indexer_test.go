@@ -24,10 +24,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/core/rawdb"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/ethdb"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/core/rawdb"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/ethdb"
 )
 
 // Runs multiple tests with randomized parameters.

@@ -26,8 +26,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/swarm"
-	"github.com/plotozhu/MDCMainnet/swarm/testutil"
+	"github.com/gauss-project/eswarm/swarm"
+	"github.com/gauss-project/eswarm/swarm/testutil"
 )
 
 // TestCLISwarmExportImport perform the following test:

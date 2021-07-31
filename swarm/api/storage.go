@@ -20,7 +20,7 @@ import (
 	"context"
 	"path"
 
-	"github.com/plotozhu/MDCMainnet/swarm/storage"
+	"github.com/gauss-project/eswarm/swarm/storage"
 )
 
 type Response struct {

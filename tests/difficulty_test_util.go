@@ -20,11 +20,11 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/common/math"
-	"github.com/plotozhu/MDCMainnet/consensus/ethash"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/params"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/common/math"
+	"github.com/gauss-project/eswarm/consensus/ethash"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/params"
 )
 
 //go:generate gencodec -type DifficultyTest -field-override difficultyTestMarshaling -out gen_difficultytest.go

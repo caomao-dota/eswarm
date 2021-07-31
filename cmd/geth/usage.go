@@ -24,8 +24,8 @@ import (
 
 	"strings"
 
-	"github.com/plotozhu/MDCMainnet/cmd/utils"
-	"github.com/plotozhu/MDCMainnet/internal/debug"
+	"github.com/gauss-project/eswarm/cmd/utils"
+	"github.com/gauss-project/eswarm/internal/debug"
 	cli "gopkg.in/urfave/cli.v1"
 )
 

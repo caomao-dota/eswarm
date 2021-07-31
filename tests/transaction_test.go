@@ -20,7 +20,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/params"
+	"github.com/gauss-project/eswarm/params"
 )
 
 func TestTransaction(t *testing.T) {

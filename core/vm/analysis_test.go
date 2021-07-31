@@ -19,7 +19,7 @@ package vm
 import (
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/crypto"
+	"github.com/gauss-project/eswarm/crypto"
 )
 
 func TestJumpDestAnalysis(t *testing.T) {

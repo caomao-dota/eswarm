@@ -36,11 +36,11 @@ import (
 
 	"github.com/elastic/gosigar"
 	"github.com/mohae/deepcopy"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/metrics"
-	"github.com/plotozhu/MDCMainnet/p2p"
-	"github.com/plotozhu/MDCMainnet/params"
-	"github.com/plotozhu/MDCMainnet/rpc"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/metrics"
+	"github.com/gauss-project/eswarm/p2p"
+	"github.com/gauss-project/eswarm/params"
+	"github.com/gauss-project/eswarm/rpc"
 	"golang.org/x/net/websocket"
 )
 

@@ -22,11 +22,11 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/metrics"
-	"github.com/plotozhu/MDCMainnet/swarm/log"
-	whisper "github.com/plotozhu/MDCMainnet/whisper/whisperv6"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/metrics"
+	"github.com/gauss-project/eswarm/swarm/log"
+	whisper "github.com/gauss-project/eswarm/whisper/whisperv6"
 )
 
 type KeyStore struct {

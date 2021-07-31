@@ -22,8 +22,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/plotozhu/MDCMainnet/common/math"
-	"github.com/plotozhu/MDCMainnet/core/vm"
+	"github.com/gauss-project/eswarm/common/math"
+	"github.com/gauss-project/eswarm/core/vm"
 )
 
 // Compiler contains information about the parsed source

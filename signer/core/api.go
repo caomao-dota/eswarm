@@ -24,14 +24,14 @@ import (
 	"math/big"
 	"reflect"
 
-	"github.com/plotozhu/MDCMainnet/accounts"
-	"github.com/plotozhu/MDCMainnet/accounts/keystore"
-	"github.com/plotozhu/MDCMainnet/accounts/usbwallet"
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/common/hexutil"
-	"github.com/plotozhu/MDCMainnet/internal/ethapi"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/gauss-project/eswarm/accounts"
+	"github.com/gauss-project/eswarm/accounts/keystore"
+	"github.com/gauss-project/eswarm/accounts/usbwallet"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/common/hexutil"
+	"github.com/gauss-project/eswarm/internal/ethapi"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/rlp"
 )
 
 const (

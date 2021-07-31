@@ -20,9 +20,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/core/rawdb"
-	"github.com/plotozhu/MDCMainnet/eth/downloader"
-	"github.com/plotozhu/MDCMainnet/light"
+	"github.com/gauss-project/eswarm/core/rawdb"
+	"github.com/gauss-project/eswarm/eth/downloader"
+	"github.com/gauss-project/eswarm/light"
 )
 
 // syncer is responsible for periodically synchronising with the network, both

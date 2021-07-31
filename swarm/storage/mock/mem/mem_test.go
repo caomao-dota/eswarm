@@ -19,7 +19,7 @@ package mem
 import (
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/swarm/storage/mock/test"
+	"github.com/gauss-project/eswarm/swarm/storage/mock/test"
 )
 
 // TestGlobalStore is running test for a GlobalStore

@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/plotozhu/MDCMainnet/cmd/evm/internal/compiler"
+	"github.com/gauss-project/eswarm/cmd/evm/internal/compiler"
 
 	cli "gopkg.in/urfave/cli.v1"
 )

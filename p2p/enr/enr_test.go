@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/gauss-project/eswarm/rlp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

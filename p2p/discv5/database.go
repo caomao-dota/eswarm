@@ -28,9 +28,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/rlp"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/iterator"

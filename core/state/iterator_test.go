@@ -20,8 +20,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/ethdb"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/ethdb"
 )
 
 // Tests that the node iterator indeed walks over the entire database contents.

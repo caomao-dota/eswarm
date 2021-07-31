@@ -25,11 +25,11 @@ import (
 	"io/ioutil"
 	"math/big"
 
-	"github.com/plotozhu/MDCMainnet/accounts"
-	"github.com/plotozhu/MDCMainnet/accounts/keystore"
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/common/math"
-	"github.com/plotozhu/MDCMainnet/crypto"
+	"github.com/gauss-project/eswarm/accounts"
+	"github.com/gauss-project/eswarm/accounts/keystore"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/common/math"
+	"github.com/gauss-project/eswarm/crypto"
 )
 
 // SignerUIAPI implements methods Clef provides for a UI to query, in the bidirectional communication

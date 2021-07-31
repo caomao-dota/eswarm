@@ -21,7 +21,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/gauss-project/eswarm/common"
 )
 
 // precompiledTest defines the input/output pairs for precompiled contract tests.

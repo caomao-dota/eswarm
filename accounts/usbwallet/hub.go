@@ -23,9 +23,9 @@ import (
 	"time"
 
 	"github.com/karalabe/hid"
-	"github.com/plotozhu/MDCMainnet/accounts"
-	"github.com/plotozhu/MDCMainnet/event"
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/accounts"
+	"github.com/gauss-project/eswarm/event"
+	"github.com/gauss-project/eswarm/log"
 )
 
 // LedgerScheme is the protocol scheme prefixing account and wallet URLs.

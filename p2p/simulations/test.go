@@ -3,10 +3,10 @@ package simulations
 import (
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/p2p"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
-	"github.com/plotozhu/MDCMainnet/p2p/enr"
-	"github.com/plotozhu/MDCMainnet/rpc"
+	"github.com/gauss-project/eswarm/p2p"
+	"github.com/gauss-project/eswarm/p2p/enode"
+	"github.com/gauss-project/eswarm/p2p/enr"
+	"github.com/gauss-project/eswarm/rpc"
 )
 
 // NoopService is the service that does not do anything

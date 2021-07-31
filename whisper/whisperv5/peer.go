@@ -21,10 +21,10 @@ import (
 	"time"
 
 	mapset "github.com/deckarep/golang-set"
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/p2p"
-	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/p2p"
+	"github.com/gauss-project/eswarm/rlp"
 )
 
 // Peer represents a whisper protocol peer connection.

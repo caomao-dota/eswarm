@@ -29,15 +29,15 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/plotozhu/MDCMainnet/accounts"
-	"github.com/plotozhu/MDCMainnet/accounts/abi"
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/common/hexutil"
-	"github.com/plotozhu/MDCMainnet/common/math"
-	"github.com/plotozhu/MDCMainnet/consensus/clique"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/gauss-project/eswarm/accounts"
+	"github.com/gauss-project/eswarm/accounts/abi"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/common/hexutil"
+	"github.com/gauss-project/eswarm/common/math"
+	"github.com/gauss-project/eswarm/consensus/clique"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/rlp"
 )
 
 type SigFormat struct {
@@ -555,7 +555,7 @@ func (api *SignerAPI) EcRecover(ctx context.Context, data hexutil.Bytes, sig hex
 	// Note, the signature must conform to the secp256k1 curve R, S and V values, where
 	// the V value must be be 27 or 28 for legacy reasons.
 	//
-	// https://github.com/plotozhu/MDCMainnet/wiki/Management-APIs#personal_ecRecover
+	// https://github.com/gauss-project/eswarm/wiki/Management-APIs#personal_ecRecover
 	if len(sig) != 65 {
 		return common.Address{}, fmt.Errorf("signature must be 65 bytes long")
 	}

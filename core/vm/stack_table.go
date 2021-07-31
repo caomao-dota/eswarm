@@ -19,7 +19,7 @@ package vm
 import (
 	"fmt"
 
-	"github.com/plotozhu/MDCMainnet/params"
+	"github.com/gauss-project/eswarm/params"
 )
 
 func makeStackFunc(pop, push int) stackValidationFunc {

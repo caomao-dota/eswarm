@@ -23,15 +23,15 @@ import (
 	"os"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/common/hexutil"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/swarm/api"
-	swarm "github.com/plotozhu/MDCMainnet/swarm/api/client"
-	swarmhttp "github.com/plotozhu/MDCMainnet/swarm/api/http"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/feed"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/feed/lookup"
-	"github.com/plotozhu/MDCMainnet/swarm/testutil"
+	"github.com/gauss-project/eswarm/common/hexutil"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/swarm/api"
+	swarm "github.com/gauss-project/eswarm/swarm/api/client"
+	swarmhttp "github.com/gauss-project/eswarm/swarm/api/http"
+	"github.com/gauss-project/eswarm/swarm/storage/feed"
+	"github.com/gauss-project/eswarm/swarm/storage/feed/lookup"
+	"github.com/gauss-project/eswarm/swarm/testutil"
 )
 
 func TestCLIFeedUpdate(t *testing.T) {

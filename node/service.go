@@ -19,11 +19,11 @@ package node
 import (
 	"reflect"
 
-	"github.com/plotozhu/MDCMainnet/accounts"
-	"github.com/plotozhu/MDCMainnet/ethdb"
-	"github.com/plotozhu/MDCMainnet/event"
-	"github.com/plotozhu/MDCMainnet/p2p"
-	"github.com/plotozhu/MDCMainnet/rpc"
+	"github.com/gauss-project/eswarm/accounts"
+	"github.com/gauss-project/eswarm/ethdb"
+	"github.com/gauss-project/eswarm/event"
+	"github.com/gauss-project/eswarm/p2p"
+	"github.com/gauss-project/eswarm/rpc"
 )
 
 // ServiceContext is a collection of service independent options inherited from

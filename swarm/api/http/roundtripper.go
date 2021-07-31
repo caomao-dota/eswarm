@@ -20,17 +20,17 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/plotozhu/MDCMainnet/swarm/log"
+	"github.com/gauss-project/eswarm/swarm/log"
 )
 
 /*
 http roundtripper to register for bzz url scheme
-see https://github.com/plotozhu/MDCMainnet/issues/2040
+see https://github.com/gauss-project/eswarm/issues/2040
 Usage:
 
 import (
- "github.com/plotozhu/MDCMainnet/common/httpclient"
- "github.com/plotozhu/MDCMainnet/swarm/api/http"
+ "github.com/gauss-project/eswarm/common/httpclient"
+ "github.com/gauss-project/eswarm/swarm/api/http"
 )
 client := httpclient.New()
 // for (private) swarm proxy running locally

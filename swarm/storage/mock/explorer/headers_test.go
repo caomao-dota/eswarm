@@ -22,7 +22,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/swarm/storage/mock/mem"
+	"github.com/gauss-project/eswarm/swarm/storage/mock/mem"
 )
 
 // TestHandler_CORSOrigin validates that the correct Access-Control-Allow-Origin

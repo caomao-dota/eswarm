@@ -29,9 +29,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/event"
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/event"
+	"github.com/gauss-project/eswarm/log"
 )
 
 const (

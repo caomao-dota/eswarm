@@ -27,10 +27,10 @@ import (
 	"time"
 
 	"github.com/docker/docker/pkg/reexec"
-	"github.com/plotozhu/MDCMainnet/cmd/utils"
-	"github.com/plotozhu/MDCMainnet/rpc"
-	"github.com/plotozhu/MDCMainnet/swarm"
-	"github.com/plotozhu/MDCMainnet/swarm/api"
+	"github.com/gauss-project/eswarm/cmd/utils"
+	"github.com/gauss-project/eswarm/rpc"
+	"github.com/gauss-project/eswarm/swarm"
+	"github.com/gauss-project/eswarm/swarm/api"
 )
 
 func TestConfigDump(t *testing.T) {

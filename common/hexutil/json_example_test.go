@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/plotozhu/MDCMainnet/common/hexutil"
+	"github.com/gauss-project/eswarm/common/hexutil"
 )
 
 type MyType [5]byte

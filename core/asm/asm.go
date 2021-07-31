@@ -21,7 +21,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/plotozhu/MDCMainnet/core/vm"
+	"github.com/gauss-project/eswarm/core/vm"
 )
 
 // Iterator for disassembled EVM instructions

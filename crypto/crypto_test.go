@@ -26,8 +26,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/common/hexutil"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/common/hexutil"
 )
 
 var testAddrHex = "970e8128ab834e8eac17ab8e3812f010678cf791"

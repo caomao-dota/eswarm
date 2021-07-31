@@ -21,7 +21,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/swarm/state"
+	"github.com/gauss-project/eswarm/swarm/state"
 )
 
 // TestDBStore tests basic functionality of DBStore.

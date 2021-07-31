@@ -24,8 +24,8 @@ import (
 	"sync"
 
 	"github.com/olekukonko/tablewriter"
-	"github.com/plotozhu/MDCMainnet/core"
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/core"
+	"github.com/gauss-project/eswarm/log"
 )
 
 // networkStats verifies the status of network components and generates a protip

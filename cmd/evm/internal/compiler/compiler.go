@@ -20,7 +20,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/plotozhu/MDCMainnet/core/asm"
+	"github.com/gauss-project/eswarm/core/asm"
 )
 
 func Compile(fn string, src []byte, debug bool) (string, error) {

@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/swarm/log"
+	"github.com/gauss-project/eswarm/swarm/log"
 )
 
 // SwAP Swarm Accounting Protocol with

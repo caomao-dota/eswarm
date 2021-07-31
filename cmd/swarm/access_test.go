@@ -31,12 +31,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/crypto/ecies"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/swarm/api"
-	swarmapi "github.com/plotozhu/MDCMainnet/swarm/api/client"
-	"github.com/plotozhu/MDCMainnet/swarm/testutil"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/crypto/ecies"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/swarm/api"
+	swarmapi "github.com/gauss-project/eswarm/swarm/api/client"
+	"github.com/gauss-project/eswarm/swarm/testutil"
 	"golang.org/x/crypto/sha3"
 )
 

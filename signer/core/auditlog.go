@@ -19,10 +19,10 @@ package core
 import (
 	"context"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/common/hexutil"
-	"github.com/plotozhu/MDCMainnet/internal/ethapi"
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/common/hexutil"
+	"github.com/gauss-project/eswarm/internal/ethapi"
+	"github.com/gauss-project/eswarm/log"
 )
 
 type AuditLogger struct {

@@ -19,9 +19,9 @@ package core
 import (
 	"container/list"
 
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/ethdb"
-	"github.com/plotozhu/MDCMainnet/event"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/ethdb"
+	"github.com/gauss-project/eswarm/event"
 )
 
 // Implement our EthTest Manager

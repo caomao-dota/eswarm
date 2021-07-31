@@ -19,8 +19,8 @@ package miner
 import (
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/core/types"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/core/types"
 )
 
 // noopChainRetriever is an implementation of headerRetriever that always

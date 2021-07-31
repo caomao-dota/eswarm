@@ -19,7 +19,7 @@ package vm
 import (
 	"math/big"
 
-	"github.com/plotozhu/MDCMainnet/common/math"
+	"github.com/gauss-project/eswarm/common/math"
 )
 
 func memorySha3(stack *Stack) *big.Int {

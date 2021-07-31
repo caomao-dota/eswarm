@@ -22,8 +22,8 @@ import (
 	"testing"
 	"time"
 
-	p2ptest "github.com/plotozhu/MDCMainnet/p2p/testing"
-	"github.com/plotozhu/MDCMainnet/swarm/state"
+	p2ptest "github.com/gauss-project/eswarm/p2p/testing"
+	"github.com/gauss-project/eswarm/swarm/state"
 )
 
 func newHiveTester(t *testing.T, params *HiveParams, n int, store state.Store) (*bzzTester, *Hive) {

@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/plotozhu/MDCMainnet/node"
-	"github.com/plotozhu/MDCMainnet/p2p"
-	"github.com/plotozhu/MDCMainnet/rpc"
+	"github.com/gauss-project/eswarm/node"
+	"github.com/gauss-project/eswarm/p2p"
+	"github.com/gauss-project/eswarm/rpc"
 )
 
 // SampleService is a trivial network service that can be attached to a node for

@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/metrics"
+	"github.com/gauss-project/eswarm/metrics"
 )
 
 // a regexp for extracting the unit from time.Duration.String

@@ -24,8 +24,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/cmd/utils"
-	"github.com/plotozhu/MDCMainnet/core/vm"
+	"github.com/gauss-project/eswarm/cmd/utils"
+	"github.com/gauss-project/eswarm/core/vm"
 )
 
 func TestState(t *testing.T) {

@@ -27,14 +27,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common/mclock"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/ethdb"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/p2p"
-	"github.com/plotozhu/MDCMainnet/p2p/discv5"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
-	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/gauss-project/eswarm/common/mclock"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/ethdb"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/p2p"
+	"github.com/gauss-project/eswarm/p2p/discv5"
+	"github.com/gauss-project/eswarm/p2p/enode"
+	"github.com/gauss-project/eswarm/rlp"
 )
 
 const (

@@ -27,10 +27,10 @@ import (
 	"testing/quick"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
-	"github.com/plotozhu/MDCMainnet/p2p/enr"
-	"github.com/plotozhu/MDCMainnet/p2p/netutil"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/p2p/enode"
+	"github.com/gauss-project/eswarm/p2p/enr"
+	"github.com/gauss-project/eswarm/p2p/netutil"
 )
 
 func TestTable_pingReplace(t *testing.T) {

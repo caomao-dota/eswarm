@@ -17,9 +17,9 @@
 package runtime
 
 import (
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/core"
-	"github.com/plotozhu/MDCMainnet/core/vm"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/core"
+	"github.com/gauss-project/eswarm/core/vm"
 )
 
 func NewEnv(cfg *Config) *vm.EVM {

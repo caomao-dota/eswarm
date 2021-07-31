@@ -31,9 +31,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/core"
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/core"
+	"github.com/gauss-project/eswarm/log"
 	"golang.org/x/crypto/ssh/terminal"
 )
 

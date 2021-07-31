@@ -34,8 +34,8 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/plotozhu/MDCMainnet/core"
-	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/gauss-project/eswarm/core"
+	"github.com/gauss-project/eswarm/rlp"
 )
 
 type allocItem struct{ Addr, Balance *big.Int }

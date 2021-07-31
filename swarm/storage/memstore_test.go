@@ -20,7 +20,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/swarm/log"
+	"github.com/gauss-project/eswarm/swarm/log"
 )
 
 func newTestMemStore() *MemStore {

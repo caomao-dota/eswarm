@@ -21,10 +21,10 @@ import (
 	"encoding/json"
 	"hash"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/common/hexutil"
-	"github.com/plotozhu/MDCMainnet/swarm/storage"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/feed/lookup"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/common/hexutil"
+	"github.com/gauss-project/eswarm/swarm/storage"
+	"github.com/gauss-project/eswarm/swarm/storage/feed/lookup"
 )
 
 // Request represents a request to sign or signed feed update message

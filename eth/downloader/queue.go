@@ -25,11 +25,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/common/prque"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/metrics"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/common/prque"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/metrics"
 )
 
 var (

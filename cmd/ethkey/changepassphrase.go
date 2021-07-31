@@ -5,8 +5,8 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/plotozhu/MDCMainnet/accounts/keystore"
-	"github.com/plotozhu/MDCMainnet/cmd/utils"
+	"github.com/gauss-project/eswarm/accounts/keystore"
+	"github.com/gauss-project/eswarm/cmd/utils"
 	"gopkg.in/urfave/cli.v1"
 )
 

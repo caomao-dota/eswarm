@@ -21,10 +21,10 @@ import (
 	"encoding/hex"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
-	"github.com/plotozhu/MDCMainnet/swarm/network"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/p2p/enode"
+	"github.com/gauss-project/eswarm/swarm/network"
 )
 
 // BucketKeyKademlia is the key to be used for storing the kademlia

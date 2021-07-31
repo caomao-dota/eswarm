@@ -26,8 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common/bitutil"
-	"github.com/plotozhu/MDCMainnet/crypto"
+	"github.com/gauss-project/eswarm/common/bitutil"
+	"github.com/gauss-project/eswarm/crypto"
 )
 
 // bloomIndexes represents the bit indexes inside the bloom filter that belong

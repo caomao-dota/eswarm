@@ -19,8 +19,8 @@ package vm
 import (
 	"math/big"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/common/math"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/common/math"
 )
 
 // calculates the memory size required for a step

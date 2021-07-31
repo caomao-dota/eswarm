@@ -21,11 +21,11 @@ package csdc
 
 import (
 	"errors"
-	"github.com/plotozhu/MDCMainnet/accounts"
-	"github.com/plotozhu/MDCMainnet/accounts/keystore"
-	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/gauss-project/eswarm/accounts"
+	"github.com/gauss-project/eswarm/accounts/keystore"
+	"github.com/gauss-project/eswarm/common"
 	"time"
-	//"github.com/plotozhu/MDCMainnet/crypto"
+	//"github.com/gauss-project/eswarm/crypto"
 )
 
 const (

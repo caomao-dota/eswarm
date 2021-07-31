@@ -22,12 +22,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/accounts/abi/bind"
-	"github.com/plotozhu/MDCMainnet/accounts/abi/bind/backends"
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/core"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/crypto"
+	"github.com/gauss-project/eswarm/accounts/abi/bind"
+	"github.com/gauss-project/eswarm/accounts/abi/bind/backends"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/core"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/crypto"
 )
 
 var testKey, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")

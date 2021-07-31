@@ -19,7 +19,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/log"
 )
 
 // deployDashboard queries the user for various input on deploying a web-service

@@ -30,9 +30,9 @@ import (
 
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
-	"github.com/plotozhu/MDCMainnet/internal/jsre"
-	"github.com/plotozhu/MDCMainnet/internal/web3ext"
-	"github.com/plotozhu/MDCMainnet/rpc"
+	"github.com/gauss-project/eswarm/internal/jsre"
+	"github.com/gauss-project/eswarm/internal/web3ext"
+	"github.com/gauss-project/eswarm/rpc"
 	"github.com/robertkrimen/otto"
 )
 

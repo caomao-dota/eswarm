@@ -23,13 +23,13 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/plotozhu/MDCMainnet/consensus/ethash"
-	"github.com/plotozhu/MDCMainnet/core"
-	"github.com/plotozhu/MDCMainnet/core/state"
-	"github.com/plotozhu/MDCMainnet/core/vm"
-	"github.com/plotozhu/MDCMainnet/ethdb"
-	"github.com/plotozhu/MDCMainnet/params"
-	"github.com/plotozhu/MDCMainnet/trie"
+	"github.com/gauss-project/eswarm/consensus/ethash"
+	"github.com/gauss-project/eswarm/core"
+	"github.com/gauss-project/eswarm/core/state"
+	"github.com/gauss-project/eswarm/core/vm"
+	"github.com/gauss-project/eswarm/ethdb"
+	"github.com/gauss-project/eswarm/params"
+	"github.com/gauss-project/eswarm/trie"
 )
 
 func TestNodeIterator(t *testing.T) {

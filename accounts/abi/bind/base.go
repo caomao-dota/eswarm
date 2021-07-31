@@ -22,12 +22,12 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/plotozhu/MDCMainnet"
-	"github.com/plotozhu/MDCMainnet/accounts/abi"
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/event"
+	"github.com/gauss-project/eswarm"
+	"github.com/gauss-project/eswarm/accounts/abi"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/event"
 )
 
 // SignerFn is a signer function callback when a contract requires a method to

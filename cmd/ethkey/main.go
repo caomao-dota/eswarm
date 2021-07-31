@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/plotozhu/MDCMainnet/cmd/utils"
+	"github.com/gauss-project/eswarm/cmd/utils"
 	"gopkg.in/urfave/cli.v1"
 )
 

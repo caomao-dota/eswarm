@@ -19,8 +19,8 @@ package les
 import (
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common/bitutil"
-	"github.com/plotozhu/MDCMainnet/light"
+	"github.com/gauss-project/eswarm/common/bitutil"
+	"github.com/gauss-project/eswarm/light"
 )
 
 const (

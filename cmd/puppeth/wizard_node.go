@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/accounts/keystore"
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/accounts/keystore"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/log"
 )
 
 // deployNode creates a new node configuration based on some user input.

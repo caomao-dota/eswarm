@@ -19,7 +19,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/log"
 )
 
 // ensureVirtualHost checks whether a reverse-proxy is running on the specified

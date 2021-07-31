@@ -25,14 +25,14 @@ import (
 	"time"
 
 	mapset "github.com/deckarep/golang-set"
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/common/math"
-	"github.com/plotozhu/MDCMainnet/consensus"
-	"github.com/plotozhu/MDCMainnet/consensus/misc"
-	"github.com/plotozhu/MDCMainnet/core/state"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/params"
-	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/common/math"
+	"github.com/gauss-project/eswarm/consensus"
+	"github.com/gauss-project/eswarm/consensus/misc"
+	"github.com/gauss-project/eswarm/core/state"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/params"
+	"github.com/gauss-project/eswarm/rlp"
 	"golang.org/x/crypto/sha3"
 )
 

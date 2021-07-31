@@ -21,13 +21,13 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/consensus/ethash"
-	"github.com/plotozhu/MDCMainnet/core"
-	"github.com/plotozhu/MDCMainnet/core/rawdb"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/ethdb"
-	"github.com/plotozhu/MDCMainnet/params"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/consensus/ethash"
+	"github.com/gauss-project/eswarm/core"
+	"github.com/gauss-project/eswarm/core/rawdb"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/ethdb"
+	"github.com/gauss-project/eswarm/params"
 )
 
 // So we can deterministically seed different blockchains

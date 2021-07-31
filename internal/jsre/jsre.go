@@ -26,8 +26,8 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/internal/jsre/deps"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/internal/jsre/deps"
 	"github.com/robertkrimen/otto"
 )
 

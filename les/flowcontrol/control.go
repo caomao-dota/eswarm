@@ -22,8 +22,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common/mclock"
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/common/mclock"
+	"github.com/gauss-project/eswarm/log"
 )
 
 const (

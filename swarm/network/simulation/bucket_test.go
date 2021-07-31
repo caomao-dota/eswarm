@@ -20,8 +20,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/node"
-	"github.com/plotozhu/MDCMainnet/p2p/simulations/adapters"
+	"github.com/gauss-project/eswarm/node"
+	"github.com/gauss-project/eswarm/p2p/simulations/adapters"
 )
 
 // TestServiceBucket tests all bucket functionality using subtests.

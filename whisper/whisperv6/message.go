@@ -28,10 +28,10 @@ import (
 	mrand "math/rand"
 	"strconv"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/crypto/ecies"
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/crypto/ecies"
+	"github.com/gauss-project/eswarm/log"
 )
 
 // MessageParams specifies the exact way a message should be wrapped

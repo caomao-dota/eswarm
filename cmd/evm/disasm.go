@@ -22,7 +22,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/plotozhu/MDCMainnet/core/asm"
+	"github.com/gauss-project/eswarm/core/asm"
 	cli "gopkg.in/urfave/cli.v1"
 )
 

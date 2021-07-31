@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/p2p"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
-	"github.com/plotozhu/MDCMainnet/p2p/protocols"
-	"github.com/plotozhu/MDCMainnet/swarm/network"
-	"github.com/plotozhu/MDCMainnet/swarm/pot"
-	whisper "github.com/plotozhu/MDCMainnet/whisper/whisperv6"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/p2p"
+	"github.com/gauss-project/eswarm/p2p/enode"
+	"github.com/gauss-project/eswarm/p2p/protocols"
+	"github.com/gauss-project/eswarm/swarm/network"
+	"github.com/gauss-project/eswarm/swarm/pot"
+	whisper "github.com/gauss-project/eswarm/whisper/whisperv6"
 )
 
 type testCase struct {

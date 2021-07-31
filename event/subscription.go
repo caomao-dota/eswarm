@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common/mclock"
+	"github.com/gauss-project/eswarm/common/mclock"
 )
 
 // Subscription represents a stream of events. The carrier of the events is typically a

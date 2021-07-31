@@ -21,10 +21,10 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/metrics"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/metrics"
 )
 
 var (

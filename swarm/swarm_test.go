@@ -28,10 +28,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/rpc"
-	"github.com/plotozhu/MDCMainnet/swarm/api"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/rpc"
+	"github.com/gauss-project/eswarm/swarm/api"
 )
 
 // TestNewSwarm validates Swarm fields in repsect to the provided configuration.

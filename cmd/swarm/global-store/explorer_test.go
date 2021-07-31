@@ -23,9 +23,9 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/mock/explorer"
-	mockRPC "github.com/plotozhu/MDCMainnet/swarm/storage/mock/rpc"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/swarm/storage/mock/explorer"
+	mockRPC "github.com/gauss-project/eswarm/swarm/storage/mock/rpc"
 )
 
 // TestExplorer validates basic chunk explorer functionality by storing

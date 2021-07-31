@@ -22,11 +22,11 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/rpc"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/mock"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/mock/db"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/mock/mem"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/rpc"
+	"github.com/gauss-project/eswarm/swarm/storage/mock"
+	"github.com/gauss-project/eswarm/swarm/storage/mock/db"
+	"github.com/gauss-project/eswarm/swarm/storage/mock/mem"
 	cli "gopkg.in/urfave/cli.v1"
 )
 

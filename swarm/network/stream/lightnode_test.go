@@ -18,7 +18,7 @@ package stream
 import (
 	"testing"
 
-	p2ptest "github.com/plotozhu/MDCMainnet/p2p/testing"
+	p2ptest "github.com/gauss-project/eswarm/p2p/testing"
 )
 
 // This test checks the default behavior of the server, that is

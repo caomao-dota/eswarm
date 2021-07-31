@@ -26,12 +26,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/consensus/ethash"
-	"github.com/plotozhu/MDCMainnet/core"
-	"github.com/plotozhu/MDCMainnet/eth"
-	"github.com/plotozhu/MDCMainnet/internal/jsre"
-	"github.com/plotozhu/MDCMainnet/node"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/consensus/ethash"
+	"github.com/gauss-project/eswarm/core"
+	"github.com/gauss-project/eswarm/eth"
+	"github.com/gauss-project/eswarm/internal/jsre"
+	"github.com/gauss-project/eswarm/node"
 )
 
 const (

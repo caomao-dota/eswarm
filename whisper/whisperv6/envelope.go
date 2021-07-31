@@ -26,11 +26,11 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/common/math"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/crypto/ecies"
-	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/common/math"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/crypto/ecies"
+	"github.com/gauss-project/eswarm/rlp"
 )
 
 // Envelope represents a clear-text data packet to transmit through the Whisper

@@ -20,8 +20,8 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/crypto"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/crypto"
 )
 
 // Tests that transactions can be added to strict lists and list contents and

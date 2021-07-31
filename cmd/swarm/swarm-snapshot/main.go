@@ -19,8 +19,8 @@ package main
 import (
 	"os"
 
-	"github.com/plotozhu/MDCMainnet/cmd/utils"
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/cmd/utils"
+	"github.com/gauss-project/eswarm/log"
 	cli "gopkg.in/urfave/cli.v1"
 )
 

@@ -21,10 +21,10 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/core/vm"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/params"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/core/vm"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/params"
 )
 
 var (

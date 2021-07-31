@@ -21,9 +21,9 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/plotozhu/MDCMainnet/core/state"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/params"
+	"github.com/gauss-project/eswarm/core/state"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/params"
 )
 
 var (

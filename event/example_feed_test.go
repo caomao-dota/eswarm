@@ -19,7 +19,7 @@ package event_test
 import (
 	"fmt"
 
-	"github.com/plotozhu/MDCMainnet/event"
+	"github.com/gauss-project/eswarm/event"
 )
 
 func ExampleFeed_acknowledgedEvents() {

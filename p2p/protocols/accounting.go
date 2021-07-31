@@ -19,7 +19,7 @@ package protocols
 import (
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/metrics"
+	"github.com/gauss-project/eswarm/metrics"
 )
 
 // define some metrics

@@ -23,9 +23,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/swarm/api"
-	"github.com/plotozhu/MDCMainnet/swarm/storage"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/feed"
+	"github.com/gauss-project/eswarm/swarm/api"
+	"github.com/gauss-project/eswarm/swarm/storage"
+	"github.com/gauss-project/eswarm/swarm/storage/feed"
 )
 
 type TestServer interface {

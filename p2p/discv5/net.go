@@ -24,12 +24,12 @@ import (
 	"net"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/common/mclock"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/p2p/netutil"
-	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/common/mclock"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/p2p/netutil"
+	"github.com/gauss-project/eswarm/rlp"
 	"golang.org/x/crypto/sha3"
 )
 

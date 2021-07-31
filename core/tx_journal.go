@@ -21,10 +21,10 @@ import (
 	"io"
 	"os"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/rlp"
 )
 
 // errNoActiveJournal is returned if a transaction is attempted to be inserted

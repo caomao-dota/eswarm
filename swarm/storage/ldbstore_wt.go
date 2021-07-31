@@ -37,10 +37,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/plotozhu/MDCMainnet/metrics"
-	"github.com/plotozhu/MDCMainnet/rlp"
-	"github.com/plotozhu/MDCMainnet/swarm/log"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/mock"
+	"github.com/gauss-project/eswarm/metrics"
+	"github.com/gauss-project/eswarm/rlp"
+	"github.com/gauss-project/eswarm/swarm/log"
+	"github.com/gauss-project/eswarm/swarm/storage/mock"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 

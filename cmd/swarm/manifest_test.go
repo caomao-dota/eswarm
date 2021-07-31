@@ -24,9 +24,9 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/swarm/api"
-	swarm "github.com/plotozhu/MDCMainnet/swarm/api/client"
-	swarmhttp "github.com/plotozhu/MDCMainnet/swarm/api/http"
+	"github.com/gauss-project/eswarm/swarm/api"
+	swarm "github.com/gauss-project/eswarm/swarm/api/client"
+	swarmhttp "github.com/gauss-project/eswarm/swarm/api/http"
 )
 
 // TestManifestChange tests manifest add, update and remove

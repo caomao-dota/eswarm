@@ -17,8 +17,8 @@
 package eth
 
 import (
-	"github.com/plotozhu/MDCMainnet/metrics"
-	"github.com/plotozhu/MDCMainnet/p2p"
+	"github.com/gauss-project/eswarm/metrics"
+	"github.com/gauss-project/eswarm/p2p"
 )
 
 var (

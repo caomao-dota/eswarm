@@ -30,9 +30,9 @@ import (
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/swarm/api"
-	"github.com/plotozhu/MDCMainnet/swarm/log"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/swarm/api"
+	"github.com/gauss-project/eswarm/swarm/log"
 )
 
 var (

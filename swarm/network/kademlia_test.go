@@ -22,12 +22,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/p2p"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
-	"github.com/plotozhu/MDCMainnet/p2p/protocols"
-	"github.com/plotozhu/MDCMainnet/swarm/pot"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/p2p"
+	"github.com/gauss-project/eswarm/p2p/enode"
+	"github.com/gauss-project/eswarm/p2p/protocols"
+	"github.com/gauss-project/eswarm/swarm/pot"
 )
 
 func init() {

@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/plotozhu/MDCMainnet/swarm/chunk"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/encryption"
+	"github.com/gauss-project/eswarm/swarm/chunk"
+	"github.com/gauss-project/eswarm/swarm/storage/encryption"
 	"golang.org/x/crypto/sha3"
 )
 

@@ -19,7 +19,7 @@
 package fetcher
 
 import (
-	"github.com/plotozhu/MDCMainnet/metrics"
+	"github.com/gauss-project/eswarm/metrics"
 )
 
 var (

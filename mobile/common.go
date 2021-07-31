@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/gauss-project/eswarm/common"
 )
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.

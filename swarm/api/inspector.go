@@ -20,8 +20,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/plotozhu/MDCMainnet/swarm/network"
-	"github.com/plotozhu/MDCMainnet/swarm/storage"
+	"github.com/gauss-project/eswarm/swarm/network"
+	"github.com/gauss-project/eswarm/swarm/storage"
 )
 
 type Inspector struct {

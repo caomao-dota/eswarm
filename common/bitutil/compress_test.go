@@ -21,7 +21,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/common/hexutil"
+	"github.com/gauss-project/eswarm/common/hexutil"
 )
 
 // Tests that data bitset encoding and decoding works and is bijective.

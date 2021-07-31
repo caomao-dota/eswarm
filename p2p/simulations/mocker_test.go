@@ -27,7 +27,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
+	"github.com/gauss-project/eswarm/p2p/enode"
 )
 
 func TestMocker(t *testing.T) {

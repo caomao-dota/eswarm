@@ -20,9 +20,9 @@ import (
 	"context"
 	"sync"
 
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/swarm/chunk"
-	"github.com/plotozhu/MDCMainnet/swarm/shed"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/swarm/chunk"
+	"github.com/gauss-project/eswarm/swarm/shed"
 )
 
 // SubscribePush returns a channel that provides storage chunks with ordering from push syncing index.

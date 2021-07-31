@@ -21,13 +21,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/common/hexutil"
-	"github.com/plotozhu/MDCMainnet/crypto"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/common/hexutil"
+	"github.com/gauss-project/eswarm/crypto"
 
-	"github.com/plotozhu/MDCMainnet/cmd/utils"
-	swarm "github.com/plotozhu/MDCMainnet/swarm/api/client"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/feed"
+	"github.com/gauss-project/eswarm/cmd/utils"
+	swarm "github.com/gauss-project/eswarm/swarm/api/client"
+	"github.com/gauss-project/eswarm/swarm/storage/feed"
 	"gopkg.in/urfave/cli.v1"
 )
 

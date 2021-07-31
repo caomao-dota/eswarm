@@ -24,7 +24,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/gauss-project/eswarm/common"
 )
 
 func TestPack(t *testing.T) {

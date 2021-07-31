@@ -27,18 +27,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/swarm/testutil"
+	"github.com/gauss-project/eswarm/swarm/testutil"
 
 	colorable "github.com/mattn/go-colorable"
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/node"
-	"github.com/plotozhu/MDCMainnet/p2p"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
-	"github.com/plotozhu/MDCMainnet/p2p/simulations"
-	"github.com/plotozhu/MDCMainnet/p2p/simulations/adapters"
-	"github.com/plotozhu/MDCMainnet/swarm/network"
-	"github.com/plotozhu/MDCMainnet/swarm/state"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/node"
+	"github.com/gauss-project/eswarm/p2p"
+	"github.com/gauss-project/eswarm/p2p/enode"
+	"github.com/gauss-project/eswarm/p2p/simulations"
+	"github.com/gauss-project/eswarm/p2p/simulations/adapters"
+	"github.com/gauss-project/eswarm/swarm/network"
+	"github.com/gauss-project/eswarm/swarm/state"
 )
 
 // serviceName is used with the exec adapter so the exec'd binary knows which

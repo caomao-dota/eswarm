@@ -24,8 +24,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
-	"github.com/plotozhu/MDCMainnet/p2p/enr"
+	"github.com/gauss-project/eswarm/p2p/enode"
+	"github.com/gauss-project/eswarm/p2p/enr"
 )
 
 var nullNode *enode.Node

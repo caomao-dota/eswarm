@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/log"
 )
 
 //TestReporter tests that the metrics being collected for p2p accounting

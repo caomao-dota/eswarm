@@ -27,7 +27,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/ethdb"
+	"github.com/gauss-project/eswarm/ethdb"
 )
 
 func newTestLDB() (*ethdb.LDBDatabase, func()) {

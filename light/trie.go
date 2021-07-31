@@ -21,12 +21,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/core/state"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/ethdb"
-	"github.com/plotozhu/MDCMainnet/trie"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/core/state"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/ethdb"
+	"github.com/gauss-project/eswarm/trie"
 )
 
 func NewState(ctx context.Context, head *types.Header, odr OdrBackend) *state.StateDB {

@@ -22,9 +22,9 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/rlp"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)

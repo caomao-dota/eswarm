@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/plotozhu/MDCMainnet/common/math"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/p2p/enr"
-	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/gauss-project/eswarm/common/math"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/p2p/enr"
+	"github.com/gauss-project/eswarm/rlp"
 	"golang.org/x/crypto/sha3"
 )
 

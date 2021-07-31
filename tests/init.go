@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/plotozhu/MDCMainnet/params"
+	"github.com/gauss-project/eswarm/params"
 )
 
 // Forks table defines supported forks and their chain config.

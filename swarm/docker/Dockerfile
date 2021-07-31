@@ -24,20 +24,20 @@ RUN apt-get -y install git gcc g++   autoconf automake libtool make govendor
 
 RUN  mkdir -p $GOPATH/src/github.com/plotozhu/ && \
     cd $GOPATH/src/github.com/plotozhu && \
-    git clone https://3823a1162e4a52f6e284610be5151c4204a900e7:@github.com/plotozhu/MDCMainnet && \
-    cd $GOPATH/src/github.com/plotozhu/MDCMainnet && \
-    git checkout ${VERSION}    && cd $GOPATH/src/github.com/plotozhu/MDCMainnet &&\
+    git clone https://3823a1162e4a52f6e284610be5151c4204a900e7:@github.com/gauss-project/eswarm && \
+    cd $GOPATH/src/github.com/gauss-project/eswarm && \
+    git checkout ${VERSION}    && cd $GOPATH/src/github.com/gauss-project/eswarm &&\
     mkdir -p vendor && mv vendor_bak.json vendor/vendor.json
 
-RUN     cd $GOPATH/src/github.com/plotozhu/MDCMainnet &&\
+RUN     cd $GOPATH/src/github.com/gauss-project/eswarm &&\
          govendor sync
 
-RUN     cd $GOPATH/src/github.com/plotozhu/MDCMainnet/vendor/github.com/plotozhu/wiredtiger-go && \
+RUN     cd $GOPATH/src/github.com/gauss-project/eswarm/vendor/github.com/plotozhu/wiredtiger-go && \
         git pull  && sh install-deps.sh
 
 
 
-RUN    cd  $GOPATH/src/github.com/plotozhu/MDCMainnet && \
+RUN    cd  $GOPATH/src/github.com/gauss-project/eswarm && \
     go install -ldflags "-X main.gitCommit=${VERSION}" ./cmd/swarm && \
     go install -ldflags "-X main.gitCommit=${VERSION}" ./cmd/swarm/swarm-smoke && \
     go install -ldflags "-X main.gitCommit=${VERSION}" ./cmd/swarm/global-store && \

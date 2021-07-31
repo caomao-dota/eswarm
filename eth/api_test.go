@@ -21,9 +21,9 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/core/state"
-	"github.com/plotozhu/MDCMainnet/ethdb"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/core/state"
+	"github.com/gauss-project/eswarm/ethdb"
 )
 
 var dumper = spew.ConfigState{Indent: "    "}

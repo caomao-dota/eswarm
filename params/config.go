@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/gauss-project/eswarm/common"
 )
 
 // Genesis hashes to enforce below configs on.

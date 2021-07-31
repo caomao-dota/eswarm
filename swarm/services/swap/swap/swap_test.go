@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/gauss-project/eswarm/common"
 )
 
 type testInPayment struct {

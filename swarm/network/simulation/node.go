@@ -24,10 +24,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
-	"github.com/plotozhu/MDCMainnet/p2p/simulations"
-	"github.com/plotozhu/MDCMainnet/p2p/simulations/adapters"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/p2p/enode"
+	"github.com/gauss-project/eswarm/p2p/simulations"
+	"github.com/gauss-project/eswarm/p2p/simulations/adapters"
 )
 
 // NodeIDs returns NodeIDs for all nodes in the network.

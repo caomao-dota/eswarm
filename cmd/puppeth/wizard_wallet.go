@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/log"
 )
 
 // deployWallet creates a new web wallet based on some user input.

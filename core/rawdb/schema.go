@@ -20,8 +20,8 @@ package rawdb
 import (
 	"encoding/binary"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/metrics"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/metrics"
 )
 
 // The fields below define the low level database schema prefixing.

@@ -25,8 +25,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/plotozhu/MDCMainnet/accounts/abi"
-	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/gauss-project/eswarm/accounts/abi"
+	"github.com/gauss-project/eswarm/common"
 )
 
 type decodedArgument struct {

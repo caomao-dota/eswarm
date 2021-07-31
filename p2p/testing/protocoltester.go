@@ -31,14 +31,14 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/node"
-	"github.com/plotozhu/MDCMainnet/p2p"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
-	"github.com/plotozhu/MDCMainnet/p2p/simulations"
-	"github.com/plotozhu/MDCMainnet/p2p/simulations/adapters"
-	"github.com/plotozhu/MDCMainnet/rlp"
-	"github.com/plotozhu/MDCMainnet/rpc"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/node"
+	"github.com/gauss-project/eswarm/p2p"
+	"github.com/gauss-project/eswarm/p2p/enode"
+	"github.com/gauss-project/eswarm/p2p/simulations"
+	"github.com/gauss-project/eswarm/p2p/simulations/adapters"
+	"github.com/gauss-project/eswarm/rlp"
+	"github.com/gauss-project/eswarm/rpc"
 )
 
 // ProtocolTester is the tester environment used for unit testing protocol

@@ -23,9 +23,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/metrics"
-	"github.com/plotozhu/MDCMainnet/swarm/log"
-	"github.com/plotozhu/MDCMainnet/swarm/storage"
+	"github.com/gauss-project/eswarm/metrics"
+	"github.com/gauss-project/eswarm/swarm/log"
+	"github.com/gauss-project/eswarm/swarm/storage"
 )
 
 const (

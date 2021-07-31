@@ -28,17 +28,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/common/hexutil"
-	"github.com/plotozhu/MDCMainnet/core"
-	"github.com/plotozhu/MDCMainnet/core/rawdb"
-	"github.com/plotozhu/MDCMainnet/core/state"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/internal/ethapi"
-	"github.com/plotozhu/MDCMainnet/params"
-	"github.com/plotozhu/MDCMainnet/rlp"
-	"github.com/plotozhu/MDCMainnet/rpc"
-	"github.com/plotozhu/MDCMainnet/trie"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/common/hexutil"
+	"github.com/gauss-project/eswarm/core"
+	"github.com/gauss-project/eswarm/core/rawdb"
+	"github.com/gauss-project/eswarm/core/state"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/internal/ethapi"
+	"github.com/gauss-project/eswarm/params"
+	"github.com/gauss-project/eswarm/rlp"
+	"github.com/gauss-project/eswarm/rpc"
+	"github.com/gauss-project/eswarm/trie"
 )
 
 // PublicEthereumAPI provides an API to access Ethereum full node-related

@@ -26,13 +26,13 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/plotozhu/MDCMainnet/accounts"
-	"github.com/plotozhu/MDCMainnet/ethdb"
-	"github.com/plotozhu/MDCMainnet/event"
-	"github.com/plotozhu/MDCMainnet/internal/debug"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/p2p"
-	"github.com/plotozhu/MDCMainnet/rpc"
+	"github.com/gauss-project/eswarm/accounts"
+	"github.com/gauss-project/eswarm/ethdb"
+	"github.com/gauss-project/eswarm/event"
+	"github.com/gauss-project/eswarm/internal/debug"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/p2p"
+	"github.com/gauss-project/eswarm/rpc"
 	"github.com/prometheus/prometheus/util/flock"
 )
 

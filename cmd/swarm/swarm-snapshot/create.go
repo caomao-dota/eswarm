@@ -29,12 +29,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/node"
-	"github.com/plotozhu/MDCMainnet/p2p/simulations"
-	"github.com/plotozhu/MDCMainnet/p2p/simulations/adapters"
-	"github.com/plotozhu/MDCMainnet/swarm/network"
-	"github.com/plotozhu/MDCMainnet/swarm/network/simulation"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/node"
+	"github.com/gauss-project/eswarm/p2p/simulations"
+	"github.com/gauss-project/eswarm/p2p/simulations/adapters"
+	"github.com/gauss-project/eswarm/swarm/network"
+	"github.com/gauss-project/eswarm/swarm/network/simulation"
 	cli "gopkg.in/urfave/cli.v1"
 )
 

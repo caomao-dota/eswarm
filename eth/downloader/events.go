@@ -16,7 +16,7 @@
 
 package downloader
 
-import "github.com/plotozhu/MDCMainnet/core/types"
+import "github.com/gauss-project/eswarm/core/types"
 
 type DoneEvent struct {
 	Latest *types.Header

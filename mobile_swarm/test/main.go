@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/plotozhu/MDCMainnet/mobile_swarm"
+	"github.com/gauss-project/eswarm/mobile_swarm"
 	"time"
 )
 

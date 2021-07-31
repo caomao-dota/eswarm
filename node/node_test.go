@@ -24,9 +24,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/p2p"
-	"github.com/plotozhu/MDCMainnet/rpc"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/p2p"
+	"github.com/gauss-project/eswarm/rpc"
 )
 
 var (

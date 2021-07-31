@@ -27,7 +27,7 @@ import (
 
 	"strings"
 
-	"github.com/plotozhu/MDCMainnet/p2p/enr"
+	"github.com/gauss-project/eswarm/p2p/enr"
 )
 
 type NodeTypeOption uint8

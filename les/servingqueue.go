@@ -19,8 +19,8 @@ package les
 import (
 	"sync"
 
-	"github.com/plotozhu/MDCMainnet/common/mclock"
-	"github.com/plotozhu/MDCMainnet/common/prque"
+	"github.com/gauss-project/eswarm/common/mclock"
+	"github.com/gauss-project/eswarm/common/prque"
 )
 
 // servingQueue allows running tasks in a limited number of threads and puts the

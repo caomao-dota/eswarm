@@ -13,12 +13,12 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
-	"github.com/plotozhu/MDCMainnet/common/hexutil"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/metrics"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/feed"
-	"github.com/plotozhu/MDCMainnet/swarm/testutil"
+	"github.com/gauss-project/eswarm/common/hexutil"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/metrics"
+	"github.com/gauss-project/eswarm/swarm/storage/feed"
+	"github.com/gauss-project/eswarm/swarm/testutil"
 	cli "gopkg.in/urfave/cli.v1"
 )
 

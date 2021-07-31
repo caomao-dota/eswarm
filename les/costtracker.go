@@ -23,11 +23,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common/mclock"
-	"github.com/plotozhu/MDCMainnet/eth"
-	"github.com/plotozhu/MDCMainnet/ethdb"
-	"github.com/plotozhu/MDCMainnet/les/flowcontrol"
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/common/mclock"
+	"github.com/gauss-project/eswarm/eth"
+	"github.com/gauss-project/eswarm/ethdb"
+	"github.com/gauss-project/eswarm/les/flowcontrol"
+	"github.com/gauss-project/eswarm/log"
 )
 
 const makeCostStats = false // make request cost statistics during operation

@@ -26,10 +26,10 @@ package rpc
 import (
 	"fmt"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/rpc"
-	"github.com/plotozhu/MDCMainnet/swarm/log"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/mock"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/rpc"
+	"github.com/gauss-project/eswarm/swarm/log"
+	"github.com/gauss-project/eswarm/swarm/storage/mock"
 )
 
 // GlobalStore is rpc.Client that connects to a centralized mock store.

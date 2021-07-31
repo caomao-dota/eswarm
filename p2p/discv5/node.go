@@ -30,8 +30,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/crypto"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/crypto"
 )
 
 // Node represents a host on the network.

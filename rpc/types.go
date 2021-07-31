@@ -22,7 +22,7 @@ import (
 	"math"
 	"strings"
 
-	"github.com/plotozhu/MDCMainnet/common/hexutil"
+	"github.com/gauss-project/eswarm/common/hexutil"
 )
 
 // API describes the set of methods offered over the RPC interface

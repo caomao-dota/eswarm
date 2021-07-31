@@ -21,8 +21,8 @@ package geth
 import (
 	"math/big"
 
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/ethclient"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/ethclient"
 )
 
 // EthereumClient provides access to the Ethereum APIs.

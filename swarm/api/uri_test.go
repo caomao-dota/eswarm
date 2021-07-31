@@ -21,7 +21,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/swarm/storage"
+	"github.com/gauss-project/eswarm/swarm/storage"
 )
 
 func TestParseURI(t *testing.T) {

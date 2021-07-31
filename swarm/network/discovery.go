@@ -19,10 +19,10 @@ package network
 import (
 	"context"
 	"fmt"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
+	"github.com/gauss-project/eswarm/p2p/enode"
 	"sync"
 
-	"github.com/plotozhu/MDCMainnet/swarm/pot"
+	"github.com/gauss-project/eswarm/swarm/pot"
 )
 
 // discovery bzz extension for requesting and relaying node address records

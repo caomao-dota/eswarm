@@ -27,7 +27,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/p2p/simulations"
+	"github.com/gauss-project/eswarm/p2p/simulations"
 )
 
 // TestSnapshotCreate is a high level e2e test that tests for snapshot generation.

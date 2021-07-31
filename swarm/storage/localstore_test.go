@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/swarm/chunk"
+	"github.com/gauss-project/eswarm/swarm/chunk"
 )
 
 var (

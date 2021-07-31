@@ -5,7 +5,7 @@ package whisperv6
 import (
 	"encoding/json"
 
-	"github.com/plotozhu/MDCMainnet/common/hexutil"
+	"github.com/gauss-project/eswarm/common/hexutil"
 )
 
 var _ = (*newMessageOverride)(nil)

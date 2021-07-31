@@ -25,9 +25,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/rpc"
-	mockRPC "github.com/plotozhu/MDCMainnet/swarm/storage/mock/rpc"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/rpc"
+	mockRPC "github.com/gauss-project/eswarm/swarm/storage/mock/rpc"
 )
 
 // TestHTTP_InMemory tests in-memory global store that exposes

@@ -25,9 +25,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	whisper "github.com/plotozhu/MDCMainnet/whisper/whisperv6"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/crypto"
+	whisper "github.com/gauss-project/eswarm/whisper/whisperv6"
 )
 
 const powRequirement = 0.00001

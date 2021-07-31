@@ -21,8 +21,8 @@ package geth
 import (
 	"errors"
 
-	ethereum "github.com/plotozhu/MDCMainnet"
-	"github.com/plotozhu/MDCMainnet/common"
+	ethereum "github.com/gauss-project/eswarm"
+	"github.com/gauss-project/eswarm/common"
 )
 
 // Subscription represents an event subscription where events are

@@ -45,12 +45,12 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/p2p"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
-	"github.com/plotozhu/MDCMainnet/p2p/simulations"
-	"github.com/plotozhu/MDCMainnet/p2p/simulations/adapters"
-	"github.com/plotozhu/MDCMainnet/rpc"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/p2p"
+	"github.com/gauss-project/eswarm/p2p/enode"
+	"github.com/gauss-project/eswarm/p2p/simulations"
+	"github.com/gauss-project/eswarm/p2p/simulations/adapters"
+	"github.com/gauss-project/eswarm/rpc"
 	"gopkg.in/urfave/cli.v1"
 )
 

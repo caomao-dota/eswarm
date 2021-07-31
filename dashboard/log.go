@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/mohae/deepcopy"
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/log"
 	"github.com/rjeczalik/notify"
 )
 

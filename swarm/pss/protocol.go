@@ -24,10 +24,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/p2p"
-	"github.com/plotozhu/MDCMainnet/p2p/protocols"
-	"github.com/plotozhu/MDCMainnet/rlp"
-	"github.com/plotozhu/MDCMainnet/swarm/log"
+	"github.com/gauss-project/eswarm/p2p"
+	"github.com/gauss-project/eswarm/p2p/protocols"
+	"github.com/gauss-project/eswarm/rlp"
+	"github.com/gauss-project/eswarm/swarm/log"
 )
 
 const (

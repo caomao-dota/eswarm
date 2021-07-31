@@ -22,12 +22,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/internal/ethapi"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/signer/core"
-	"github.com/plotozhu/MDCMainnet/signer/rules/deps"
-	"github.com/plotozhu/MDCMainnet/signer/storage"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/internal/ethapi"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/signer/core"
+	"github.com/gauss-project/eswarm/signer/rules/deps"
+	"github.com/gauss-project/eswarm/signer/storage"
 	"github.com/robertkrimen/otto"
 )
 

@@ -3,8 +3,8 @@ package les
 import (
 	"fmt"
 
-	"github.com/plotozhu/MDCMainnet/eth"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
+	"github.com/gauss-project/eswarm/eth"
+	"github.com/gauss-project/eswarm/p2p/enode"
 )
 
 type ulc struct {

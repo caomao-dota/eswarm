@@ -22,15 +22,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/consensus"
-	"github.com/plotozhu/MDCMainnet/core"
-	"github.com/plotozhu/MDCMainnet/core/state"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/eth/downloader"
-	"github.com/plotozhu/MDCMainnet/event"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/params"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/consensus"
+	"github.com/gauss-project/eswarm/core"
+	"github.com/gauss-project/eswarm/core/state"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/eth/downloader"
+	"github.com/gauss-project/eswarm/event"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/params"
 )
 
 // Backend wraps all methods required for mining.

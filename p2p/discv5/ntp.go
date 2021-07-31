@@ -26,7 +26,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/log"
 )
 
 const (

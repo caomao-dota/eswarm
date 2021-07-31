@@ -34,11 +34,11 @@ import (
 
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/pborman/uuid"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/metrics"
-	"github.com/plotozhu/MDCMainnet/swarm/api"
-	"github.com/plotozhu/MDCMainnet/swarm/api/client"
-	"github.com/plotozhu/MDCMainnet/swarm/spancontext"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/metrics"
+	"github.com/gauss-project/eswarm/swarm/api"
+	"github.com/gauss-project/eswarm/swarm/api/client"
+	"github.com/gauss-project/eswarm/swarm/spancontext"
 	cli "gopkg.in/urfave/cli.v1"
 )
 

@@ -1,7 +1,7 @@
 package p2p
 
 import (
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
+	"github.com/gauss-project/eswarm/p2p/enode"
 )
 
 type FiterItem interface {

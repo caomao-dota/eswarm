@@ -20,19 +20,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/plotozhu/MDCMainnet/swarm/tracing"
+	"github.com/gauss-project/eswarm/swarm/tracing"
 	"sync"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
-	"github.com/plotozhu/MDCMainnet/metrics"
-	"github.com/plotozhu/MDCMainnet/p2p/protocols"
-	"github.com/plotozhu/MDCMainnet/swarm/log"
-	pq "github.com/plotozhu/MDCMainnet/swarm/network/priorityqueue"
-	"github.com/plotozhu/MDCMainnet/swarm/network/stream/intervals"
-	"github.com/plotozhu/MDCMainnet/swarm/spancontext"
-	"github.com/plotozhu/MDCMainnet/swarm/state"
-	"github.com/plotozhu/MDCMainnet/swarm/storage"
+	"github.com/gauss-project/eswarm/metrics"
+	"github.com/gauss-project/eswarm/p2p/protocols"
+	"github.com/gauss-project/eswarm/swarm/log"
+	pq "github.com/gauss-project/eswarm/swarm/network/priorityqueue"
+	"github.com/gauss-project/eswarm/swarm/network/stream/intervals"
+	"github.com/gauss-project/eswarm/swarm/spancontext"
+	"github.com/gauss-project/eswarm/swarm/state"
+	"github.com/gauss-project/eswarm/swarm/storage"
 )
 
 const (

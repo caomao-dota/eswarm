@@ -19,7 +19,7 @@ package downloader
 import (
 	"fmt"
 
-	"github.com/plotozhu/MDCMainnet/core/types"
+	"github.com/gauss-project/eswarm/core/types"
 )
 
 // peerDropFn is a callback type for dropping a peer detected as malicious.

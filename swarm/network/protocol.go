@@ -20,18 +20,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/plotozhu/MDCMainnet/p2p/enr"
+	"github.com/gauss-project/eswarm/p2p/enr"
 	"net"
 	"sync"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/p2p"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
-	"github.com/plotozhu/MDCMainnet/p2p/protocols"
-	"github.com/plotozhu/MDCMainnet/rpc"
-	"github.com/plotozhu/MDCMainnet/swarm/log"
-	"github.com/plotozhu/MDCMainnet/swarm/state"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/p2p"
+	"github.com/gauss-project/eswarm/p2p/enode"
+	"github.com/gauss-project/eswarm/p2p/protocols"
+	"github.com/gauss-project/eswarm/rpc"
+	"github.com/gauss-project/eswarm/swarm/log"
+	"github.com/gauss-project/eswarm/swarm/state"
 )
 
 const (

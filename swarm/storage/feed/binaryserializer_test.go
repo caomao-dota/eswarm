@@ -21,7 +21,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/common/hexutil"
+	"github.com/gauss-project/eswarm/common/hexutil"
 )
 
 // KV mocks a key value store

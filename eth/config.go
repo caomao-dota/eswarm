@@ -24,13 +24,13 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/common/hexutil"
-	"github.com/plotozhu/MDCMainnet/consensus/ethash"
-	"github.com/plotozhu/MDCMainnet/core"
-	"github.com/plotozhu/MDCMainnet/eth/downloader"
-	"github.com/plotozhu/MDCMainnet/eth/gasprice"
-	"github.com/plotozhu/MDCMainnet/params"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/common/hexutil"
+	"github.com/gauss-project/eswarm/consensus/ethash"
+	"github.com/gauss-project/eswarm/core"
+	"github.com/gauss-project/eswarm/eth/downloader"
+	"github.com/gauss-project/eswarm/eth/gasprice"
+	"github.com/gauss-project/eswarm/params"
 )
 
 // DefaultConfig contains default settings for use on the Ethereum main net.

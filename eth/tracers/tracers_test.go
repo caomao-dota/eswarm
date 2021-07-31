@@ -27,17 +27,17 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/common/hexutil"
-	"github.com/plotozhu/MDCMainnet/common/math"
-	"github.com/plotozhu/MDCMainnet/core"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/core/vm"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/ethdb"
-	"github.com/plotozhu/MDCMainnet/params"
-	"github.com/plotozhu/MDCMainnet/rlp"
-	"github.com/plotozhu/MDCMainnet/tests"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/common/hexutil"
+	"github.com/gauss-project/eswarm/common/math"
+	"github.com/gauss-project/eswarm/core"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/core/vm"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/ethdb"
+	"github.com/gauss-project/eswarm/params"
+	"github.com/gauss-project/eswarm/rlp"
+	"github.com/gauss-project/eswarm/tests"
 )
 
 // To generate a new callTracer test, copy paste the makeTest method below into

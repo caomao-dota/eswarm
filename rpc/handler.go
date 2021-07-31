@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/log"
 )
 
 // handler handles JSON-RPC messages. There is one handler per connection. Note that

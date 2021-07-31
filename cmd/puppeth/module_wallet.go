@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/log"
 )
 
 // walletDockerfile is the Dockerfile required to run a web wallet.

@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/plotozhu/MDCMainnet/crypto"
+	"github.com/gauss-project/eswarm/crypto"
 )
 
 // Method represents a callable given a `Name` and whether the method is a constant.

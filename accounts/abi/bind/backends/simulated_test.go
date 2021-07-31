@@ -21,13 +21,13 @@ import (
 	"math/big"
 	"testing"
 
-	ethereum "github.com/plotozhu/MDCMainnet"
-	"github.com/plotozhu/MDCMainnet/accounts/abi/bind"
-	"github.com/plotozhu/MDCMainnet/accounts/abi/bind/backends"
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/core"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/crypto"
+	ethereum "github.com/gauss-project/eswarm"
+	"github.com/gauss-project/eswarm/accounts/abi/bind"
+	"github.com/gauss-project/eswarm/accounts/abi/bind/backends"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/core"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/crypto"
 )
 
 func TestSimulatedBackend(t *testing.T) {

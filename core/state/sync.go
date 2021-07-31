@@ -19,9 +19,9 @@ package state
 import (
 	"bytes"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/rlp"
-	"github.com/plotozhu/MDCMainnet/trie"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/rlp"
+	"github.com/gauss-project/eswarm/trie"
 )
 
 // NewStateSync create a new state trie download scheduler.

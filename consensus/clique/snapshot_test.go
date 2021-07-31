@@ -22,13 +22,13 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/core"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/core/vm"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/ethdb"
-	"github.com/plotozhu/MDCMainnet/params"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/core"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/core/vm"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/ethdb"
+	"github.com/gauss-project/eswarm/params"
 )
 
 // testerAccountPool is a pool to maintain currently active tester accounts,
@@ -363,7 +363,7 @@ func TestClique(t *testing.T) {
 			failure: errRecentlySigned,
 		}, {
 			// Recent signatures should not reset on checkpoint blocks imported in a new
-			// batch (https://github.com/plotozhu/MDCMainnet/issues/17593). Whilst this
+			// batch (https://github.com/gauss-project/eswarm/issues/17593). Whilst this
 			// seems overly specific and weird, it was a Rinkeby consensus split.
 			epoch:   3,
 			signers: []string{"A", "B", "C"},

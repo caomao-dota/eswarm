@@ -30,10 +30,10 @@ import (
 	"testing"
 
 	colorable "github.com/mattn/go-colorable"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/swarm/api"
-	"github.com/plotozhu/MDCMainnet/swarm/storage"
-	"github.com/plotozhu/MDCMainnet/swarm/testutil"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/swarm/api"
+	"github.com/gauss-project/eswarm/swarm/storage"
+	"github.com/gauss-project/eswarm/swarm/testutil"
 )
 
 var (

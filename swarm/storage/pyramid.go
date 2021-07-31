@@ -25,8 +25,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/swarm/chunk"
-	"github.com/plotozhu/MDCMainnet/swarm/log"
+	"github.com/gauss-project/eswarm/swarm/chunk"
+	"github.com/gauss-project/eswarm/swarm/log"
 )
 
 /*

@@ -24,7 +24,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/swarm/testutil"
+	"github.com/gauss-project/eswarm/swarm/testutil"
 )
 
 const testDataSize = 0x0001000

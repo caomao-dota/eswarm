@@ -23,10 +23,10 @@ import (
 	"net"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common/math"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/crypto/secp256k1"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
+	"github.com/gauss-project/eswarm/common/math"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/crypto/secp256k1"
+	"github.com/gauss-project/eswarm/p2p/enode"
 )
 
 // node represents a host on the network.

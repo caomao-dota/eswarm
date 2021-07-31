@@ -21,9 +21,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hashicorp/golang-lru"
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/rlp"
-	"github.com/plotozhu/MDCMainnet/swarm/util"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/rlp"
+	"github.com/gauss-project/eswarm/swarm/util"
 	"io"
 	"reflect"
 	"sync"
@@ -31,10 +31,10 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	olog "github.com/opentracing/opentracing-go/log"
-	"github.com/plotozhu/MDCMainnet/metrics"
-	"github.com/plotozhu/MDCMainnet/swarm/chunk"
-	"github.com/plotozhu/MDCMainnet/swarm/log"
-	"github.com/plotozhu/MDCMainnet/swarm/spancontext"
+	"github.com/gauss-project/eswarm/metrics"
+	"github.com/gauss-project/eswarm/swarm/chunk"
+	"github.com/gauss-project/eswarm/swarm/log"
+	"github.com/gauss-project/eswarm/swarm/spancontext"
 	rawHttp "net/http"
 )
 

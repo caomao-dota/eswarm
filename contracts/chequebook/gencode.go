@@ -25,11 +25,11 @@ import (
 	"io/ioutil"
 	"math/big"
 
-	"github.com/plotozhu/MDCMainnet/accounts/abi/bind"
-	"github.com/plotozhu/MDCMainnet/accounts/abi/bind/backends"
-	"github.com/plotozhu/MDCMainnet/contracts/chequebook/contract"
-	"github.com/plotozhu/MDCMainnet/core"
-	"github.com/plotozhu/MDCMainnet/crypto"
+	"github.com/gauss-project/eswarm/accounts/abi/bind"
+	"github.com/gauss-project/eswarm/accounts/abi/bind/backends"
+	"github.com/gauss-project/eswarm/contracts/chequebook/contract"
+	"github.com/gauss-project/eswarm/core"
+	"github.com/gauss-project/eswarm/crypto"
 )
 
 var (

@@ -30,10 +30,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/mock"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/mock/db"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/mock/mem"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/swarm/storage/mock"
+	"github.com/gauss-project/eswarm/swarm/storage/mock/db"
+	"github.com/gauss-project/eswarm/swarm/storage/mock/mem"
 )
 
 // TestHandler_memGlobalStore runs a set of tests

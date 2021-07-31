@@ -21,11 +21,11 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/core"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/event"
-	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/core"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/event"
+	"github.com/gauss-project/eswarm/rlp"
 )
 
 // Constants to match up protocol versions and messages

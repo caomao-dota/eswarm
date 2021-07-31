@@ -19,7 +19,7 @@ package ethapi
 import (
 	"sync"
 
-	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/gauss-project/eswarm/common"
 )
 
 type AddrLocker struct {

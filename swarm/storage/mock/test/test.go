@@ -26,9 +26,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/swarm/storage"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/mock"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/swarm/storage"
+	"github.com/gauss-project/eswarm/swarm/storage/mock"
 )
 
 // MockStore creates NodeStore instances from provided GlobalStorer,

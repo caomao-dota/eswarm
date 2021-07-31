@@ -33,15 +33,15 @@ import (
 	"time"
 
 	"github.com/docker/docker/pkg/reexec"
-	"github.com/plotozhu/MDCMainnet/accounts"
-	"github.com/plotozhu/MDCMainnet/accounts/keystore"
-	"github.com/plotozhu/MDCMainnet/internal/cmdtest"
-	"github.com/plotozhu/MDCMainnet/node"
-	"github.com/plotozhu/MDCMainnet/p2p"
-	"github.com/plotozhu/MDCMainnet/rpc"
-	"github.com/plotozhu/MDCMainnet/swarm"
-	"github.com/plotozhu/MDCMainnet/swarm/api"
-	swarmhttp "github.com/plotozhu/MDCMainnet/swarm/api/http"
+	"github.com/gauss-project/eswarm/accounts"
+	"github.com/gauss-project/eswarm/accounts/keystore"
+	"github.com/gauss-project/eswarm/internal/cmdtest"
+	"github.com/gauss-project/eswarm/node"
+	"github.com/gauss-project/eswarm/p2p"
+	"github.com/gauss-project/eswarm/rpc"
+	"github.com/gauss-project/eswarm/swarm"
+	"github.com/gauss-project/eswarm/swarm/api"
+	swarmhttp "github.com/gauss-project/eswarm/swarm/api/http"
 )
 
 var loglevel = flag.Int("loglevel", 3, "verbosity of logs")

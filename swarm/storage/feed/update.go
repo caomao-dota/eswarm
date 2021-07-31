@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/plotozhu/MDCMainnet/swarm/chunk"
+	"github.com/gauss-project/eswarm/swarm/chunk"
 )
 
 // ProtocolVersion defines the current version of the protocol that will be included in each update message

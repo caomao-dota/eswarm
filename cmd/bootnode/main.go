@@ -24,14 +24,14 @@ import (
 	"net"
 	"os"
 
-	"github.com/plotozhu/MDCMainnet/cmd/utils"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/p2p/discover"
-	"github.com/plotozhu/MDCMainnet/p2p/discv5"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
-	"github.com/plotozhu/MDCMainnet/p2p/nat"
-	"github.com/plotozhu/MDCMainnet/p2p/netutil"
+	"github.com/gauss-project/eswarm/cmd/utils"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/p2p/discover"
+	"github.com/gauss-project/eswarm/p2p/discv5"
+	"github.com/gauss-project/eswarm/p2p/enode"
+	"github.com/gauss-project/eswarm/p2p/nat"
+	"github.com/gauss-project/eswarm/p2p/netutil"
 )
 
 func main() {

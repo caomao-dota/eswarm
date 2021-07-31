@@ -20,9 +20,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/common/prque"
-	"github.com/plotozhu/MDCMainnet/ethdb"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/common/prque"
+	"github.com/gauss-project/eswarm/ethdb"
 )
 
 // ErrNotRequested is returned by the trie sync when it's requested to process a

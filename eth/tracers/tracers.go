@@ -21,7 +21,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/plotozhu/MDCMainnet/eth/tracers/internal/tracers"
+	"github.com/gauss-project/eswarm/eth/tracers/internal/tracers"
 )
 
 // all contains all the built in JavaScript tracers by name.

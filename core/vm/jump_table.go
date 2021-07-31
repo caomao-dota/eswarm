@@ -20,7 +20,7 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/plotozhu/MDCMainnet/params"
+	"github.com/gauss-project/eswarm/params"
 )
 
 type (

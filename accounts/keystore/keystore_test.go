@@ -26,9 +26,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/accounts"
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/event"
+	"github.com/gauss-project/eswarm/accounts"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/event"
 )
 
 var testSigData = make([]byte, 32)

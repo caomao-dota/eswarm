@@ -34,7 +34,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/log"
 )
 
 // Handler is the global debugging handler.

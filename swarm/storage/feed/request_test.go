@@ -24,9 +24,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/swarm/storage"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/feed/lookup"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/swarm/storage"
+	"github.com/gauss-project/eswarm/swarm/storage/feed/lookup"
 )
 
 func areEqualJSON(s1, s2 string) (bool, error) {

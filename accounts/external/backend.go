@@ -21,16 +21,16 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/plotozhu/MDCMainnet"
-	"github.com/plotozhu/MDCMainnet/accounts"
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/common/hexutil"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/event"
-	"github.com/plotozhu/MDCMainnet/internal/ethapi"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/rpc"
-	"github.com/plotozhu/MDCMainnet/signer/core"
+	"github.com/gauss-project/eswarm"
+	"github.com/gauss-project/eswarm/accounts"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/common/hexutil"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/event"
+	"github.com/gauss-project/eswarm/internal/ethapi"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/rpc"
+	"github.com/gauss-project/eswarm/signer/core"
 )
 
 type ExternalBackend struct {

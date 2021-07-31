@@ -22,8 +22,8 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/plotozhu/MDCMainnet/cmd/utils"
-	swarm "github.com/plotozhu/MDCMainnet/swarm/api/client"
+	"github.com/gauss-project/eswarm/cmd/utils"
+	swarm "github.com/gauss-project/eswarm/swarm/api/client"
 	"gopkg.in/urfave/cli.v1"
 )
 

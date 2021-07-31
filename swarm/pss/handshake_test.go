@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/swarm/log"
+	"github.com/gauss-project/eswarm/swarm/log"
 )
 
 // asymmetrical key exchange between two directly connected peers

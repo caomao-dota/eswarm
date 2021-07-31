@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/metrics"
-	"github.com/plotozhu/MDCMainnet/swarm/testutil"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/metrics"
+	"github.com/gauss-project/eswarm/swarm/testutil"
 
 	cli "gopkg.in/urfave/cli.v1"
 )

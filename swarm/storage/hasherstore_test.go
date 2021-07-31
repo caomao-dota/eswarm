@@ -21,9 +21,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/swarm/storage/encryption"
+	"github.com/gauss-project/eswarm/swarm/storage/encryption"
 
-	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/gauss-project/eswarm/common"
 )
 
 func TestHasherStore(t *testing.T) {

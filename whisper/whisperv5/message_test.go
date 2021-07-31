@@ -21,8 +21,8 @@ import (
 	mrand "math/rand"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/rlp"
 )
 
 func generateMessageParams() (*MessageParams, error) {

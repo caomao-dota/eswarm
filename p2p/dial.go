@@ -20,13 +20,13 @@ import (
 	"container/heap"
 	"errors"
 	"fmt"
-	"github.com/plotozhu/MDCMainnet/p2p/discover"
+	"github.com/gauss-project/eswarm/p2p/discover"
 	"net"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
-	"github.com/plotozhu/MDCMainnet/p2p/netutil"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/p2p/enode"
+	"github.com/gauss-project/eswarm/p2p/netutil"
 )
 
 const (

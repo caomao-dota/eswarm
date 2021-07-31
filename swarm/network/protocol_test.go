@@ -23,11 +23,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/p2p"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
-	"github.com/plotozhu/MDCMainnet/p2p/protocols"
-	p2ptest "github.com/plotozhu/MDCMainnet/p2p/testing"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/p2p"
+	"github.com/gauss-project/eswarm/p2p/enode"
+	"github.com/gauss-project/eswarm/p2p/protocols"
+	p2ptest "github.com/gauss-project/eswarm/p2p/testing"
 )
 
 const (

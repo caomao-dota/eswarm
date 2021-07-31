@@ -36,11 +36,11 @@ import (
 	"time"
 
 	"github.com/golang/snappy"
-	"github.com/plotozhu/MDCMainnet/common/bitutil"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/crypto/ecies"
-	"github.com/plotozhu/MDCMainnet/crypto/secp256k1"
-	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/gauss-project/eswarm/common/bitutil"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/crypto/ecies"
+	"github.com/gauss-project/eswarm/crypto/secp256k1"
+	"github.com/gauss-project/eswarm/rlp"
 	"golang.org/x/crypto/sha3"
 )
 

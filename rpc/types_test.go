@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/common/math"
+	"github.com/gauss-project/eswarm/common/math"
 )
 
 func TestBlockNumberJSONUnmarshal(t *testing.T) {

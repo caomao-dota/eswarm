@@ -21,7 +21,7 @@ package csdc
 
 import (
 	"errors"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
+	"github.com/gauss-project/eswarm/p2p/enode"
 )
 
 // NewEnode parses a node designator.

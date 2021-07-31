@@ -3,8 +3,8 @@ package http
 import (
 	"context"
 
-	"github.com/plotozhu/MDCMainnet/swarm/api"
-	"github.com/plotozhu/MDCMainnet/swarm/sctx"
+	"github.com/gauss-project/eswarm/swarm/api"
+	"github.com/gauss-project/eswarm/swarm/sctx"
 )
 
 type uriKey struct{}

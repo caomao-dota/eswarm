@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/rpc"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/rpc"
 )
 
 func TestUnmarshalJSONNewFilterArgs(t *testing.T) {

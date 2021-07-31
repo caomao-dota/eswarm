@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/log"
 )
 
 // deployEthstats queries the user for various input on deploying an ethstats

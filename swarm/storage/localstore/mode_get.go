@@ -17,9 +17,9 @@
 package localstore
 
 import (
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/swarm/chunk"
-	"github.com/plotozhu/MDCMainnet/swarm/shed"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/swarm/chunk"
+	"github.com/gauss-project/eswarm/swarm/shed"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 

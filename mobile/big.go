@@ -22,7 +22,7 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/gauss-project/eswarm/common"
 )
 
 // A BigInt represents a signed multi-precision integer.

@@ -24,7 +24,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/swarm/testutil"
+	"github.com/gauss-project/eswarm/swarm/testutil"
 	"golang.org/x/crypto/sha3"
 )
 

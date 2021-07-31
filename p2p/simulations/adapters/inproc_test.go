@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/p2p/simulations/pipes"
+	"github.com/gauss-project/eswarm/p2p/simulations/pipes"
 )
 
 func TestTCPPipe(t *testing.T) {

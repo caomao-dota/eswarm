@@ -23,10 +23,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/plotozhu/MDCMainnet/cmd/utils"
-	"github.com/plotozhu/MDCMainnet/consensus/ethash"
-	"github.com/plotozhu/MDCMainnet/eth"
-	"github.com/plotozhu/MDCMainnet/params"
+	"github.com/gauss-project/eswarm/cmd/utils"
+	"github.com/gauss-project/eswarm/consensus/ethash"
+	"github.com/gauss-project/eswarm/eth"
+	"github.com/gauss-project/eswarm/params"
 	"gopkg.in/urfave/cli.v1"
 )
 

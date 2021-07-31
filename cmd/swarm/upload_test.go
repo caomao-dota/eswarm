@@ -31,9 +31,9 @@ import (
 	"time"
 
 	"github.com/mattn/go-colorable"
-	"github.com/plotozhu/MDCMainnet/log"
-	swarmapi "github.com/plotozhu/MDCMainnet/swarm/api/client"
-	"github.com/plotozhu/MDCMainnet/swarm/testutil"
+	"github.com/gauss-project/eswarm/log"
+	swarmapi "github.com/gauss-project/eswarm/swarm/api/client"
+	"github.com/gauss-project/eswarm/swarm/testutil"
 )
 
 func init() {

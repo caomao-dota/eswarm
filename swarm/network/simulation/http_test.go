@@ -24,9 +24,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/node"
-	"github.com/plotozhu/MDCMainnet/p2p/simulations/adapters"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/node"
+	"github.com/gauss-project/eswarm/p2p/simulations/adapters"
 )
 
 func TestSimulationWithHTTPServer(t *testing.T) {

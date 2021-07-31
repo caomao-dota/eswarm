@@ -5,8 +5,8 @@ Maintainer: {{.Author}}
 Build-Depends: debhelper (>= 8.0.0), golang-1.11
 Standards-Version: 3.9.5
 Homepage: https://ethereum.org
-Vcs-Git: git://github.com/plotozhu/MDCMainnet.git
-Vcs-Browser: https://github.com/plotozhu/MDCMainnet
+Vcs-Git: git://github.com/gauss-project/eswarm.git
+Vcs-Browser: https://github.com/gauss-project/eswarm
 
 {{range .Executables}}
 Package: {{$.ExeName .}}

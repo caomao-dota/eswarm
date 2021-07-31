@@ -36,22 +36,22 @@ go test -race -v ./swarm/pss -cpu 4 -run TestNetwork
   1 ==================
   2 WARNING: DATA RACE
   3 Read at 0x00c424d456a0 by goroutine 1089:
-  4   github.com/plotozhu/MDCMainnet/swarm/pss.(*Pss).forward.func1()
-  5       /Users/nonsense/code/src/github.com/plotozhu/MDCMainnet/swarm/pss/pss.go:654 +0x44f
-  6   github.com/plotozhu/MDCMainnet/swarm/network.(*Kademlia).eachConn.func1()
-  7       /Users/nonsense/code/src/github.com/plotozhu/MDCMainnet/swarm/network/kademlia.go:350 +0xc9
-  8   github.com/plotozhu/MDCMainnet/pot.(*Pot).eachNeighbour.func1()
-  9       /Users/nonsense/code/src/github.com/plotozhu/MDCMainnet/pot/pot.go:599 +0x59
+  4   github.com/gauss-project/eswarm/swarm/pss.(*Pss).forward.func1()
+  5       /Users/nonsense/code/src/github.com/gauss-project/eswarm/swarm/pss/pss.go:654 +0x44f
+  6   github.com/gauss-project/eswarm/swarm/network.(*Kademlia).eachConn.func1()
+  7       /Users/nonsense/code/src/github.com/gauss-project/eswarm/swarm/network/kademlia.go:350 +0xc9
+  8   github.com/gauss-project/eswarm/pot.(*Pot).eachNeighbour.func1()
+  9       /Users/nonsense/code/src/github.com/gauss-project/eswarm/pot/pot.go:599 +0x59
   ...
 
  28
  29 Previous write at 0x00c424d456a0 by goroutine 829:
- 30   github.com/plotozhu/MDCMainnet/swarm/pss.(*Pss).Run()
- 31       /Users/nonsense/code/src/github.com/plotozhu/MDCMainnet/swarm/pss/pss.go:192 +0x16a
- 32   github.com/plotozhu/MDCMainnet/swarm/pss.(*Pss).Run-fm()
- 33       /Users/nonsense/code/src/github.com/plotozhu/MDCMainnet/swarm/pss/pss.go:185 +0x63
- 34   github.com/plotozhu/MDCMainnet/p2p.(*Peer).startProtocols.func1()
- 35       /Users/nonsense/code/src/github.com/plotozhu/MDCMainnet/p2p/peer.go:347 +0x8b
+ 30   github.com/gauss-project/eswarm/swarm/pss.(*Pss).Run()
+ 31       /Users/nonsense/code/src/github.com/gauss-project/eswarm/swarm/pss/pss.go:192 +0x16a
+ 32   github.com/gauss-project/eswarm/swarm/pss.(*Pss).Run-fm()
+ 33       /Users/nonsense/code/src/github.com/gauss-project/eswarm/swarm/pss/pss.go:185 +0x63
+ 34   github.com/gauss-project/eswarm/p2p.(*Peer).startProtocols.func1()
+ 35       /Users/nonsense/code/src/github.com/gauss-project/eswarm/p2p/peer.go:347 +0x8b
  ...
 ```
 

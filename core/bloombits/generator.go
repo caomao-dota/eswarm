@@ -19,7 +19,7 @@ package bloombits
 import (
 	"errors"
 
-	"github.com/plotozhu/MDCMainnet/core/types"
+	"github.com/gauss-project/eswarm/core/types"
 )
 
 var (

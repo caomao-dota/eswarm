@@ -19,7 +19,7 @@
 package ethdb_test
 
 import (
-	"github.com/plotozhu/MDCMainnet/ethdb"
+	"github.com/gauss-project/eswarm/ethdb"
 )
 
 var _ ethdb.Database = &ethdb.LDBDatabase{}

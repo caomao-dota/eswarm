@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/gauss-project/eswarm/common"
 )
 
 const (

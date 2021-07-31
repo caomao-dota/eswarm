@@ -16,7 +16,7 @@
 
 package bind
 
-import "github.com/plotozhu/MDCMainnet/accounts/abi"
+import "github.com/gauss-project/eswarm/accounts/abi"
 
 // tmplData is the data structure required to fill the binding template.
 type tmplData struct {
@@ -68,12 +68,12 @@ import (
 	"math/big"
 	"strings"
 
-	ethereum "github.com/plotozhu/MDCMainnet"
-	"github.com/plotozhu/MDCMainnet/accounts/abi"
-	"github.com/plotozhu/MDCMainnet/accounts/abi/bind"
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/event"
+	ethereum "github.com/gauss-project/eswarm"
+	"github.com/gauss-project/eswarm/accounts/abi"
+	"github.com/gauss-project/eswarm/accounts/abi/bind"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/event"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.

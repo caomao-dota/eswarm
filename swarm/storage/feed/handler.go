@@ -24,10 +24,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/plotozhu/MDCMainnet/swarm/storage/feed/lookup"
+	"github.com/gauss-project/eswarm/swarm/storage/feed/lookup"
 
-	"github.com/plotozhu/MDCMainnet/swarm/log"
-	"github.com/plotozhu/MDCMainnet/swarm/storage"
+	"github.com/gauss-project/eswarm/swarm/log"
+	"github.com/gauss-project/eswarm/swarm/storage"
 )
 
 type Handler struct {

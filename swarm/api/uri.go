@@ -22,8 +22,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/swarm/storage"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/swarm/storage"
 )
 
 //matches hex swarm hashes

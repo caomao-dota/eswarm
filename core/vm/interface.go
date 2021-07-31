@@ -19,8 +19,8 @@ package vm
 import (
 	"math/big"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/core/types"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/core/types"
 )
 
 // StateDB is an EVM database for full state querying.

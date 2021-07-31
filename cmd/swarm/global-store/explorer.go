@@ -23,9 +23,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/mock"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/mock/explorer"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/swarm/storage/mock"
+	"github.com/gauss-project/eswarm/swarm/storage/mock/explorer"
 	cli "gopkg.in/urfave/cli.v1"
 )
 

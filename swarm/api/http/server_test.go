@@ -37,17 +37,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/swarm/storage/feed/lookup"
+	"github.com/gauss-project/eswarm/swarm/storage/feed/lookup"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/swarm/api"
-	swarm "github.com/plotozhu/MDCMainnet/swarm/api/client"
-	"github.com/plotozhu/MDCMainnet/swarm/storage"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/feed"
-	"github.com/plotozhu/MDCMainnet/swarm/testutil"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/swarm/api"
+	swarm "github.com/gauss-project/eswarm/swarm/api/client"
+	"github.com/gauss-project/eswarm/swarm/storage"
+	"github.com/gauss-project/eswarm/swarm/storage/feed"
+	"github.com/gauss-project/eswarm/swarm/testutil"
 )
 
 func init() {

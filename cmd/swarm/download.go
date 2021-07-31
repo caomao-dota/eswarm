@@ -21,10 +21,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/plotozhu/MDCMainnet/cmd/utils"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/swarm/api"
-	swarm "github.com/plotozhu/MDCMainnet/swarm/api/client"
+	"github.com/gauss-project/eswarm/cmd/utils"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/swarm/api"
+	swarm "github.com/gauss-project/eswarm/swarm/api/client"
 	"gopkg.in/urfave/cli.v1"
 )
 

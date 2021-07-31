@@ -22,7 +22,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/rpc"
+	"github.com/gauss-project/eswarm/rpc"
 )
 
 // In this example, our client wishes to track the latest 'block number'

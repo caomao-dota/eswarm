@@ -19,9 +19,9 @@ package rpc
 import (
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/rpc"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/mock/mem"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/mock/test"
+	"github.com/gauss-project/eswarm/rpc"
+	"github.com/gauss-project/eswarm/swarm/storage/mock/mem"
+	"github.com/gauss-project/eswarm/swarm/storage/mock/test"
 )
 
 // TestDBStore is running test for a GlobalStore

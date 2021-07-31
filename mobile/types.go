@@ -23,10 +23,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/rlp"
-	whisper "github.com/plotozhu/MDCMainnet/whisper/whisperv6"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/rlp"
+	whisper "github.com/gauss-project/eswarm/whisper/whisperv6"
 )
 
 // A Nonce is a 64-bit hash which proves (combined with the mix-hash) that

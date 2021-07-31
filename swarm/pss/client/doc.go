@@ -28,11 +28,11 @@
 //  	"context"
 //  	"fmt"
 //  	"os"
-//  	pss "github.com/plotozhu/MDCMainnet/swarm/pss/client"
-//  	"github.com/plotozhu/MDCMainnet/p2p/protocols"
-//  	"github.com/plotozhu/MDCMainnet/p2p"
-//  	"github.com/plotozhu/MDCMainnet/swarm/pot"
-//  	"github.com/plotozhu/MDCMainnet/swarm/log"
+//  	pss "github.com/gauss-project/eswarm/swarm/pss/client"
+//  	"github.com/gauss-project/eswarm/p2p/protocols"
+//  	"github.com/gauss-project/eswarm/p2p"
+//  	"github.com/gauss-project/eswarm/swarm/pot"
+//  	"github.com/gauss-project/eswarm/swarm/log"
 //  )
 //
 //  type FooMsg struct {

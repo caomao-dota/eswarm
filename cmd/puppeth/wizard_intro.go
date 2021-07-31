@@ -26,7 +26,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/log"
 )
 
 // makeWizard creates and returns a new puppeth wizard.

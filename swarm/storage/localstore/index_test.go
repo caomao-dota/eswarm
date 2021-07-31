@@ -21,7 +21,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/swarm/chunk"
+	"github.com/gauss-project/eswarm/swarm/chunk"
 )
 
 // TestDB_pullIndex validates the ordering of keys in pull index.

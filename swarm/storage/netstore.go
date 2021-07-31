@@ -25,9 +25,9 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
-	"github.com/plotozhu/MDCMainnet/swarm/log"
-	"github.com/plotozhu/MDCMainnet/swarm/spancontext"
+	"github.com/gauss-project/eswarm/p2p/enode"
+	"github.com/gauss-project/eswarm/swarm/log"
+	"github.com/gauss-project/eswarm/swarm/spancontext"
 
 	lru "github.com/hashicorp/golang-lru"
 )

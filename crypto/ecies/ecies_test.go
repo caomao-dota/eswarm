@@ -40,7 +40,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/crypto"
+	"github.com/gauss-project/eswarm/crypto"
 )
 
 var dumpEnc bool

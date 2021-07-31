@@ -21,7 +21,7 @@ package keystore
 import (
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/log"
 	"github.com/rjeczalik/notify"
 )
 

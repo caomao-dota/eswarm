@@ -30,8 +30,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/accounts/keystore"
-	"github.com/plotozhu/MDCMainnet/core/types"
+	"github.com/gauss-project/eswarm/accounts/keystore"
+	"github.com/gauss-project/eswarm/core/types"
 )
 
 // Tests that the account management snippets work correctly.

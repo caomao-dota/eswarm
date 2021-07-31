@@ -54,7 +54,7 @@ func TestBloom(t *testing.T) {
 import (
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/core/state"
+	"github.com/gauss-project/eswarm/core/state"
 )
 
 func TestBloom9(t *testing.T) {

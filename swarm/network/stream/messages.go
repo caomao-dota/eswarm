@@ -19,14 +19,14 @@ package stream
 import (
 	"context"
 	"fmt"
-	"github.com/plotozhu/MDCMainnet/swarm/storage"
+	"github.com/gauss-project/eswarm/swarm/storage"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
-	"github.com/plotozhu/MDCMainnet/metrics"
-	"github.com/plotozhu/MDCMainnet/swarm/log"
-	bv "github.com/plotozhu/MDCMainnet/swarm/network/bitvector"
-	"github.com/plotozhu/MDCMainnet/swarm/spancontext"
+	"github.com/gauss-project/eswarm/metrics"
+	"github.com/gauss-project/eswarm/swarm/log"
+	bv "github.com/gauss-project/eswarm/swarm/network/bitvector"
+	"github.com/gauss-project/eswarm/swarm/spancontext"
 )
 
 var syncBatchTimeout = 30 * time.Second

@@ -24,9 +24,9 @@ import (
 	"path/filepath"
 
 	"github.com/pborman/uuid"
-	"github.com/plotozhu/MDCMainnet/accounts/keystore"
-	"github.com/plotozhu/MDCMainnet/cmd/utils"
-	"github.com/plotozhu/MDCMainnet/crypto"
+	"github.com/gauss-project/eswarm/accounts/keystore"
+	"github.com/gauss-project/eswarm/cmd/utils"
+	"github.com/gauss-project/eswarm/crypto"
 	"gopkg.in/urfave/cli.v1"
 )
 

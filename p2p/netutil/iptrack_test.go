@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common/mclock"
+	"github.com/gauss-project/eswarm/common/mclock"
 )
 
 const (

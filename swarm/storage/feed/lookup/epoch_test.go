@@ -3,7 +3,7 @@ package lookup_test
 import (
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/swarm/storage/feed/lookup"
+	"github.com/gauss-project/eswarm/swarm/storage/feed/lookup"
 )
 
 func TestMarshallers(t *testing.T) {

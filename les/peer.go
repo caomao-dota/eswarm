@@ -23,14 +23,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/common/mclock"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/eth"
-	"github.com/plotozhu/MDCMainnet/les/flowcontrol"
-	"github.com/plotozhu/MDCMainnet/light"
-	"github.com/plotozhu/MDCMainnet/p2p"
-	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/common/mclock"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/eth"
+	"github.com/gauss-project/eswarm/les/flowcontrol"
+	"github.com/gauss-project/eswarm/light"
+	"github.com/gauss-project/eswarm/p2p"
+	"github.com/gauss-project/eswarm/rlp"
 )
 
 var (

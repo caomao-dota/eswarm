@@ -16,7 +16,7 @@
 
 package core
 
-import "github.com/plotozhu/MDCMainnet/common"
+import "github.com/gauss-project/eswarm/common"
 
 // BadHashes represent a set of manually tracked bad hashes (usually hard forks)
 var BadHashes = map[common.Hash]bool{

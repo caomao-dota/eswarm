@@ -16,7 +16,7 @@
 
 package storage
 
-import "github.com/plotozhu/MDCMainnet/swarm/chunk"
+import "github.com/gauss-project/eswarm/swarm/chunk"
 
 const (
 	ErrInit = iota

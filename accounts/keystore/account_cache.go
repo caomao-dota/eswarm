@@ -28,9 +28,9 @@ import (
 	"time"
 
 	mapset "github.com/deckarep/golang-set"
-	"github.com/plotozhu/MDCMainnet/accounts"
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/accounts"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/log"
 )
 
 // Minimum amount of time between cache reloads. This limit applies if the platform does

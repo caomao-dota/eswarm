@@ -19,10 +19,10 @@ package les
 import (
 	"context"
 
-	"github.com/plotozhu/MDCMainnet/core"
-	"github.com/plotozhu/MDCMainnet/ethdb"
-	"github.com/plotozhu/MDCMainnet/light"
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/core"
+	"github.com/gauss-project/eswarm/ethdb"
+	"github.com/gauss-project/eswarm/light"
+	"github.com/gauss-project/eswarm/log"
 )
 
 // LesOdr implements light.OdrBackend

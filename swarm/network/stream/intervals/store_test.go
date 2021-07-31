@@ -19,7 +19,7 @@ package intervals
 import (
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/swarm/state"
+	"github.com/gauss-project/eswarm/swarm/state"
 )
 
 // TestInmemoryStore tests basic functionality of InmemoryStore.

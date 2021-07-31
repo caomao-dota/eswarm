@@ -23,16 +23,16 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/contracts/ens"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/node"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
-	"github.com/plotozhu/MDCMainnet/swarm/log"
-	"github.com/plotozhu/MDCMainnet/swarm/network"
-	"github.com/plotozhu/MDCMainnet/swarm/pss"
-	"github.com/plotozhu/MDCMainnet/swarm/services/swap"
-	"github.com/plotozhu/MDCMainnet/swarm/storage"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/contracts/ens"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/node"
+	"github.com/gauss-project/eswarm/p2p/enode"
+	"github.com/gauss-project/eswarm/swarm/log"
+	"github.com/gauss-project/eswarm/swarm/network"
+	"github.com/gauss-project/eswarm/swarm/pss"
+	"github.com/gauss-project/eswarm/swarm/services/swap"
+	"github.com/gauss-project/eswarm/swarm/storage"
 )
 
 const (

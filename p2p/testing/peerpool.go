@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/p2p/enode"
 )
 
 type TestPeer interface {

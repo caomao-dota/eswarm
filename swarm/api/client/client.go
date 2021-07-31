@@ -38,11 +38,11 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/metrics"
-	"github.com/plotozhu/MDCMainnet/swarm/api"
-	"github.com/plotozhu/MDCMainnet/swarm/spancontext"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/feed"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/metrics"
+	"github.com/gauss-project/eswarm/swarm/api"
+	"github.com/gauss-project/eswarm/swarm/spancontext"
+	"github.com/gauss-project/eswarm/swarm/storage/feed"
 )
 
 var (

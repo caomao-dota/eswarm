@@ -21,7 +21,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/plotozhu/MDCMainnet/event"
+	"github.com/gauss-project/eswarm/event"
 )
 
 // Manager is an overarching account manager that can communicate with various

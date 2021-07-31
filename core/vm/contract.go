@@ -19,7 +19,7 @@ package vm
 import (
 	"math/big"
 
-	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/gauss-project/eswarm/common"
 )
 
 // ContractRef is a reference to the contract's backing object

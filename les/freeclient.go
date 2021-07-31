@@ -23,11 +23,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common/mclock"
-	"github.com/plotozhu/MDCMainnet/common/prque"
-	"github.com/plotozhu/MDCMainnet/ethdb"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/gauss-project/eswarm/common/mclock"
+	"github.com/gauss-project/eswarm/common/prque"
+	"github.com/gauss-project/eswarm/ethdb"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/rlp"
 )
 
 // freeClientPool implements a client database that limits the connection time

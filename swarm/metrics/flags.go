@@ -19,10 +19,10 @@ package metrics
 import (
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/cmd/utils"
-	gethmetrics "github.com/plotozhu/MDCMainnet/metrics"
-	"github.com/plotozhu/MDCMainnet/metrics/influxdb"
-	"github.com/plotozhu/MDCMainnet/swarm/log"
+	"github.com/gauss-project/eswarm/cmd/utils"
+	gethmetrics "github.com/gauss-project/eswarm/metrics"
+	"github.com/gauss-project/eswarm/metrics/influxdb"
+	"github.com/gauss-project/eswarm/swarm/log"
 	cli "gopkg.in/urfave/cli.v1"
 )
 

@@ -1,8 +1,8 @@
 package log
 
 import (
-	l "github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/metrics"
+	l "github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/metrics"
 )
 
 const (

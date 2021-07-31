@@ -19,8 +19,8 @@
 package geth
 
 import (
-	"github.com/plotozhu/MDCMainnet/whisper/shhclient"
-	whisper "github.com/plotozhu/MDCMainnet/whisper/whisperv6"
+	"github.com/gauss-project/eswarm/whisper/shhclient"
+	whisper "github.com/gauss-project/eswarm/whisper/whisperv6"
 )
 
 // WhisperClient provides access to the Ethereum APIs.

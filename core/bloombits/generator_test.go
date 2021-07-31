@@ -21,7 +21,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/core/types"
+	"github.com/gauss-project/eswarm/core/types"
 )
 
 // Tests that batched bloom bits are correctly rotated from the input bloom

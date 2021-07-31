@@ -26,8 +26,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/swarm/shed"
-	"github.com/plotozhu/MDCMainnet/swarm/storage"
+	"github.com/gauss-project/eswarm/swarm/shed"
+	"github.com/gauss-project/eswarm/swarm/storage"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 

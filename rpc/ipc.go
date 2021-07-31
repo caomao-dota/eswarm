@@ -20,8 +20,8 @@ import (
 	"context"
 	"net"
 
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/p2p/netutil"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/p2p/netutil"
 )
 
 // ServeListener accepts connections on l, serving JSON-RPC on them.

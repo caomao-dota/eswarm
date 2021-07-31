@@ -19,9 +19,9 @@ package types
 import (
 	"bytes"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/rlp"
-	"github.com/plotozhu/MDCMainnet/trie"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/rlp"
+	"github.com/gauss-project/eswarm/trie"
 )
 
 type DerivableList interface {

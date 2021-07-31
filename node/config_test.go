@@ -24,8 +24,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/p2p"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/p2p"
 )
 
 // Tests that datadirs can be successfully created, be them manually configured

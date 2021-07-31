@@ -17,9 +17,9 @@
 package vm
 
 import (
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/common/math"
-	"github.com/plotozhu/MDCMainnet/params"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/common/math"
+	"github.com/gauss-project/eswarm/params"
 )
 
 // memoryGasCost calculates the quadratic gas for memory expansion. It does so

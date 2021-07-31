@@ -19,7 +19,7 @@ package tests
 import (
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/core/vm"
+	"github.com/gauss-project/eswarm/core/vm"
 )
 
 func TestVM(t *testing.T) {

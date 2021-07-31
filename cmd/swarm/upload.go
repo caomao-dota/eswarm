@@ -29,10 +29,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/plotozhu/MDCMainnet/log"
-	swarm "github.com/plotozhu/MDCMainnet/swarm/api/client"
+	"github.com/gauss-project/eswarm/log"
+	swarm "github.com/gauss-project/eswarm/swarm/api/client"
 
-	"github.com/plotozhu/MDCMainnet/cmd/utils"
+	"github.com/gauss-project/eswarm/cmd/utils"
 	"gopkg.in/urfave/cli.v1"
 )
 

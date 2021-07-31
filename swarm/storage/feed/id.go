@@ -21,10 +21,10 @@ import (
 	"hash"
 	"strconv"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/feed/lookup"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/swarm/storage/feed/lookup"
 
-	"github.com/plotozhu/MDCMainnet/swarm/storage"
+	"github.com/gauss-project/eswarm/swarm/storage"
 )
 
 // ID uniquely identifies an update on the network.

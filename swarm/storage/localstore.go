@@ -18,12 +18,12 @@ package storage
 
 import (
 	"context"
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/log"
 	"path/filepath"
 	"sync"
 
-	"github.com/plotozhu/MDCMainnet/metrics"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/mock"
+	"github.com/gauss-project/eswarm/metrics"
+	"github.com/gauss-project/eswarm/swarm/storage/mock"
 )
 
 type LocalStoreParams struct {

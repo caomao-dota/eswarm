@@ -26,8 +26,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/log"
 )
 
 // nodeDockerfile is the Dockerfile required to run an Ethereum node.

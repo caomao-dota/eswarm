@@ -21,7 +21,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/swarm/storage/mock/test"
+	"github.com/gauss-project/eswarm/swarm/storage/mock/test"
 )
 
 // TestDBStore is running a test.MockStore tests

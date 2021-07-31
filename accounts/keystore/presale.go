@@ -26,8 +26,8 @@ import (
 	"fmt"
 
 	"github.com/pborman/uuid"
-	"github.com/plotozhu/MDCMainnet/accounts"
-	"github.com/plotozhu/MDCMainnet/crypto"
+	"github.com/gauss-project/eswarm/accounts"
+	"github.com/gauss-project/eswarm/crypto"
 	"golang.org/x/crypto/pbkdf2"
 )
 

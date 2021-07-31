@@ -26,12 +26,12 @@ import (
 	"time"
 
 	"github.com/karalabe/hid"
-	ethereum "github.com/plotozhu/MDCMainnet"
-	"github.com/plotozhu/MDCMainnet/accounts"
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/log"
+	ethereum "github.com/gauss-project/eswarm"
+	"github.com/gauss-project/eswarm/accounts"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/log"
 )
 
 // Maximum time between wallet health checks to detect USB unplugs.

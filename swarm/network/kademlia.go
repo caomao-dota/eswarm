@@ -21,17 +21,17 @@ import (
 	"fmt"
 	"github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
-	"github.com/plotozhu/MDCMainnet/p2p"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
+	"github.com/gauss-project/eswarm/p2p"
+	"github.com/gauss-project/eswarm/p2p/enode"
 	"math"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/swarm/log"
-	"github.com/plotozhu/MDCMainnet/swarm/pot"
-	sv "github.com/plotozhu/MDCMainnet/swarm/version"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/swarm/log"
+	"github.com/gauss-project/eswarm/swarm/pot"
+	sv "github.com/gauss-project/eswarm/swarm/version"
 )
 
 /*

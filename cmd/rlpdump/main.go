@@ -26,7 +26,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/gauss-project/eswarm/rlp"
 )
 
 var (

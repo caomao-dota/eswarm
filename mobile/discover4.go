@@ -21,7 +21,7 @@ package geth
 
 import (
 	"errors"
-	"github.com/plotozhu/MDCMainnet/p2p/enode"
+	"github.com/gauss-project/eswarm/p2p/enode"
 )
 
 // Enode represents a host on the network.

@@ -3,7 +3,7 @@ package feed
 import (
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/common/hexutil"
+	"github.com/gauss-project/eswarm/common/hexutil"
 )
 
 func TestTopic(t *testing.T) {

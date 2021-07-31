@@ -22,7 +22,7 @@ import (
 	"html/template"
 	"path"
 
-	"github.com/plotozhu/MDCMainnet/swarm/api"
+	"github.com/gauss-project/eswarm/swarm/api"
 )
 
 type htmlListData struct {

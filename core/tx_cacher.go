@@ -19,7 +19,7 @@ package core
 import (
 	"runtime"
 
-	"github.com/plotozhu/MDCMainnet/core/types"
+	"github.com/gauss-project/eswarm/core/types"
 )
 
 // senderCacher is a concurrent transaction sender recoverer and cacher.

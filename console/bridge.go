@@ -23,9 +23,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/accounts/usbwallet"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/rpc"
+	"github.com/gauss-project/eswarm/accounts/usbwallet"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/rpc"
 	"github.com/robertkrimen/otto"
 )
 

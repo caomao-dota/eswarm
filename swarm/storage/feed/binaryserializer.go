@@ -16,7 +16,7 @@
 
 package feed
 
-import "github.com/plotozhu/MDCMainnet/common/hexutil"
+import "github.com/gauss-project/eswarm/common/hexutil"
 
 type binarySerializer interface {
 	binaryPut(serializedData []byte) error

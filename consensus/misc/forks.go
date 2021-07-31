@@ -19,9 +19,9 @@ package misc
 import (
 	"fmt"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/params"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/params"
 )
 
 // VerifyForkHashes verifies that blocks conforming to network hard-forks do have

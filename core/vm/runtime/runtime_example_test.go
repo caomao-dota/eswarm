@@ -19,8 +19,8 @@ package runtime_test
 import (
 	"fmt"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/core/vm/runtime"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/core/vm/runtime"
 )
 
 func ExampleExecute() {

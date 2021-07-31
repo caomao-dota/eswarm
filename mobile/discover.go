@@ -22,7 +22,7 @@ package geth
 import (
 	"errors"
 
-	"github.com/plotozhu/MDCMainnet/p2p/discv5"
+	"github.com/gauss-project/eswarm/p2p/discv5"
 )
 
 // Enode represents a host on the network.

@@ -22,12 +22,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/core/rawdb"
-	"github.com/plotozhu/MDCMainnet/core/state"
-	"github.com/plotozhu/MDCMainnet/ethdb"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/trie"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/core/rawdb"
+	"github.com/gauss-project/eswarm/core/state"
+	"github.com/gauss-project/eswarm/ethdb"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/trie"
 	"golang.org/x/crypto/sha3"
 )
 

@@ -20,9 +20,9 @@ import (
 	"context"
 	"sync"
 
-	ethereum "github.com/plotozhu/MDCMainnet"
-	"github.com/plotozhu/MDCMainnet/event"
-	"github.com/plotozhu/MDCMainnet/rpc"
+	ethereum "github.com/gauss-project/eswarm"
+	"github.com/gauss-project/eswarm/event"
+	"github.com/gauss-project/eswarm/rpc"
 )
 
 // PublicDownloaderAPI provides an API which gives information about the current synchronisation status.

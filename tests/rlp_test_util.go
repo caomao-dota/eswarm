@@ -24,7 +24,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/gauss-project/eswarm/rlp"
 )
 
 // RLPTest is the JSON structure of a single RLP test.

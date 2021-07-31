@@ -20,8 +20,8 @@ import (
 	"hash"
 	"sync"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/rlp"
 	"golang.org/x/crypto/sha3"
 )
 

@@ -22,8 +22,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet"
-	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/gauss-project/eswarm"
+	"github.com/gauss-project/eswarm/common"
 )
 
 // Verify that Client implements the ethereum interfaces.

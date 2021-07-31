@@ -17,7 +17,7 @@
 package api
 
 import (
-	"github.com/plotozhu/MDCMainnet/swarm/network"
+	"github.com/gauss-project/eswarm/swarm/network"
 )
 
 type Control struct {

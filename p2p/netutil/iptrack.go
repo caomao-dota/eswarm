@@ -19,7 +19,7 @@ package netutil
 import (
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common/mclock"
+	"github.com/gauss-project/eswarm/common/mclock"
 )
 
 // IPTracker predicts the external endpoint, i.e. IP address and port, of the local host

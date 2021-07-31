@@ -22,7 +22,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/log"
 )
 
 func init() {

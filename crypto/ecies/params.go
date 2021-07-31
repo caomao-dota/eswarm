@@ -42,7 +42,7 @@ import (
 	"fmt"
 	"hash"
 
-	ethcrypto "github.com/plotozhu/MDCMainnet/crypto"
+	ethcrypto "github.com/gauss-project/eswarm/crypto"
 )
 
 var (

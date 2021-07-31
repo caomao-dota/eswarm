@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/common/hexutil"
+	"github.com/gauss-project/eswarm/common/hexutil"
 )
 
 func TestTextHash(t *testing.T) {

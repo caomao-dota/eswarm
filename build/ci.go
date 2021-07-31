@@ -58,9 +58,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/internal/build"
-	"github.com/plotozhu/MDCMainnet/params"
-	sv "github.com/plotozhu/MDCMainnet/swarm/version"
+	"github.com/gauss-project/eswarm/internal/build"
+	"github.com/gauss-project/eswarm/params"
+	sv "github.com/gauss-project/eswarm/swarm/version"
 )
 
 var (
@@ -802,7 +802,7 @@ func doAndroidArchive(cmdline []string) {
 	}
 	// Build the Android archive and Maven resources
 	build.MustRun(goTool("get", "golang.org/x/mobile/cmd/gomobile", "golang.org/x/mobile/cmd/gobind"))
-	build.MustRun(gomobileTool("bind", "-ldflags", "-s -w", "--target", "android", "--javapkg", "org.mdcmainnet", "-v", "github.com/plotozhu/MDCMainnet/mobile_swarm"))
+	build.MustRun(gomobileTool("bind", "-ldflags", "-s -w", "--target", "android", "--javapkg", "org.mdcmainnet", "-v", "github.com/gauss-project/eswarm/mobile_swarm"))
 
 	if *local {
 		// If we're building locally, copy bundle to build dir and skip Maven
@@ -923,7 +923,7 @@ func doXCodeFramework(cmdline []string) {
 	// Build the iOS XCode framework
 	build.MustRun(goTool("get", "golang.org/x/mobile/cmd/gomobile", "golang.org/x/mobile/cmd/gobind"))
 	build.MustRun(gomobileTool("init"))
-	bind := gomobileTool("bind", "-ldflags", "-s -w", "--target", "ios", "--tags", "ios", "-v", "github.com/plotozhu/MDCMainnet/mobile_swarm")
+	bind := gomobileTool("bind", "-ldflags", "-s -w", "--target", "ios", "--tags", "ios", "-v", "github.com/gauss-project/eswarm/mobile_swarm")
 
 	if *local {
 		// If we're building locally, use the build folder and stop afterwards

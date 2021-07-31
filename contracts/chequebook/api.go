@@ -20,7 +20,7 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/gauss-project/eswarm/common"
 )
 
 const Version = "1.0"

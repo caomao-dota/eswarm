@@ -21,7 +21,7 @@ package geth
 import (
 	"errors"
 
-	"github.com/plotozhu/MDCMainnet/p2p"
+	"github.com/gauss-project/eswarm/p2p"
 )
 
 // NodeInfo represents pi short summary of the information known about the host.

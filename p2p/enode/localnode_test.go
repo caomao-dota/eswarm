@@ -19,8 +19,8 @@ package enode
 import (
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/p2p/enr"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/p2p/enr"
 )
 
 func newLocalNodeForTesting() (*LocalNode, *DB) {

@@ -24,8 +24,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/plotozhu/MDCMainnet/accounts/abi/bind"
-	"github.com/plotozhu/MDCMainnet/common/compiler"
+	"github.com/gauss-project/eswarm/accounts/abi/bind"
+	"github.com/gauss-project/eswarm/common/compiler"
 )
 
 var (

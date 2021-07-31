@@ -30,12 +30,12 @@ import (
 	"gopkg.in/urfave/cli.v1"
 
 	"github.com/naoina/toml"
-	"github.com/plotozhu/MDCMainnet/cmd/utils"
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/node"
+	"github.com/gauss-project/eswarm/cmd/utils"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/node"
 
-	bzzapi "github.com/plotozhu/MDCMainnet/swarm/api"
+	bzzapi "github.com/gauss-project/eswarm/swarm/api"
 )
 
 var (
@@ -101,7 +101,7 @@ var tomlSettings = toml.Config{
 	MissingField: func(rt reflect.Type, field string) error {
 		link := ""
 		if unicode.IsUpper(rune(rt.Name()[0])) && rt.PkgPath() != "main" {
-			link = fmt.Sprintf(", check github.com/plotozhu/MDCMainnet/swarm/api/config.go for available fields")
+			link = fmt.Sprintf(", check github.com/gauss-project/eswarm/swarm/api/config.go for available fields")
 		}
 		return fmt.Errorf("field '%s' is not defined in %s%s", field, rt.String(), link)
 	},

@@ -1,6 +1,6 @@
 package discv5
 
-import "github.com/plotozhu/MDCMainnet/metrics"
+import "github.com/gauss-project/eswarm/metrics"
 
 var (
 	ingressTrafficMeter = metrics.NewRegisteredMeter("discv5/InboundTraffic", nil)

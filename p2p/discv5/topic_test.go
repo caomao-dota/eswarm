@@ -21,8 +21,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/common/mclock"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/common/mclock"
 )
 
 func TestTopicRadius(t *testing.T) {

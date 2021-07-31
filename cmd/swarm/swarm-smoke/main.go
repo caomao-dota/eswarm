@@ -21,13 +21,13 @@ import (
 	"os"
 	"sort"
 
-	"github.com/plotozhu/MDCMainnet/cmd/utils"
-	gethmetrics "github.com/plotozhu/MDCMainnet/metrics"
-	"github.com/plotozhu/MDCMainnet/metrics/influxdb"
-	swarmmetrics "github.com/plotozhu/MDCMainnet/swarm/metrics"
-	"github.com/plotozhu/MDCMainnet/swarm/tracing"
+	"github.com/gauss-project/eswarm/cmd/utils"
+	gethmetrics "github.com/gauss-project/eswarm/metrics"
+	"github.com/gauss-project/eswarm/metrics/influxdb"
+	swarmmetrics "github.com/gauss-project/eswarm/swarm/metrics"
+	"github.com/gauss-project/eswarm/swarm/tracing"
 
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/log"
 
 	cli "gopkg.in/urfave/cli.v1"
 )

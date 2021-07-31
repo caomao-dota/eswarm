@@ -19,10 +19,10 @@ package shhclient
 import (
 	"context"
 
-	"github.com/plotozhu/MDCMainnet"
-	"github.com/plotozhu/MDCMainnet/common/hexutil"
-	"github.com/plotozhu/MDCMainnet/rpc"
-	whisper "github.com/plotozhu/MDCMainnet/whisper/whisperv6"
+	"github.com/gauss-project/eswarm"
+	"github.com/gauss-project/eswarm/common/hexutil"
+	"github.com/gauss-project/eswarm/rpc"
+	whisper "github.com/gauss-project/eswarm/whisper/whisperv6"
 )
 
 // Client defines typed wrappers for the Whisper v6 RPC API.

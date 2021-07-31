@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/swarm/api"
+	"github.com/gauss-project/eswarm/swarm/api"
 )
 
 const (

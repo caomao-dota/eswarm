@@ -19,7 +19,7 @@ package params
 import (
 	"math/big"
 
-	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/gauss-project/eswarm/common"
 )
 
 // DAOForkBlockExtra is the block header extra-data field to set for the DAO fork

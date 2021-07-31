@@ -17,7 +17,7 @@
 package shed
 
 import (
-	"github.com/plotozhu/MDCMainnet/rlp"
+	"github.com/gauss-project/eswarm/rlp"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 

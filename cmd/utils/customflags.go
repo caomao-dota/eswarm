@@ -27,7 +27,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/plotozhu/MDCMainnet/common/math"
+	"github.com/gauss-project/eswarm/common/math"
 	"gopkg.in/urfave/cli.v1"
 )
 

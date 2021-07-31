@@ -29,8 +29,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/cmd/utils"
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/cmd/utils"
+	"github.com/gauss-project/eswarm/log"
 )
 
 type testFile struct {

@@ -4,8 +4,8 @@ package storage
 
 import (
 	"fmt"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/swarm/chunk"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/swarm/chunk"
 	"github.com/plotozhu/wiredtiger-go/wiredtiger"
 	"math"
 	"os"

@@ -25,14 +25,14 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/swarm/storage"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/feed/lookup"
+	"github.com/gauss-project/eswarm/swarm/storage"
+	"github.com/gauss-project/eswarm/swarm/storage/feed/lookup"
 
-	"github.com/plotozhu/MDCMainnet/common"
-	"github.com/plotozhu/MDCMainnet/crypto"
-	"github.com/plotozhu/MDCMainnet/swarm/api"
-	swarmhttp "github.com/plotozhu/MDCMainnet/swarm/api/http"
-	"github.com/plotozhu/MDCMainnet/swarm/storage/feed"
+	"github.com/gauss-project/eswarm/common"
+	"github.com/gauss-project/eswarm/crypto"
+	"github.com/gauss-project/eswarm/swarm/api"
+	swarmhttp "github.com/gauss-project/eswarm/swarm/api/http"
+	"github.com/gauss-project/eswarm/swarm/storage/feed"
 )
 
 func serverFunc(api *api.API) swarmhttp.TestServer {

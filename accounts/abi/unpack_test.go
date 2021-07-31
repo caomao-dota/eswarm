@@ -26,7 +26,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/plotozhu/MDCMainnet/common"
+	"github.com/gauss-project/eswarm/common"
 	"github.com/stretchr/testify/require"
 )
 

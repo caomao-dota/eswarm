@@ -29,8 +29,8 @@ import (
 	"time"
 
 	"github.com/mattn/go-colorable"
-	"github.com/plotozhu/MDCMainnet/log"
-	"github.com/plotozhu/MDCMainnet/swarm/chunk"
+	"github.com/gauss-project/eswarm/log"
+	"github.com/gauss-project/eswarm/swarm/chunk"
 )
 
 var (

@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/plotozhu/MDCMainnet/metrics"
+	"github.com/gauss-project/eswarm/metrics"
 )
 
 type exp struct {

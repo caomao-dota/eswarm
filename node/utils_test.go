@@ -22,8 +22,8 @@ package node
 import (
 	"reflect"
 
-	"github.com/plotozhu/MDCMainnet/p2p"
-	"github.com/plotozhu/MDCMainnet/rpc"
+	"github.com/gauss-project/eswarm/p2p"
+	"github.com/gauss-project/eswarm/rpc"
 )
 
 // NoopService is a trivial implementation of the Service interface.

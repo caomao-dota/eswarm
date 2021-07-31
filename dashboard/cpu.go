@@ -21,7 +21,7 @@ package dashboard
 import (
 	"syscall"
 
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/log"
 )
 
 // getProcessCPUTime retrieves the process' CPU time since program startup.

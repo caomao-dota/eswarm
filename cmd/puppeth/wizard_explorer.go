@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/log"
+	"github.com/gauss-project/eswarm/log"
 )
 
 // deployExplorer creates a new block explorer based on some user input.

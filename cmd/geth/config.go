@@ -28,13 +28,13 @@ import (
 	cli "gopkg.in/urfave/cli.v1"
 
 	"github.com/naoina/toml"
-	"github.com/plotozhu/MDCMainnet/cmd/utils"
-	"github.com/plotozhu/MDCMainnet/dashboard"
-	"github.com/plotozhu/MDCMainnet/eth"
-	"github.com/plotozhu/MDCMainnet/graphql"
-	"github.com/plotozhu/MDCMainnet/node"
-	"github.com/plotozhu/MDCMainnet/params"
-	whisper "github.com/plotozhu/MDCMainnet/whisper/whisperv6"
+	"github.com/gauss-project/eswarm/cmd/utils"
+	"github.com/gauss-project/eswarm/dashboard"
+	"github.com/gauss-project/eswarm/eth"
+	"github.com/gauss-project/eswarm/graphql"
+	"github.com/gauss-project/eswarm/node"
+	"github.com/gauss-project/eswarm/params"
+	whisper "github.com/gauss-project/eswarm/whisper/whisperv6"
 )
 
 var (

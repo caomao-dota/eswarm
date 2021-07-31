@@ -19,10 +19,10 @@ package core
 import (
 	"fmt"
 
-	"github.com/plotozhu/MDCMainnet/consensus"
-	"github.com/plotozhu/MDCMainnet/core/state"
-	"github.com/plotozhu/MDCMainnet/core/types"
-	"github.com/plotozhu/MDCMainnet/params"
+	"github.com/gauss-project/eswarm/consensus"
+	"github.com/gauss-project/eswarm/core/state"
+	"github.com/gauss-project/eswarm/core/types"
+	"github.com/gauss-project/eswarm/params"
 )
 
 // BlockValidator is responsible for validating block headers, uncles and

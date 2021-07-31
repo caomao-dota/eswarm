@@ -23,8 +23,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/plotozhu/MDCMainnet/common/mclock"
-	"github.com/plotozhu/MDCMainnet/ethdb"
+	"github.com/gauss-project/eswarm/common/mclock"
+	"github.com/gauss-project/eswarm/ethdb"
 )
 
 func TestFreeClientPoolL10C100(t *testing.T) {
