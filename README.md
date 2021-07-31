@@ -1,9 +1,5 @@
-## 云链（ESWARM）系统
+## ESWARM 系统
 
-[https://www.cdscfund.io](https://www.cdscfund.io)
-
-
-云链是一种分布式存储平台和内容分发服务，是基于以太坊协议栈的本地基础层服务。 云链的主要目标是为dapp代码和数据以及块链和状态数据提供分散和冗余存储。 Swarm还着手为web3提供各种基础层服务，包括节点到节点消息传递，媒体流，分散式数据库服务和分散式服务经济的可扩展状态通道基础设施。
 
 [![Travis](https://travis-ci.org/ethereum/go-ethereum.svg?branch=master)](https://travis-ci.org/ethereum/go-ethereum)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/ethersphere/orange-lounge?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
