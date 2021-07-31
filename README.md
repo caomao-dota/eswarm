@@ -1,5 +1,6 @@
-## ESWARM 系统
+## ESWARM 
 
+This is enhanced version of swarm 0.3.0, which is used to deliver over 1PB data traffice in about 10K nodes.
 
 [![Travis](https://travis-ci.org/ethereum/go-ethereum.svg?branch=master)](https://travis-ci.org/ethereum/go-ethereum)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/ethersphere/orange-lounge?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
