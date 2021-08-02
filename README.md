@@ -24,7 +24,7 @@ This is enhanced version of swarm 0.3.0, which is used to deliver over 1PB data 
 ## Building the source
 
 ### Software Installation
-    sudo add-apt-repository ppa:longsleep/golang-backports -y
+    add-apt-repository ppa:longsleep/golang-backports -y
     apt-get update  
     apt install build-essential  govendor autoconf automake libtool  golang-go git -y
     
@@ -41,7 +41,6 @@ mkdir vendor
 mv vendor_bak.json vendor.json
 govendor migrate
 govendor sync -v
-go mod init
 cd vendor/github.com/plotozhu/wiredtiger-go
 ./install-deps.sh
 cd ~/go/src/github.com/gauss-project/eswarm
