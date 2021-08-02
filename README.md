@@ -23,35 +23,33 @@ This is enhanced version of swarm 0.3.0, which is used to deliver over 1PB data 
 
 ## Building the source
 
-### 安装golang和相关依赖
+### Software Installation
     sudo add-apt-repository ppa:longsleep/golang-backports -y
-    
-    apt-get update
-    
+    apt-get update  
     apt install build-essential  govendor autoconf automake libtool  golang-go git -y
     
-### 下载代码并编译wiredTiger
+### Download source code and make swarm
 
-    mkdir ~/go/src/github.com/gauss-project -p
-    cd ~/go/src/github.com/gauss-project
-    git clone https://github.com/gauss-project/eswarm
-    cd eswarm
-    go mod init
-    mkdir vendor
-    mv vendor_bak.json vendor.json
-    govendor migrate
-    govendor sync -v
-    go mod init
-    cd vendor/github.com/plotozhu/wiredtiger-go
-    ./install-deps.sh
-       
+```shell
+#!/bin/bash
+mkdir ~/go/src/github.com/gauss-project -p
+cd ~/go/src/github.com/gauss-project
+git clone https://github.com/gauss-project/eswarm
+cd eswarm
+go mod init
+mkdir vendor
+mv vendor_bak.json vendor.json
+govendor migrate
+govendor sync -v
+go mod init
+cd vendor/github.com/plotozhu/wiredtiger-go
+./install-deps.sh
+cd ~/go/src/github.com/gauss-project/eswarm
+make 
+#The swarm file exists in the "/root/go/src/github.com/gauss-project/eswarm/build/bin" directory
+make swarm
+```
 
-###  编译ESwarm
-
-    cd ~/go/src/github.com/gauss-project/eswarm
-    make 
-    make swarm
-    生成的swarm文件存放在"/root/go/src/github.com/gauss-project/eswarm/build/bin"
 
 ## Running Swarm
 
